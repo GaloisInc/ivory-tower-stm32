@@ -1,5 +1,4 @@
 
-.PHONY: default
 default:
 	cabal build
 
@@ -19,7 +18,6 @@ simple-test:
 	cabal install --dependencies-only
 	cabal run tower-example-simple -- --src-dir=tower-example-simple
 
-.PHONY: create-sandbox
 create-sandbox:
 	cabal sandbox init
 	cabal sandbox add-source ../../ivory/ivory
@@ -32,3 +30,10 @@ create-sandbox:
 	cabal sandbox add-source ../ivory-freertos-bindings
 	cabal sandbox add-source ../tower-freertos-stm32
 	cabal install --dependencies-only
+
+clean:
+	-rm -rf dist
+
+clean-sandbox: clean
+	-rm -rf .cabal-sandbox
+	-rm cabal.sandbox.config
