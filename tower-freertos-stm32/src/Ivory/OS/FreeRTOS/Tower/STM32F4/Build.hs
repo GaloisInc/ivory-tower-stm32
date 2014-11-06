@@ -32,7 +32,7 @@ makefile userobjs = artifactString "Makefile" $ unlines
   , "OBJDIR := obj"
   , "OBJS := $(addprefix $(OBJDIR)/," ++ (L.intercalate " " objects) ++ ")"
   , ""
-  , "default: $(OBJDIR) $(OBJS)"
+  , "default: $(OBJDIR) $(OBJS) image"
   , ""
   , "image: $(OBJS)"
   , "\t$(CC) -o $@ $(LDFLAGS) -Wl,--script=$(LDSCRIPT) -Wl,-Map=$@.map $(OBJS)"

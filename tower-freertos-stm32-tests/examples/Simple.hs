@@ -28,5 +28,5 @@ test1_per = do
 main :: IO ()
 main = runTowerCompile test1_per platform copts
   where
-  copts = C.initialOpts { C.outDir = Just "tower-examples-simple" }
+  copts = C.initialOpts { C.outDir = Just "tower-example-simple" }
   platform = stm32f4FreeRTOS

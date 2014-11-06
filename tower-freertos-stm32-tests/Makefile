@@ -8,15 +8,17 @@ freertos-test:
 	cabal sandbox add-source ../ivory-freertos-bindings
 	cabal install --dependencies-only
 	cabal run freertos-bindings-test -- --src-dir=freertos-test
+	make -C freertos-test
 
 .PHONY: simple-test
 simple-test:
 	rm -rf dist
-	cabal sandbox add-source ../../tower
+	cabal sandbox add-source ../../tower/tower
 	cabal sandbox add-source ../ivory-freertos-bindings
 	cabal sandbox add-source ../tower-freertos-stm32
 	cabal install --dependencies-only
 	cabal run tower-example-simple -- --src-dir=tower-example-simple
+	make -C tower-example-simple
 
 create-sandbox:
 	cabal sandbox init
@@ -33,6 +35,8 @@ create-sandbox:
 
 clean:
 	-rm -rf dist
+	-rm -rf freertos-test
+	-rm -rf tower-example-simple
 
 clean-sandbox: clean
 	-rm -rf .cabal-sandbox
