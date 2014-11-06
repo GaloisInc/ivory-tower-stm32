@@ -6,7 +6,7 @@ module Ivory.OS.FreeRTOS.Tower.STM32F4.Build
 
 import qualified Data.List as L
 
-import qualified Paths_tower_freertos as P
+import qualified Paths_tower_freertos_stm32 as P
 import Ivory.Artifact
 import System.FilePath
 

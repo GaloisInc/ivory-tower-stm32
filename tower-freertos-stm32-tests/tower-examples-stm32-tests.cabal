@@ -1,4 +1,4 @@
-name:                tower-examples
+name:                tower-freertos-stm32-tests
 version:             0.9.0.0
 author:              Galois, Inc.
 maintainer:          pat@galois.com
@@ -21,7 +21,7 @@ executable tower-example-simple
                        ivory-stdlib,
                        ivory-backend-c,
                        tower >= 0.9,
-                       tower-freertos >= 0.9
+                       tower-freertos-stm32 >= 0.9
   if flag(werror)
     ghc-options:        -Wall -Werror
   else
@@ -38,7 +38,7 @@ executable tower-example-simplesignal
                        ivory-stdlib,
                        ivory-backend-c,
                        tower >= 0.9,
-                       tower-freertos >= 0.9
+                       tower-freertos-stm32 >= 0.9
   if flag(werror)
     ghc-options:        -Wall -Werror
   else
@@ -71,7 +71,7 @@ executable tower-example-stm32f4signals
                        ivory-backend-c,
                        ivory-hw,
                        tower >= 0.9,
-                       tower-freertos >= 0.9
+                       tower-freertos-stm32 >= 0.9
   if flag(werror)
     ghc-options:        -Wall -Werror
   else

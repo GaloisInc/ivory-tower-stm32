@@ -1,4 +1,4 @@
-name:                tower-freertos
+name:                tower-freertos-stm32
 version:             0.9.0.0
 author:              Galois, Inc.
 maintainer:          pat@galois.com
@@ -23,7 +23,7 @@ library
                         Ivory.OS.FreeRTOS.Tower.Signal,
                         Ivory.OS.FreeRTOS.Tower.System
 
-  other-modules:        Paths_tower_freertos
+  other-modules:        Paths_tower_freertos_stm32
 
   build-depends:        base >= 4.6,
                         template-haskell >= 2.8,
