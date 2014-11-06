@@ -3,7 +3,6 @@ module Ivory.OS.FreeRTOS.Tower.STM32F4 where
 
 import Ivory.Language
 import Ivory.Artifact
-import Ivory.Tower
 import Ivory.HW
 import qualified Ivory.Tower.AST as AST
 
