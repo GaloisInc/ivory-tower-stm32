@@ -10,15 +10,10 @@ maintainer:          pat@galois.com
 build-type:          Simple
 cabal-version:       >=1.8
 
-data-files: support/stm32_init.h,
-            support/stm32_init.c
-
 library
   exposed-modules:     Ivory.BSP.ARMv7M.Exception,
                        Ivory.BSP.ARMv7M.MemoryMap,
                        Ivory.BSP.ARMv7M.SystemControl.NVIC,
-
-                       Ivory.BSP.STM32.SearchDir,
 
                        Ivory.BSP.STM32.ClockConfig,
                        Ivory.BSP.STM32.MemoryMap,
@@ -74,19 +69,19 @@ library
                        Ivory.BSP.STM32.Peripheral.UART.Regs,
                        Ivory.BSP.STM32.Peripheral.UART.Peripheral,
 
-                       Ivory.BSP.STM32.Driver.CAN,
-                       Ivory.BSP.STM32.Driver.CAN.Types,
+                       --Ivory.BSP.STM32.Driver.CAN,
+                       --Ivory.BSP.STM32.Driver.CAN.Types,
 
-                       Ivory.BSP.STM32.Driver.I2C,
-                       Ivory.BSP.STM32.Driver.I2C.Types,
-                       Ivory.BSP.STM32.Driver.I2C.I2CDeviceAddr,
-                       Ivory.BSP.STM32.Driver.I2C.I2CDriverState,
+                       --Ivory.BSP.STM32.Driver.I2C,
+                       --Ivory.BSP.STM32.Driver.I2C.Types,
+                       --Ivory.BSP.STM32.Driver.I2C.I2CDeviceAddr,
+                       --Ivory.BSP.STM32.Driver.I2C.I2CDriverState,
 
-                       Ivory.BSP.STM32.Driver.SPI,
-                       Ivory.BSP.STM32.Driver.SPI.Types,
-                       Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle,
+                       --Ivory.BSP.STM32.Driver.SPI,
+                       --Ivory.BSP.STM32.Driver.SPI.Types,
+                       --Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle,
 
-                       Ivory.BSP.STM32.Driver.UART,
+                       --Ivory.BSP.STM32.Driver.UART,
 
                        Ivory.BSP.STM32F405.ClockConfig,
                        Ivory.BSP.STM32F405.MemoryMap,
@@ -108,16 +103,16 @@ library
                        Ivory.BSP.STM32F405.Init,
                        Ivory.BSP.STM32F405.VectorTable
 
-  other-modules:       Paths_ivory_bsp_stm32
   hs-source-dirs:      src
   build-depends:       base >= 4.6,
                        array,
                        template-haskell,
                        filepath,
                        ivory,
+                       ivory-artifact,
                        ivory-stdlib,
                        ivory-hw,
-                       tower >= 0.8
+                       tower >= 0.9
 
   ghc-options:         -Wall
 

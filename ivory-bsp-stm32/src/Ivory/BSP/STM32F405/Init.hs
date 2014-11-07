@@ -13,6 +13,13 @@ import Ivory.BSP.STM32.PlatformClock
 import Ivory.BSP.STM32.Init (stm32InitModule)
 import Ivory.BSP.STM32F405.VectorTable (vector_table)
 
+-- XXX FIX THIS:
+-- wont be used directly by the user any longer
+-- artifact for vector table, and init module, will both
+-- be used by the tower-freertos-stm32 backend
+stm32f405InitTower :: forall p . (PlatformClock p) => Tower p ()
+stm32f405InitTower = return ()
+{-
 stm32f405InitTower :: forall p . (PlatformClock p) => Tower p ()
 stm32f405InitTower = do
   towerArtifact vectorArtifact
@@ -23,3 +30,4 @@ stm32f405InitTower = do
     , artifact_contents = vector_table
     , artifact_tag      = "SOURCES"
     }
+-}

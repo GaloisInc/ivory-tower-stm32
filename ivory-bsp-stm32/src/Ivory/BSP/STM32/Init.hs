@@ -21,8 +21,6 @@ import Ivory.BSP.STM32.Peripheral.RCC
 stm32InitModule :: (PlatformClock p) => Proxy p -> Module
 stm32InitModule platform = package "stm32_ivory_init" $ do
   inclHeader "stm32_init.h"
-  sourceDep  "stm32_init.h"
-  sourceDep  "stm32_init.c"
   incl (reset_handler platform)
   hw_moduledef
   private $ do
@@ -32,13 +30,13 @@ stm32InitModule platform = package "stm32_ivory_init" $ do
     incl main_proc
 
 init_relocate :: Def('[]:->())
-init_relocate = externProc "init_relocate"
+init_relocate = importProc "init_relocate" "stm32_init.h"
 
 init_libc :: Def('[]:->())
-init_libc = externProc "init_libc"
+init_libc = importProc "init_libc" "stm32_init.h"
 
 main_proc :: Def('[]:->())
-main_proc = externProc "main"
+main_proc = importProc "main" "stm32_init.h"
 
 reset_handler :: (PlatformClock p) => Proxy p -> Def('[]:->())
 reset_handler platform = proc (exceptionHandlerName Reset) $ body $ do
