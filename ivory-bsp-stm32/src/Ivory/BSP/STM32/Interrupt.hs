@@ -7,6 +7,7 @@ import Ivory.BSP.ARMv7M.Exception
 
 class STM32Interrupt i where
   interruptIRQn             :: i -> IRQn
+  interruptTable            :: [Maybe i]
   interruptHandlerName      :: i -> String
   interrupt_enable          :: forall eff . i -> Ivory eff ()
   interrupt_disable         :: forall eff . i -> Ivory eff ()

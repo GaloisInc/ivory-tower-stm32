@@ -9,7 +9,6 @@ module Ivory.BSP.STM32.Init
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.HW
-import Ivory.HW.Module (hw_moduledef)
 
 import Ivory.BSP.ARMv7M.Exception
 import Ivory.BSP.STM32.PlatformClock

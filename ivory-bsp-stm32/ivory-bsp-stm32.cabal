@@ -10,6 +10,9 @@ maintainer:          pat@galois.com
 build-type:          Simple
 cabal-version:       >=1.8
 
+data-files: support/vector_table.s.template,
+            support/linker_script.lds.template
+
 library
   exposed-modules:     Ivory.BSP.ARMv7M.Exception,
                        Ivory.BSP.ARMv7M.MemoryMap,
@@ -18,12 +21,14 @@ library
                        Ivory.BSP.STM32.ClockConfig,
                        Ivory.BSP.STM32.MemoryMap,
                        Ivory.BSP.STM32.PlatformClock,
+                       Ivory.BSP.STM32.Processor,
                        Ivory.BSP.STM32.Init,
 
                        Ivory.BSP.STM32.Interrupt,
                        Ivory.BSP.STM32.Signalable,
                        Ivory.BSP.STM32.Signalable.TH,
                        Ivory.BSP.STM32.Signalable.Class,
+                       Ivory.BSP.STM32.VectorTable,
 
                        Ivory.BSP.STM32.Peripheral.ATIM18.Regs,
                        Ivory.BSP.STM32.Peripheral.ATIM18.RegTypes,
@@ -99,15 +104,16 @@ library
                        Ivory.BSP.STM32F405.GPIO.Pins,
                        Ivory.BSP.STM32F405.GTIM2345,
                        Ivory.BSP.STM32F405.ATIM18,
-                       Ivory.BSP.STM32F405.UART,
-                       Ivory.BSP.STM32F405.Init,
-                       Ivory.BSP.STM32F405.VectorTable
+                       Ivory.BSP.STM32F405.UART
+
+  other-modules:       Paths_ivory_bsp_stm32
 
   hs-source-dirs:      src
   build-depends:       base >= 4.6,
                        array,
                        template-haskell,
                        filepath,
+                       HStringTemplate,
                        ivory,
                        ivory-artifact,
                        ivory-stdlib,

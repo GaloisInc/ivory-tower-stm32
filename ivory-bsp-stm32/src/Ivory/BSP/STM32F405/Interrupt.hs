@@ -20,6 +20,7 @@ import Ivory.BSP.STM32.Interrupt
 
 instance STM32Interrupt F405.Interrupt where
   interruptIRQn = F405.interruptIRQn
+  interruptTable = F405.interruptTable
   interruptHandlerName = F405.interruptHandlerName
   interrupt_enable = F405.interrupt_enable
   interrupt_disable = F405.interrupt_disable

@@ -1,0 +1,37 @@
+	.syntax unified
+	.thumb
+	.cpu cortex-m3
+	.fpu softvfp
+
+
+.global $reset_handler$
+.global g_vectors
+.word _sidata
+.word _sdata
+.word _edata
+.word _sbss
+.word _ebss
+
+
+	.section .text.defaultExceptionHandler, "ax",%progbits
+defaultExceptionHandler:
+	b defaultExceptionHandler
+	.size defaultExceptionHandler, .-defaultExceptionHandler
+
+	.section .isr_vector,\"ax\"
+	.code    16
+	.align   2
+	.globl   g_vectors
+	.type    g_vectors, function
+
+g_vectors:
+
+	.word _estack
+
+$entries$
+
+	.size g_vectors, .-g_vectors
+
+$weakdefs$
+
+
