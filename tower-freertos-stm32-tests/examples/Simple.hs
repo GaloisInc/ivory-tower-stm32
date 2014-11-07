@@ -6,7 +6,7 @@ module Main where
 import Ivory.Language
 import Ivory.Tower
 import Ivory.Tower.Compile
-import Ivory.OS.FreeRTOS.Tower
+import Ivory.OS.FreeRTOS.Tower.STM32
 import qualified Ivory.Compile.C.CmdlineFrontend as C
 
 test1_per :: Tower p ()
@@ -29,4 +29,4 @@ main :: IO ()
 main = runTowerCompile test1_per platform copts
   where
   copts = C.initialOpts { C.outDir = Just "tower-example-simple" }
-  platform = stm32f4FreeRTOS
+  platform = stm32FreeRTOS defaultConfig

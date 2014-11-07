@@ -15,6 +15,7 @@ simple-test:
 	rm -rf dist
 	cabal sandbox add-source ../../tower/tower
 	cabal sandbox add-source ../ivory-freertos-bindings
+	cabal sandbox add-source ../ivory-bsp-stm32
 	cabal sandbox add-source ../tower-freertos-stm32
 	cabal install --dependencies-only
 	cabal run tower-example-simple -- --src-dir=tower-example-simple
@@ -30,6 +31,7 @@ create-sandbox:
 	cabal sandbox add-source ../../ivory/ivory-backend-c
 	cabal sandbox add-source ../../tower/tower
 	cabal sandbox add-source ../ivory-freertos-bindings
+	cabal sandbox add-source ../ivory-bsp-stm32
 	cabal sandbox add-source ../tower-freertos-stm32
 	cabal install --dependencies-only
 
