@@ -16,8 +16,9 @@ data-files: support/stm32_init.c,
 
 library
   exposed-modules:      Ivory.OS.FreeRTOS.Tower,
-                        Ivory.OS.FreeRTOS.Tower.STM32F4,
-                        Ivory.OS.FreeRTOS.Tower.STM32F4.Build,
+                        Ivory.OS.FreeRTOS.Tower.STM32,
+                        Ivory.OS.FreeRTOS.Tower.STM32.Build,
+                        Ivory.OS.FreeRTOS.Tower.STM32.Config,
                         Ivory.OS.FreeRTOS.Tower.Init,
                         Ivory.OS.FreeRTOS.Tower.Monitor,
                         Ivory.OS.FreeRTOS.Tower.Signal,
@@ -37,6 +38,7 @@ library
                         ivory-stdlib,
                         ivory-backend-c,
                         ivory-freertos-bindings,
+                        ivory-bsp-stm32,
                         tower >= 0.9
 
   hs-source-dirs:       src

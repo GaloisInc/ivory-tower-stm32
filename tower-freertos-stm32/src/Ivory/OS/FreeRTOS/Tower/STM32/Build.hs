@@ -1,5 +1,5 @@
 
-module Ivory.OS.FreeRTOS.Tower.STM32F4.Build
+module Ivory.OS.FreeRTOS.Tower.STM32.Build
   ( makefile
   , artifacts
   ) where
@@ -8,7 +8,9 @@ import qualified Data.List as L
 
 import qualified Paths_tower_freertos_stm32 as P
 import Ivory.Artifact
-import System.FilePath
+import Ivory.BSP.STM32.VectorTable
+
+import Ivory.OS.FreeRTOS.Tower.STM32.Config
 
 makefile :: [FilePath] -> Artifact
 makefile userobjs = artifactString "Makefile" $ unlines
@@ -27,7 +29,7 @@ makefile userobjs = artifactString "Makefile" $ unlines
   , "  -mthumb -mcpu=cortex-m4 \\"
   , "  -mfloat-abi=hard -mfpu=fpv4-sp-d16"
   , ""
-  , "LDSCRIPT := stm32f405.lds"
+  , "LDSCRIPT := linker_script.lds"
   , ""
   , "OBJDIR := obj"
   , "OBJS := $(addprefix $(OBJDIR)/," ++ (L.intercalate " " objects) ++ ")"
@@ -53,24 +55,21 @@ makefile userobjs = artifactString "Makefile" $ unlines
   , ""
   ]
   where
-  objects = userobjs ++ boot_objects
+  objects = userobjs ++  ["stm32_init.o", "vector_table.o"]
 
-artifacts :: [Artifact]
-artifacts = map (artifactCabalFile P.getDataDir)
-                (boot_sources ++ boot_headers ++ [ linker_script ])
+artifacts :: Config -> [Artifact]
+artifacts conf = [ vector_table (config_processor conf)
+                 , linker_script conf
+                 ] ++ init_artifacts
+  where
+  init_artifacts = map (artifactCabalFile P.getDataDir)
+                ["support/stm32_init.c", "support/stm32_init.h"]
 
-linker_script :: FilePath
-linker_script = "support/stm32f405.lds"
+linker_script :: Config -> Artifact
+linker_script = error "linker script is undefined"
 
-boot_objects :: [FilePath]
-boot_objects = [ replaceExtension (takeFileName f) ".o" | f <- boot_sources ]
-
-boot_sources :: [FilePath]
-boot_sources =
-  [ "support/stm32_init.c"
-  , "support/stm32_ivory_init.c"
-  , "support/stm32f405_vectors.s"
-  ]
+--linker_script :: FilePath -- XXX FIXME
+---linker_script = "support/linker_script.lds.template"
 
 -- XXX many of these can be improved:
 --    - stm32_ivory_init is actually generated as an ivory module by
@@ -80,10 +79,4 @@ boot_sources =
 --    - the linker script can be generalized to a template, and filled in
 --      by sone config that specifies the exact chip, whether there is a
 --      bootloader, and so on
-
-boot_headers :: [FilePath]
-boot_headers =
-  [ "support/stm32_init.h"
-  , "support/stm32_ivory_init.h"
-  ]
 

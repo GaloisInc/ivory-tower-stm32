@@ -1,7 +1,7 @@
 
 module Ivory.OS.FreeRTOS.Tower
-  ( stm32f4FreeRTOS
+  ( stm32FreeRTOS
   ) where
 
-import Ivory.OS.FreeRTOS.Tower.STM32F4 (stm32f4FreeRTOS)
+import Ivory.OS.FreeRTOS.Tower.STM32 (stm32FreeRTOS)
 

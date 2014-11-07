@@ -12,6 +12,7 @@ create-sandbox:
 	cabal sandbox add-source ../../ivory/ivory-backend-c
 	cabal sandbox add-source ../../tower/tower
 	cabal sandbox add-source ../ivory-freertos-bindings
+	cabal sandbox add-source ../ivory-bsp-stm32
 	cabal install --dependencies-only
 
 clean:
