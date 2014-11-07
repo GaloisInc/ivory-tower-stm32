@@ -5,9 +5,8 @@ module Ivory.OS.FreeRTOS.Config
   ) where
 
 import Ivory.Artifact
+import Ivory.Artifact.Template
 import qualified Paths_ivory_freertos_bindings as P
-
-import Text.StringTemplate
 
 data Config = Config
   { cpu_clock_hz        :: Integer
@@ -18,31 +17,12 @@ data Config = Config
   }
 
 configHeader :: Config -> Artifact
-configHeader c =
-  artifactTransformErrString applyconf af
+configHeader c = artifactCabalFileTemplate P.getDataDir loc attrs
   where
-  af = artifactFile "FreeRTOSConfig.h" $ fmap suffix P.getDataDir
-  suffix f = f ++ "/freertos-sources/FreeRTOSConfig.h.template"
-  applyconf s =
-    let t  = newSTMP s :: StringTemplate String
-        t' = setManyAttrib attrs t
-    in case checkTemplate t' of
-      (Just e, _, _) -> Left (parseErr e)
-      (_, Just e, _) -> Left (missingAttrErr e)
-      (_, _, Just e) -> Left (missingTemplate e)
-      (_, _, _) -> Right (toString t')
-
+  loc = "freertos-sources/FreeRTOSConfig.h.template"
   attrs = [ ("cpu_clock_hz",       show (cpu_clock_hz c))
           , ("tick_rate_hz",       show (tick_rate_hz c))
           , ("max_priorities",     show (max_priorities c))
           , ("minimal_stack_size", show (minimal_stack_size c))
           , ("total_heap_size",    show (total_heap_size c))
           ]
-
-  prefix = "Error in FreeRTOSConfig.h.template: "
-  parseErr e = prefix ++ "Failed to parse: \n" ++ e
-  missingAttrErr es =  prefix ++ "The following attributes are missing:\n"
-                    ++ unlines es
-  missingTemplate es =  prefix ++ "Failed to lookup invoked templates: \n"
-                     ++ unlines es
-
