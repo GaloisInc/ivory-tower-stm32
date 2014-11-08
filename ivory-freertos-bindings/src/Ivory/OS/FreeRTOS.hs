@@ -33,14 +33,12 @@ wrapperfiles =
 
 kernelfiles :: [FilePath]
 kernelfiles =
-  [ "freertos-sources/croutine.c"
-  , "freertos-sources/list.c"
+  [ "freertos-sources/list.c"
   , "freertos-sources/queue.c"
   , "freertos-sources/tasks.c"
   , "freertos-sources/timers.c"
   , "freertos-sources/include/FreeRTOS.h"
   , "freertos-sources/include/StackMacros.h"
-  , "freertos-sources/include/croutine.h"
   , "freertos-sources/include/list.h"
   , "freertos-sources/include/mpu_wrappers.h"
   , "freertos-sources/include/portable.h"
