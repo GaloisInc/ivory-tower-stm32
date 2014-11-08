@@ -18,7 +18,6 @@ import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.Peripheral.CAN.Regs
 import Ivory.BSP.STM32.Peripheral.GPIOF4
-import Ivory.BSP.STM32.PlatformClock
 import Ivory.HW
 import Ivory.Language
 
@@ -171,9 +170,12 @@ legalTimings pclk bitrate =
   , t_seg2 >= 1 && t_seg2 <= 8
   ]
 
-canInit :: (STM32Interrupt i, PlatformClock p, GetAlloc eff ~ Scope cs, Break ~ GetBreaks (AllowBreak eff))
-        => CANPeriph i -> Integer -> GPIOPin -> GPIOPin -> Proxy p -> Ivory eff ()
-canInit periph bitrate rxpin txpin platform = do
+canInit :: ( STM32Interrupt i
+           , GetAlloc eff ~ Scope cs
+           , Break ~ GetBreaks (AllowBreak eff))
+        => CANPeriph i -> Integer -> GPIOPin -> GPIOPin -> ClockConfig
+        -> Ivory eff ()
+canInit periph bitrate rxpin txpin clockconfig = do
   canRCCEnable periph
   forM_ [rxpin, txpin] $ \ p -> do
     pinEnable        p
@@ -189,7 +191,7 @@ canInit periph bitrate rxpin txpin platform = do
     msr <- getReg (canRegMSR periph)
     return $ getBitDataField can_msr_inak msr /=? fromRep 0
 
-  let pclk = clockPClk1Hz $ platformClockConfig platform
+  let pclk = clockPClk1Hz clockconfig
   let timings = legalTimings pclk bitrate
   when (null timings) $ fail $ "no legal bxCAN bit timings for " ++ show bitrate ++ "bps with " ++ show pclk ++ "Hz APB clock"
 

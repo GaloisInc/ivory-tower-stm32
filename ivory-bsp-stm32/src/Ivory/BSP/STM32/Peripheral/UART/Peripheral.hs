@@ -19,7 +19,6 @@ import Ivory.Language
 import Ivory.HW
 
 import Ivory.BSP.STM32.Interrupt
-import Ivory.BSP.STM32.PlatformClock
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Peripheral.GPIOF4
 
@@ -89,11 +88,12 @@ initPin p af = do
   pinSetMode       p gpio_mode_af
 
 -- | Set the BRR register of a UART given a baud rate.
-setBaudRate :: (GetAlloc eff ~ Scope s, PlatformClock p) => UART i -> Proxy p -> Uint32 -> Ivory eff ()
-setBaudRate uart platform baud = do
+setBaudRate :: (GetAlloc eff ~ Scope s)
+            => UART i -> ClockConfig -> Uint32 -> Ivory eff ()
+setBaudRate uart clockconfig baud = do
   --pclk    <- assign =<< getFreqPClk platform (uartPClk uart)
   pclk    <- assign (fromIntegral (clockPClkHz (uartPClk uart)
-                        (platformClockConfig platform)))
+                                    clockconfig))
   cr1     <- getReg (uartRegCR1 uart)
   isOver8 <- assign (bitToBool (cr1 #. uart_cr1_over8))
   ipart   <- assign ((25 * pclk) `iDiv` (baud * (isOver8 ? (2, 4))))
@@ -125,16 +125,16 @@ setParity uart x =
     setField uart_cr1_pce (boolToBit x)
 
 -- | Initialize a UART device given a baud rate.
-uartInit :: (GetAlloc eff ~ Scope s, PlatformClock p)
-         => UART i -> Proxy p -> Uint32 -> Ivory eff ()
-uartInit uart platform baud = do
+uartInit :: (GetAlloc eff ~ Scope s)
+         => UART i -> ClockConfig -> Uint32 -> Ivory eff ()
+uartInit uart clockconfig baud = do
   -- Enable the peripheral clock and set up GPIOs.
   uartRCCEnable uart
   initPin (uartPinTx uart) (uartPinAF uart)
   initPin (uartPinRx uart) (uartPinAF uart)
 
   -- Initialize the baud rate and other settings.
-  setBaudRate uart platform baud
+  setBaudRate uart clockconfig baud
   setStopBits uart uart_stop_bits_1_0
   setWordLen  uart uart_word_len_8
   setParity   uart false

@@ -19,7 +19,6 @@ import Ivory.HW
 import Ivory.Stdlib
 
 import Ivory.BSP.STM32.Interrupt
-import Ivory.BSP.STM32.PlatformClock
 import Ivory.BSP.STM32.ClockConfig
 
 import Ivory.BSP.STM32.Peripheral.SPI.RegTypes
@@ -133,17 +132,16 @@ spiDeviceInit dev = do
   pinSetOutputType  pin gpio_outputtype_pushpull
   pinSetSpeed       pin gpio_speed_2mhz
 
-spiBusBegin :: (GetAlloc eff ~ Scope cs, PlatformClock p)
-            => Proxy p -> SPIDevice i -> Ivory eff ()
-spiBusBegin platform dev = do
+spiBusBegin :: (GetAlloc eff ~ Scope cs)
+            => ClockConfig -> SPIDevice i -> Ivory eff ()
+spiBusBegin clockconfig dev = do
   -- XXX can i eliminate this on/off cycle?
   spiModifyCr1        periph [ spi_cr1_spe ] true
   spiClearCr1         periph
   spiClearCr2         periph
-  -- XXX Can we change the platform code to just calculate this
-  -- statically? Shouldn't need runtime config, since that should
-  -- always be the same
-  baud <- spiDevBaud  platform periph (spiDevClockHz dev)
+  -- XXX We can change the spiDevBaud code to just calculate this
+  -- statically
+  baud <- spiDevBaud clockconfig periph (spiDevClockHz dev)
   modifyReg (spiRegCR1 periph) $ do
     setBit   spi_cr1_mstr
     setBit   spi_cr1_ssm
@@ -198,11 +196,11 @@ spiSetDR spi b =
 
 -- Internal Helper Functions ---------------------------------------------------
 
-spiDevBaud :: (GetAlloc eff ~ Scope s, PlatformClock p)
-           => Proxy p -> SPIPeriph i -> Integer -> Ivory eff SPIBaud
-spiDevBaud platform periph hz = do
+spiDevBaud :: (GetAlloc eff ~ Scope s)
+           => ClockConfig -> SPIPeriph i -> Integer -> Ivory eff SPIBaud
+spiDevBaud clockconfig periph hz = do
   (fplk :: Uint32) <- assign (fromIntegral (clockPClkHz (spiPClk periph)
-                                  (platformClockConfig platform)))
+                                              clockconfig))
   comment ("got fplk, target is " ++ show hz)
   let bestWithoutGoingOver = map aux tbl
       target = fromIntegral hz
