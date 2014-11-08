@@ -54,4 +54,18 @@ clockPClkHz :: PClk -> ClockConfig -> Integer
 clockPClkHz PClk1 = clockPClk1Hz
 clockPClkHz PClk2 = clockPClk2Hz
 
+externalXtal :: Integer -> Integer -> ClockConfig
+externalXtal xtal_mhz sysclk_mhz = ClockConfig
+  { clockconfig_source = External (xtal_mhz * 1000 * 1000)
+  , clockconfig_pll    = PLLFactor
+      { pll_m = xtal_mhz
+      , pll_n = sysclk_mhz * p
+      , pll_p = p
+      , pll_q = 7
+      }
+  , clockconfig_hclk_divider = 1
+  , clockconfig_pclk1_divider = 4
+  , clockconfig_pclk2_divider = 2
+  }
+  where p = 2
 

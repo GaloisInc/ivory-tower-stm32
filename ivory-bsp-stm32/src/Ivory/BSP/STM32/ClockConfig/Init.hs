@@ -89,7 +89,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
         comment "XXX handle this exception case with a breakpoint or reconfigure pll values for hsi"
         forever $ return ()
 
-  -- Select regulator voltage output scale 1 mode, sys freq 168mhz
+  -- Select regulator voltage output scale 1 mode
   modifyReg (rcc_reg_apb1enr rcc) $ setBit rcc_apb1en_pwr
   modifyReg (pwr_reg_cr pwr) $ setBit pwr_cr_vos
 
