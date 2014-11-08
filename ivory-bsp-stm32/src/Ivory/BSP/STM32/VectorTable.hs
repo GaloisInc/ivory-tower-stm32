@@ -3,6 +3,7 @@
 
 module Ivory.BSP.STM32.VectorTable
   ( vector_table
+  , reset_handler
   ) where
 
 import qualified Paths_ivory_bsp_stm32 as P

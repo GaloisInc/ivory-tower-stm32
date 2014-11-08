@@ -2,50 +2,21 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Ivory.BSP.STM32.Init
-  ( stm32InitModule
+module Ivory.BSP.STM32.ClockConfig.Init
+  ( init_clocks
   ) where
 
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.HW
 
-import Ivory.BSP.ARMv7M.Exception
-import Ivory.BSP.STM32.PlatformClock
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Peripheral.Flash
 import Ivory.BSP.STM32.Peripheral.PWR
 import Ivory.BSP.STM32.Peripheral.RCC
 
-stm32InitModule :: (PlatformClock p) => Proxy p -> Module
-stm32InitModule platform = package "stm32_ivory_init" $ do
-  inclHeader "stm32_init.h"
-  incl (reset_handler platform)
-  hw_moduledef
-  private $ do
-    incl (init_clocks platform)
-    incl init_relocate
-    incl init_libc
-    incl main_proc
-
-init_relocate :: Def('[]:->())
-init_relocate = importProc "init_relocate" "stm32_init.h"
-
-init_libc :: Def('[]:->())
-init_libc = importProc "init_libc" "stm32_init.h"
-
-main_proc :: Def('[]:->())
-main_proc = importProc "main" "stm32_init.h"
-
-reset_handler :: (PlatformClock p) => Proxy p -> Def('[]:->())
-reset_handler platform = proc (exceptionHandlerName Reset) $ body $ do
-  call_ init_relocate
-  call_ (init_clocks platform)
-  call_ init_libc
-  call_ main_proc
-
-init_clocks :: (PlatformClock p) => Proxy p -> Def('[]:->())
-init_clocks platform = proc "init_clocks" $ body $ do
+init_clocks :: ClockConfig -> Def('[]:->())
+init_clocks clockconfig = proc "init_clocks" $ body $ do
   comment ("platformClockConfig: " ++ (show cc)      ++ "\n" ++
            "sysclk: "  ++ (show (clockSysClkHz cc))  ++ "\n" ++
            "hclk:   "  ++ (show (clockHClkHz cc))    ++ "\n" ++
@@ -158,9 +129,9 @@ init_clocks platform = proc "init_clocks" $ body $ do
     when ((cfgr #. rcc_cfgr_sws) ==? rcc_sysclk_pll) $ breakOut
 
   where
-  cc = if clockPLL48ClkHz (platformClockConfig platform) == 48 * 1000 * 1000
-          then platformClockConfig platform
-          else error "paltformClockConfig invalid: 48MHz peripheral clock is wrong speed"
+  cc = if clockPLL48ClkHz clockconfig == 48 * 1000 * 1000
+          then clockconfig
+          else error "ClockConfig invalid: 48MHz peripheral clock is wrong speed"
   mm = pll_m (clockconfig_pll cc)
   m = if mm > 1 && mm < 64
          then fromRep (fromIntegral mm)

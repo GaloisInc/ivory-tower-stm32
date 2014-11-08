@@ -10,8 +10,7 @@ maintainer:          pat@galois.com
 build-type:          Simple
 cabal-version:       >=1.8
 
-data-files: support/vector_table.s.template,
-            support/linker_script.lds.template
+data-files: support/vector_table.s.template
 
 library
   exposed-modules:     Ivory.BSP.ARMv7M.Exception,
@@ -19,10 +18,10 @@ library
                        Ivory.BSP.ARMv7M.SystemControl.NVIC,
 
                        Ivory.BSP.STM32.ClockConfig,
+                       Ivory.BSP.STM32.ClockConfig.Init,
                        Ivory.BSP.STM32.MemoryMap,
                        Ivory.BSP.STM32.PlatformClock,
                        Ivory.BSP.STM32.Processor,
-                       Ivory.BSP.STM32.Init,
 
                        Ivory.BSP.STM32.Interrupt,
                        Ivory.BSP.STM32.Signalable,
