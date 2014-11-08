@@ -8,6 +8,7 @@ import qualified Data.List as L
 
 import qualified Paths_tower_freertos_stm32 as P
 import Ivory.Artifact
+import Ivory.Artifact.Template
 import Ivory.BSP.STM32.VectorTable
 
 import Ivory.OS.FreeRTOS.Tower.STM32.Config
@@ -22,7 +23,8 @@ makefile userobjs = artifactString "Makefile" $ unlines
   , "  -mlittle-endian \\"
   , "  -mthumb -mcpu=cortex-m4 \\"
   , "  -mfloat-abi=hard -mfpu=fpv4-sp-d16 \\"
-  , "  -DIVORY_TEST"
+  , "  -DIVORY_TEST \\"
+  , "  -I."
   , ""
   , "LDFLAGS := \\"
   , "  -mlittle-endian \\"
@@ -63,20 +65,16 @@ artifacts conf = [ vector_table (config_processor conf)
                  ] ++ init_artifacts
   where
   init_artifacts = map (artifactCabalFile P.getDataDir)
-                ["support/stm32_init.c", "support/stm32_init.h"]
+                ["support/stm32_freertos_init.c", "support/stm32_freertos_init.h"]
 
 linker_script :: Config -> Artifact
-linker_script = error "linker script is undefined"
-
---linker_script :: FilePath -- XXX FIXME
----linker_script = "support/linker_script.lds.template"
-
--- XXX many of these can be improved:
---    - stm32_ivory_init is actually generated as an ivory module by
---      ivory_bsp_stm32
---    - stm32f405_vectors is generated as an artifact by ivory_bsp_stm32
---    - some parts of stm32_init.c can be moved to ivory generated code
---    - the linker script can be generalized to a template, and filled in
---      by sone config that specifies the exact chip, whether there is a
---      bootloader, and so on
-
+linker_script _conf = artifactCabalFileTemplate P.getDataDir path attrs
+  where path = "support/linker_script.lds.template"
+        -- XXX USE CONF:
+        attrs = [("flash_origin",  "0x08000000") -- add 0x4000 for bootloader
+                ,("flash_length",  "1024K")      -- 1008K for bootloader
+                ,("sram_length",   "128K")
+                ,("ccsram_length", "64K")
+                ,("estack",        "0x20020000") -- sram end, given sram_start = 0x20000000
+                ,("reset_handler", reset_handler)
+                ]
