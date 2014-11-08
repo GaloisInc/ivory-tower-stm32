@@ -1,6 +1,6 @@
 
-#ifndef __STM32_INIT_H__
-#define __STM32_INIT_H__
+#ifndef STM32_FREERTOS_INIT_H__
+#define STM32_FREERTOS_INIT_H__
 
 #include <stdint.h>
 
@@ -8,5 +8,5 @@ void init_relocate(void);
 void init_libc(void);
 int  main(void);
 
-#endif //__STM32_INIT_H__
+#endif // STM32_FREERTOS_INIT_H__
 
