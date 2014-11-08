@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Main where
 
@@ -9,12 +10,16 @@ import Ivory.Tower.Compile
 import Ivory.OS.FreeRTOS.Tower.STM32
 
 -- XXX Eventaully the command line will take care of the following config:
-import Ivory.OS.FreeRTOS.Tower.STM32.Config
 import Ivory.BSP.STM32.ClockConfig
+-- Just using the PlatformClock constraint as a test
+import Ivory.BSP.STM32.PlatformClock
 
 import qualified Ivory.Compile.C.CmdlineFrontend as C
 
-test1_per :: Tower p ()
+instance PlatformClock Config where
+  getClockConfig = config_clock `fmap` getEnv
+
+test1_per :: (PlatformClock e) => Tower e ()
 test1_per = do
   (c1in, c1out) <- channel
   per <- period (Microseconds 1000)
