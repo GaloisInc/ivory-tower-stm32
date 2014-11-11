@@ -57,7 +57,7 @@ makefile userobjs = artifactString "Makefile" $ unlines
   , ""
   ]
   where
-  objects = userobjs ++  ["stm32_init.o", "vector_table.o"]
+  objects = userobjs ++  ["stm32_freertos_init.o", "vector_table.o"]
 
 artifacts :: Config -> [Artifact]
 artifacts conf = [ vector_table (config_processor conf)
