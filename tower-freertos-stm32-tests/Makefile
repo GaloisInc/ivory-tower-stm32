@@ -30,6 +30,7 @@ create-sandbox:
 	cabal sandbox add-source ../../ivory/ivory-stdlib
 	cabal sandbox add-source ../../ivory/ivory-backend-c
 	cabal sandbox add-source ../../tower/tower
+	cabal sandbox add-source ../../tower/tower-config
 	cabal sandbox add-source ../ivory-freertos-bindings
 	cabal sandbox add-source ../ivory-bsp-stm32
 	cabal sandbox add-source ../tower-freertos-stm32

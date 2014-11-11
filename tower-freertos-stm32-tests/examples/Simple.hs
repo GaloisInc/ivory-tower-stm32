@@ -4,13 +4,13 @@
 
 module Main where
 
+import System.Exit (exitFailure)
 import Ivory.Language
 import Ivory.Tower
 import Ivory.Tower.Compile
+import Tower.Config
 import Ivory.OS.FreeRTOS.Tower.STM32
 
--- XXX Eventaully the command line will take care of the following config:
-import Ivory.BSP.STM32.ClockConfig
 -- Just using the PlatformClock constraint as a test
 import Ivory.BSP.STM32.PlatformClock
 
@@ -37,12 +37,12 @@ test1_per = do
         refCopy s m
 
 main :: IO ()
-main = runTowerCompile test1_per platform copts
+main =  do
+  c <- configFromFile "default.conf" ["."]
+  case c of
+    Right conf -> do
+      let platform = stm32FreeRTOS conf
+      runTowerCompile test1_per platform copts
+    Left e -> putStrLn e >> exitFailure
   where
   copts = C.initialOpts { C.outDir = Just "tower-example-simple" }
-  platform = stm32FreeRTOS conf
-  conf = Config
-    { config_processor = STM32F405
-    , config_bootloader = NoBootloader
-    , config_clock = externalXtal 8 168
-    }
