@@ -4,22 +4,14 @@ default:
 
 .PHONY: freertos-test
 freertos-test:
-	rm -rf dist
-	cabal sandbox add-source ../ivory-freertos-bindings
-	cabal install --dependencies-only
 	cabal run freertos-bindings-test -- --src-dir=freertos-test
 	make -C freertos-test
 
 .PHONY: simple-test
 simple-test:
-	rm -rf dist
-	cabal sandbox add-source ../../tower/tower
-	cabal sandbox add-source ../ivory-freertos-bindings
-	cabal sandbox add-source ../ivory-bsp-stm32
-	cabal sandbox add-source ../tower-freertos-stm32
-	cabal install --dependencies-only
 	cabal run tower-example-simple -- --src-dir=tower-example-simple
 	make -C tower-example-simple
+
 
 create-sandbox:
 	cabal sandbox init
@@ -36,10 +28,16 @@ create-sandbox:
 	cabal sandbox add-source ../tower-freertos-stm32
 	cabal install --dependencies-only
 
-clean:
+dist-clean:
 	-rm -rf dist
+
+simple-clean: dist-clean
+	-rm -rf tower-exmple-simple
+
+freertos-test-clean: dist-clean
 	-rm -rf freertos-test
-	-rm -rf tower-example-simple
+
+clean: dist-clean simple-clean freertos-test-clean
 
 clean-sandbox: clean
 	-rm -rf .cabal-sandbox
