@@ -117,6 +117,7 @@ library
                        ivory-artifact,
                        ivory-stdlib,
                        ivory-hw,
+                       tower-config,
                        tower >= 0.9
 
   ghc-options:         -Wall

@@ -10,6 +10,7 @@ create-sandbox:
 	cabal sandbox add-source ../../ivory/ivory-opts
 	cabal sandbox add-source ../../ivory/ivory-stdlib
 	cabal sandbox add-source ../../ivory/ivory-backend-c
+	cabal sandbox add-source ../../tower/tower-config
 	cabal sandbox add-source ../../tower/tower
 	cabal install --dependencies-only
 

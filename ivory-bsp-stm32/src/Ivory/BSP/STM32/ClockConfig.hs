@@ -1,6 +1,8 @@
 
 module Ivory.BSP.STM32.ClockConfig where
 
+import Tower.Config
+
 data ClockSource = External Integer | Internal deriving (Eq, Show)
 
 data PLLFactor = PLLFactor
@@ -69,3 +71,8 @@ externalXtal xtal_mhz sysclk_mhz = ClockConfig
   }
   where p = 2
 
+instance Configurable ClockConfig where
+  fromConfig v = do
+    xtal_mhz <- element "xtalMHz" v
+    sysclk_mhz <- element "sysclkMHz" v
+    return (externalXtal xtal_mhz sysclk_mhz)
