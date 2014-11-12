@@ -19,8 +19,6 @@ import Ivory.HW.Module
 
 
 import Ivory.BSP.STM32.Interrupt
-import Ivory.BSP.STM32.Signalable
-import Ivory.BSP.STM32.PlatformClock
 
 import Ivory.BSP.STM32.Peripheral.CAN
 import Ivory.BSP.STM32.Peripheral.GPIOF4
@@ -28,7 +26,7 @@ import Ivory.BSP.STM32.Peripheral.GPIOF4
 import Ivory.BSP.STM32.Driver.CAN.Types
 
 
-canTower :: (PlatformClock p, STM32Signal p)
+canTower :: (HasClockConfig p, STM32Signal p)
          => CANPeriph (InterruptType p)
          -> Integer
          -> GPIOPin
@@ -47,7 +45,7 @@ canTower periph bitrate rxpin txpin = do
 
 
 canPeripheralDriver :: forall p
-                     . (STM32Signal p, PlatformClock p)
+                     . (STM32Signal p, HasClockConfig p)
                     => CANPeriph (InterruptType p)
                     -> Integer
                     -> GPIOPin

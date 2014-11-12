@@ -4,6 +4,7 @@ module Ivory.BSP.STM32.Interrupt where
 
 import Ivory.Language
 import Ivory.BSP.ARMv7M.Exception
+import Ivory.Tower
 
 class STM32Interrupt i where
   interruptIRQn             :: i -> IRQn
@@ -18,6 +19,12 @@ class STM32Interrupt i where
 data IRQ i = Exception Exception
            | Interrupt i
            deriving (Eq, Show)
+
+instance (STM32Interrupt i) => Signalable (IRQ i) where
+  signalName (Exception e) = undefined
+  signalName (Interrupt i) = interruptHandlerName i
+  signalHandler (Exception e) _ = return () -- XXX
+  signalHandler (Interrupt i) _ = return () -- XXX
 
 interrupt_set_to_syscall_priority :: (STM32Interrupt i) => i -> Ivory eff ()
 interrupt_set_to_syscall_priority i =

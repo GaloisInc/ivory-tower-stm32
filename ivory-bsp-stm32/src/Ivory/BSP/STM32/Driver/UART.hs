@@ -5,6 +5,7 @@
 {-# LANGUAGE RankNTypes #-}
 
 module Ivory.BSP.STM32.Driver.UART
+where {-
   ( uartTower
   , uartTowerFlushable
   , uartTowerDebuggable
@@ -16,13 +17,10 @@ import GHC.TypeLits
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
-import Ivory.Tower.Signal (withUnsafeSignalEvent)
 import Ivory.HW
 import Ivory.HW.Module
 
 import Ivory.BSP.STM32.Interrupt
-import Ivory.BSP.STM32.Signalable
-import Ivory.BSP.STM32.PlatformClock
 
 import Ivory.BSP.STM32.Peripheral.UART.Regs
 import Ivory.BSP.STM32.Peripheral.UART.Peripheral
@@ -51,50 +49,50 @@ emptyDbg =
     }
 
 uartTower :: forall n p
-           . (ANat n, PlatformClock p, STM32Signal p)
+           . (ANat n, HasClockConfig p, STM32Signal p)
           => UART (InterruptType p)
           -> Integer
           -> Proxy (n :: Nat)
-          -> Tower p ( ChannelSink   (Stored Uint8)
-                     , ChannelSource (Stored Uint8))
+          -> Tower p ( ChanOutput (Stored Uint8)
+                     , ChanInput  (Stored Uint8))
 uartTower u b s = uartTowerDebuggable u b s emptyDbg
 
 uartTowerFlushable :: forall n p
-           . (ANat n, PlatformClock p, STM32Signal p)
+           . (ANat n, HasClockConfig p, STM32Signal p)
           => UART (InterruptType p)
           -> Integer
           -> Proxy (n :: Nat)
-          -> Tower p ( ChannelSink   (Stored Uint8)
-                     , ChannelSource (Stored Uint8)
-                     , ChannelSource (Stored ITime))
+          -> Tower p ( ChanOutput   (Stored Uint8)
+                     , ChanInput (Stored Uint8)
+                     , ChanInput (Stored ITime))
 uartTowerFlushable uart baud sizeproxy = do
-  (src_ostream, snk_ostream) <- channel' sizeproxy Nothing
-  (src_istream, snk_istream) <- channel' sizeproxy Nothing
-  (src_flush, snk_flush) <- channel' (Proxy :: Proxy 2) Nothing
+  (src_ostream, snk_ostream) <- channel
+  (src_istream, snk_istream) <- channel
+  (src_flush, snk_flush) <- channel
 
-  task (uartName uart ++ "_flushable_driver") $ do
+  monitor (uartName uart ++ "_flushable_driver") $ do
     txcheck_evt <- withChannelEvent snk_flush "flush"
-    uartTowerTask uart baud snk_ostream src_istream txcheck_evt emptyDbg
+    uartTowerMonitor uart baud snk_ostream src_istream txcheck_evt emptyDbg
 
   return (snk_istream, src_ostream, src_flush)
 
 
 uartTowerDebuggable :: forall n p
-           . (ANat n, PlatformClock p, STM32Signal p)
+           . (ANat n, HasClockConfig p, STM32Signal p)
           => UART (InterruptType p)
           -> Integer
           -> Proxy (n :: Nat)
           -> UARTTowerDebugger
-          -> Tower p ( ChannelSink   (Stored Uint8)
-                     , ChannelSource (Stored Uint8))
+          -> Tower p ( ChanOutput   (Stored Uint8)
+                     , ChanInput (Stored Uint8))
 uartTowerDebuggable uart baud sizeproxy dbg = do
 
-  (src_ostream, snk_ostream) <- channel' sizeproxy Nothing
-  (src_istream, snk_istream) <- channel' sizeproxy Nothing
+  (src_ostream, snk_ostream) <- channel
+  (src_istream, snk_istream) <- channel
 
-  task (uartName uart ++ "_driver") $ do
-    txcheck_evt <- withPeriodicEvent txcheck_period
-    uartTowerTask uart baud snk_ostream src_istream txcheck_evt dbg
+  txcheck_evt <- period txcheck_period
+  monitor (uartName uart ++ "_driver") $ do
+    uartTowerMonitor uart baud snk_ostream src_istream txcheck_evt dbg
 
   return (snk_istream, src_ostream)
 
@@ -102,16 +100,16 @@ uartTowerDebuggable uart baud sizeproxy dbg = do
   txcheck_period = Milliseconds 1
 
 
-uartTowerTask :: forall p
-               . (STM32Signal p, PlatformClock p)
+uartTowerMonitor :: forall p e
+               . (STM32Signal p, HasClockConfig e)
               => UART (InterruptType p)
               -> Integer
-              -> ChannelSink (Stored Uint8)
-              -> ChannelSource (Stored Uint8)
-              -> Event (Stored ITime)
+              -> ChanOutput (Stored Uint8)
+              -> ChanInput (Stored Uint8)
+              -> ChanInput (Stored ITime)
               -> UARTTowerDebugger
-              -> Task p ()
-uartTowerTask uart baud snk_ostream src_istream txcheck_evt dbg = do
+              -> Monitor e ()
+uartTowerMonitor uart baud snk_ostream src_istream txcheck_evt dbg = do
   o <- withChannelReceiver snk_ostream "ostream"
   i <- withChannelEmitter  src_istream "istream"
 
@@ -185,3 +183,6 @@ uartTowerTask uart baud snk_ostream src_istream txcheck_evt dbg = do
 
 
   where named n = (uartName uart) ++ "_"++ n
+-}
+
+-- XXX gave up on fixing this for the moment

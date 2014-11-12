@@ -20,13 +20,9 @@ library
                        Ivory.BSP.STM32.ClockConfig,
                        Ivory.BSP.STM32.ClockConfig.Init,
                        Ivory.BSP.STM32.MemoryMap,
-                       Ivory.BSP.STM32.PlatformClock,
                        Ivory.BSP.STM32.Processor,
 
                        Ivory.BSP.STM32.Interrupt,
-                       Ivory.BSP.STM32.Signalable,
-                       Ivory.BSP.STM32.Signalable.TH,
-                       Ivory.BSP.STM32.Signalable.Class,
                        Ivory.BSP.STM32.VectorTable,
 
                        Ivory.BSP.STM32.Peripheral.ATIM18.Regs,
@@ -81,9 +77,9 @@ library
                        --Ivory.BSP.STM32.Driver.I2C.I2CDeviceAddr,
                        --Ivory.BSP.STM32.Driver.I2C.I2CDriverState,
 
-                       --Ivory.BSP.STM32.Driver.SPI,
-                       --Ivory.BSP.STM32.Driver.SPI.Types,
-                       --Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle,
+                       Ivory.BSP.STM32.Driver.SPI,
+                       Ivory.BSP.STM32.Driver.SPI.Types,
+                       Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle,
 
                        --Ivory.BSP.STM32.Driver.UART,
 
