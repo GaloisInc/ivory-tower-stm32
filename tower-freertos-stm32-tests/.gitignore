@@ -1,3 +1,5 @@
 dist
 freertos-test
 tower-example-simple
+cabal.sandbox.config
+.cabal-sandbox
