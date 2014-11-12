@@ -10,12 +10,12 @@ import Ivory.Tower.Compile
 import Ivory.OS.FreeRTOS.Tower.STM32
 
 -- Just using the PlatformClock constraint to make sure it works.
-import Ivory.BSP.STM32.PlatformClock
+import Ivory.BSP.STM32.ClockConfig
 
-instance PlatformClock Config where
+instance HasClockConfig Config where
   getClockConfig = config_clock `fmap` getEnv
 
-test1_per :: (PlatformClock e) => Tower e ()
+test1_per :: (HasClockConfig e) => Tower e ()
 test1_per = do
   (c1in, c1out) <- channel
   per <- period (Microseconds 1000)
