@@ -2,6 +2,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Ivory.BSP.STM32.Driver.SPI
   ( spiTower
@@ -26,11 +28,12 @@ import Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle
 
 
 spiTower :: forall s e
-          . (HasClockConfig e, Signalable s, STM32Interrupt s)
-         => [SPIDevice s]
+          . (Signalable s, STM32Interrupt s)
+         => (e -> ClockConfig)
+         -> [SPIDevice s]
          -> Tower e ( ChanInput (Struct "spi_transaction_request")
                     , ChanOutput   (Struct "spi_transaction_result"))
-spiTower devices = do
+spiTower tocc devices = do
   towerDepends spiDriverTypes
   towerModule  spiDriverTypes
   reqchan <- channel
@@ -39,7 +42,7 @@ spiTower devices = do
                 (do debugToggle debugPin1
                     interrupt_disable interrupt)
   monitor (periphname ++ "PeripheralDriver") $
-    spiPeripheralDriver periph devices (snd reqchan) (fst reschan) irq
+    spiPeripheralDriver tocc periph devices (snd reqchan) (fst reschan) irq
   return (fst reqchan, snd reschan)
   where
   interrupt = spiInterrupt periph
@@ -56,15 +59,16 @@ spiTower devices = do
 
 
 spiPeripheralDriver :: forall s e
-                     . (Signalable s, STM32Interrupt s, HasClockConfig e)
-                    => SPIPeriph s
+                     . (Signalable s, STM32Interrupt s)
+                    => (e -> ClockConfig)
+                    -> SPIPeriph s
                     -> [SPIDevice s]
                     -> ChanOutput   (Struct "spi_transaction_request")
                     -> ChanInput    (Struct "spi_transaction_result")
                     -> ChanOutput (Stored ITime)
                     -> Monitor e ()
-spiPeripheralDriver periph devices req_out res_in irq = do
-  clockconfig <- getClockConfig
+spiPeripheralDriver tocc periph devices req_out res_in irq = do
+  clockconfig <- fmap tocc getEnv
   monitorModuleDef $ hw_moduledef
   done <- state "done"
   handler systemInit "initialize_hardware"$ callback $ \_ -> do

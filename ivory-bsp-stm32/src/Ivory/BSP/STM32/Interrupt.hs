@@ -21,7 +21,7 @@ data IRQ i = Exception Exception
            deriving (Eq, Show)
 
 instance (STM32Interrupt i) => Signalable (IRQ i) where
-  signalName (Exception e) = undefined
+  signalName (Exception e) = undefined  -- XXX
   signalName (Interrupt i) = interruptHandlerName i
   signalHandler (Exception e) _ = return () -- XXX
   signalHandler (Interrupt i) _ = return () -- XXX

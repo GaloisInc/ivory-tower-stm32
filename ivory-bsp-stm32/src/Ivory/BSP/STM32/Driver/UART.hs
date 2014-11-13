@@ -3,6 +3,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Ivory.BSP.STM32.Driver.UART
 where {-
@@ -49,7 +50,7 @@ emptyDbg =
     }
 
 uartTower :: forall n p
-           . (ANat n, HasClockConfig p, STM32Signal p)
+           . (ANat n, Env ClockConfig p, STM32Signal p)
           => UART (InterruptType p)
           -> Integer
           -> Proxy (n :: Nat)
@@ -58,7 +59,7 @@ uartTower :: forall n p
 uartTower u b s = uartTowerDebuggable u b s emptyDbg
 
 uartTowerFlushable :: forall n p
-           . (ANat n, HasClockConfig p, STM32Signal p)
+           . (ANat n, Env ClockConfig p, STM32Signal p)
           => UART (InterruptType p)
           -> Integer
           -> Proxy (n :: Nat)
@@ -78,7 +79,7 @@ uartTowerFlushable uart baud sizeproxy = do
 
 
 uartTowerDebuggable :: forall n p
-           . (ANat n, HasClockConfig p, STM32Signal p)
+           . (ANat n, Env ClockConfig p, STM32Signal p)
           => UART (InterruptType p)
           -> Integer
           -> Proxy (n :: Nat)
@@ -101,7 +102,7 @@ uartTowerDebuggable uart baud sizeproxy dbg = do
 
 
 uartTowerMonitor :: forall p e
-               . (STM32Signal p, HasClockConfig e)
+               . (STM32Signal p, Env ClockConfig e)
               => UART (InterruptType p)
               -> Integer
               -> ChanOutput (Stored Uint8)

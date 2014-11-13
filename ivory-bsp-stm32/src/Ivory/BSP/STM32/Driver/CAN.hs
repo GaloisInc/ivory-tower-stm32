@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Ivory.BSP.STM32.Driver.CAN
   ( canTower
@@ -26,12 +27,12 @@ import Ivory.BSP.STM32.Peripheral.GPIOF4
 import Ivory.BSP.STM32.Driver.CAN.Types
 
 
-canTower :: (HasClockConfig p, STM32Signal p)
+canTower :: (Env ClockConfig e, STM32Signal p)
          => CANPeriph (InterruptType p)
          -> Integer
          -> GPIOPin
          -> GPIOPin
-         -> Tower p ( ChannelSource (Struct "can_transmit_request")
+         -> Tower e ( ChannelSource (Struct "can_transmit_request")
                     , ChannelSink   (Struct "can_receive_result"))
 canTower periph bitrate rxpin txpin = do
   towerDepends canDriverTypes
@@ -44,8 +45,8 @@ canTower periph bitrate rxpin txpin = do
   return (src reqchan, snk reschan)
 
 
-canPeripheralDriver :: forall p
-                     . (STM32Signal p, HasClockConfig p)
+canPeripheralDriver :: forall p e
+                     . (STM32Signal p, Env ClockConfig e)
                     => CANPeriph (InterruptType p)
                     -> Integer
                     -> GPIOPin
@@ -53,7 +54,7 @@ canPeripheralDriver :: forall p
                     -> ChannelSink   (Struct "can_transmit_request")
                     -> ChannelSource (Struct "can_receive_result")
                     -> (ChannelSource (Struct "can_transmit_request"), ChannelSink (Struct "can_transmit_request"))
-                    -> Task p ()
+                    -> Task e ()
 canPeripheralDriver periph bitrate rxpin txpin req_sink res_source pendingRequests = do
   taskModuleDef $ hw_moduledef
 

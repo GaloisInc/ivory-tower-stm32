@@ -3,6 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Ivory.BSP.STM32.Driver.I2C
   ( i2cTower
@@ -30,11 +31,11 @@ import Ivory.BSP.STM32.Driver.I2C.I2CDriverState
 
 
 
-i2cTower :: (HasClockConfig p, STM32Signal p)
+i2cTower :: (Env ClockConfig e, STM32Signal p)
          => I2CPeriph (InterruptType p)
          -> GPIOPin
          -> GPIOPin
-         -> Tower p ( ChannelSource (Struct "i2c_transaction_request")
+         -> Tower e ( ChannelSource (Struct "i2c_transaction_request")
                     , ChannelSink   (Struct "i2c_transaction_result"))
 i2cTower periph sda scl = do
   towerDepends i2cTowerTypes
@@ -50,14 +51,14 @@ i2cTowerTypes = package "i2cTowerTypes" $ do
   defStruct (Proxy :: Proxy "i2c_transaction_request")
   defStruct (Proxy :: Proxy "i2c_transaction_result")
 
-i2cPeripheralDriver :: forall p
-                     . (STM32Signal p, HasClockConfig p)
+i2cPeripheralDriver :: forall p e
+                     . (STM32Signal p, Env ClockConfig e)
                     => I2CPeriph (InterruptType p)
                     -> GPIOPin
                     -> GPIOPin
                     -> ChannelSink   (Struct "i2c_transaction_request")
                     -> ChannelSource (Struct "i2c_transaction_result")
-                    -> Task p ()
+                    -> Task e ()
 i2cPeripheralDriver periph sda scl req_sink res_source = do
   taskModuleDef $ hw_moduledef
 

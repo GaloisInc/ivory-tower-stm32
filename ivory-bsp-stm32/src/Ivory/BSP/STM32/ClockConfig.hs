@@ -1,8 +1,6 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
 
 module Ivory.BSP.STM32.ClockConfig where
 
-import Ivory.Tower
 import Tower.Config
 
 data ClockSource = External Integer | Internal deriving (Eq, Show)
@@ -72,9 +70,6 @@ externalXtal xtal_mhz sysclk_mhz = ClockConfig
   , clockconfig_pclk2_divider = 2
   }
   where p = 2
-
-class HasClockConfig e where
-  getClockConfig :: (BaseUtils m e) => m e ClockConfig
 
 instance Configurable ClockConfig where
   fromConfig v = do
