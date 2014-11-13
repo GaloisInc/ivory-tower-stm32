@@ -1,5 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Ivory.OS.FreeRTOS.Tower.STM32
   ( stm32FreeRTOS
@@ -21,16 +23,16 @@ import           Ivory.OS.FreeRTOS.Tower.STM32.Config
 import Ivory.BSP.STM32.VectorTable (reset_handler)
 import Ivory.BSP.STM32.ClockConfig.Init (init_clocks)
 
-stm32FreeRTOS :: Config -> T.TowerPlatform Config
-stm32FreeRTOS config = T.TowerPlatform
+stm32FreeRTOS :: (e -> STM32Config) -> e -> T.TowerPlatform e
+stm32FreeRTOS fromEnv e = T.TowerPlatform
   { T.threadModules    = threadModules
   , T.monitorModules   = monitorModules
-  , T.systemModules    = stm32Modules config
-  , T.systemArtifacts  = stm32Artifacts config
-  , T.platformEnv      = config
+  , T.systemModules    = stm32Modules (fromEnv e)
+  , T.systemArtifacts  = stm32Artifacts (fromEnv e)
+  , T.platformEnv      = e
   }
 
-stm32Modules :: Config -> AST.Tower -> [Module]
+stm32Modules :: STM32Config -> AST.Tower -> [Module]
 stm32Modules conf ast = systemModules ast ++ [ main_module ]
   where
   main_module :: Module
@@ -39,7 +41,7 @@ stm32Modules conf ast = systemModules ast ++ [ main_module ]
     incl reset_handler_proc
     hw_moduledef
     private $ do
-      incl (init_clocks (config_clock conf))
+      incl (init_clocks (stm32config_clock conf))
       incl init_relocate
       incl init_libc
       incl main_proc
@@ -47,7 +49,7 @@ stm32Modules conf ast = systemModules ast ++ [ main_module ]
   reset_handler_proc :: Def('[]:->())
   reset_handler_proc = proc reset_handler $ body $ do
     call_ init_relocate
-    call_ (init_clocks (config_clock conf))
+    call_ (init_clocks (stm32config_clock conf))
     call_ init_libc
     call_ main_proc
 
@@ -58,7 +60,7 @@ stm32Modules conf ast = systemModules ast ++ [ main_module ]
   main_proc :: Def('[]:->())
   main_proc = importProc "main" "stm32_freertos_init.h"
 
-stm32Artifacts :: Config -> AST.Tower -> [Module] -> [Artifact]
+stm32Artifacts :: STM32Config -> AST.Tower -> [Module] -> [Artifact]
 stm32Artifacts conf ast ms = (systemArtifacts ast ms) ++ as
   where
   as = [ STM32.makefile makeobjs ] ++ STM32.artifacts conf

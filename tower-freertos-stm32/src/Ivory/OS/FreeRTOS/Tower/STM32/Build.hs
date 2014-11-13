@@ -59,15 +59,15 @@ makefile userobjs = artifactString "Makefile" $ unlines
   where
   objects = userobjs ++  ["stm32_freertos_init.o", "vector_table.o"]
 
-artifacts :: Config -> [Artifact]
-artifacts conf = [ vector_table (config_processor conf)
+artifacts :: STM32Config -> [Artifact]
+artifacts conf = [ vector_table (stm32config_processor conf)
                  , linker_script conf
                  ] ++ init_artifacts
   where
   init_artifacts = map (artifactCabalFile P.getDataDir)
                 ["support/stm32_freertos_init.c", "support/stm32_freertos_init.h"]
 
-linker_script :: Config -> Artifact
+linker_script :: STM32Config -> Artifact
 linker_script _conf = artifactCabalFileTemplate P.getDataDir path attrs
   where path = "support/linker_script.lds.template"
         -- XXX USE CONF:
