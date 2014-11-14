@@ -1,15 +1,3 @@
-CREATE_SANDBOX_SRCS=																		 \
-  ../../ivory/ivory/																		 \
-	../../ivory/ivory-artifact/														 \
-	../../ivory/ivory-hw/																	 \
-	../../ivory/ivory-opts/																 \
-	../../ivory/ivory-stdlib/															 \
-	../../ivory/ivory-backend-c/													 \
-	../../tower/tower/																		 \
-	../../tower/tower-config                               \
-	../ivory-freertos-bindings/														 \
-	../ivory-bsp-stm32/																		 \
-	../tower-freertos-stm32/
 
 default:
 	cabal build
@@ -27,8 +15,18 @@ simple-test:
 
 create-sandbox:
 	cabal sandbox init
-	cabal sandbox add-source $(CREATE_SANDBOX_SRCS)
-	cabal install $(CREATE_SANDBOX_SRCS)
+	cabal sandbox add-source ../../ivory/ivory
+	cabal sandbox add-source ../../ivory/ivory-artifact
+	cabal sandbox add-source ../../ivory/ivory-hw
+	cabal sandbox add-source ../../ivory/ivory-opts
+	cabal sandbox add-source ../../ivory/ivory-stdlib
+	cabal sandbox add-source ../../ivory/ivory-backend-c
+	cabal sandbox add-source ../../tower/tower
+	cabal sandbox add-source ../../tower/tower-config
+	cabal sandbox add-source ../ivory-freertos-bindings
+	cabal sandbox add-source ../ivory-bsp-stm32
+	cabal sandbox add-source ../tower-freertos-stm32
+	cabal install --dependencies-only
 
 dist-clean:
 	-rm -rf dist
