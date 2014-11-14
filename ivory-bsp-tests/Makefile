@@ -9,6 +9,13 @@ led-test:
 led-test-clean:
 	rm -rf bsp-led-test
 
+spi-test:
+	cabal run bsp-spi-test-gen -- --src-dir=bsp-spi-test
+	make -C bsp-spi-test
+
+spi-test-clean:
+	rm -rf bsp-spi-test
+
 create-sandbox:
 	cabal sandbox init
 	cabal sandbox add-source ../../ivory/ivory

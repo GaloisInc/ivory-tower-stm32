@@ -28,7 +28,7 @@ import Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle
 
 
 spiTower :: forall s e
-          . (Signalable s, STM32Interrupt s)
+          . (STM32Interrupt s)
          => (e -> ClockConfig)
          -> [SPIDevice s]
          -> Tower e ( ChanInput (Struct "spi_transaction_request")
@@ -38,7 +38,8 @@ spiTower tocc devices = do
   towerModule  spiDriverTypes
   reqchan <- channel
   reschan <- channel
-  irq <- signalUnsafe interrupt (Microseconds 20)
+  irq <- signalUnsafe (Interrupt interrupt)
+                (Microseconds 20)
                 (do debugToggle debugPin1
                     interrupt_disable interrupt)
   monitor (periphname ++ "PeripheralDriver") $
@@ -59,7 +60,7 @@ spiTower tocc devices = do
 
 
 spiPeripheralDriver :: forall s e
-                     . (Signalable s, STM32Interrupt s)
+                     . (STM32Interrupt s)
                     => (e -> ClockConfig)
                     -> SPIPeriph s
                     -> [SPIDevice s]
