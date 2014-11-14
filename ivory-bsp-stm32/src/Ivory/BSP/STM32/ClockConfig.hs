@@ -71,8 +71,9 @@ externalXtal xtal_mhz sysclk_mhz = ClockConfig
   }
   where p = 2
 
-instance Configurable ClockConfig where
-  fromConfig v = do
-    xtal_mhz <- element "xtalMHz" v
-    sysclk_mhz <- element "sysclkMHz" v
-    return (externalXtal xtal_mhz sysclk_mhz)
+clockConfigParser :: ConfigParser ClockConfig
+clockConfigParser = do
+  xtal_mhz   <- subsection "xtalMHz" integer
+  sysclk_mhz <- subsection "sysclkMHz" (integer `withDefault` 168)
+  return (externalXtal xtal_mhz sysclk_mhz)
+

@@ -1,6 +1,7 @@
 
 module Ivory.BSP.STM32.Processor
   ( Processor(..)
+  , processorParser
   ) where
 
 import Data.Char (toUpper)
@@ -11,8 +12,9 @@ data Processor
   | STM32F427
   deriving (Eq, Show)
 
-instance Configurable Processor where
-  fromConfig v = case fmap (map toUpper) (fromConfig v) of
-    Just "STM32F405" -> Just STM32F405
-    Just "STM32F427" -> Just STM32F427
-    _ -> Nothing
+processorParser :: ConfigParser Processor
+processorParser = string >>= \v ->
+  case map toUpper v of
+    "STM32F405" -> return STM32F405
+    "STM32F427" -> return STM32F427
+    _ -> fail ("expected Processor, got " ++ v)
