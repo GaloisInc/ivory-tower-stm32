@@ -1,3 +1,5 @@
+{-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
 
 module Ivory.BSP.STM32.Interrupt where
@@ -21,10 +23,14 @@ data IRQ i = Exception Exception
            deriving (Eq, Show)
 
 instance (STM32Interrupt i) => Signalable (IRQ i) where
-  signalName (Exception e) = undefined  -- XXX
+  signalName (Exception e) = exceptionHandlerName e
   signalName (Interrupt i) = interruptHandlerName i
-  signalHandler (Exception e) _ = return () -- XXX
-  signalHandler (Interrupt i) _ = return () -- XXX
+  signalHandler (Exception e) b = incl handlerProc
+    where handlerProc :: Def('[]:->())
+          handlerProc = proc (exceptionHandlerName e) (body b)
+  signalHandler (Interrupt i) b = incl handlerProc
+    where handlerProc :: Def('[]:->())
+          handlerProc = proc (interruptHandlerName i) (body b)
 
 interrupt_set_to_syscall_priority :: (STM32Interrupt i) => i -> Ivory eff ()
 interrupt_set_to_syscall_priority i =

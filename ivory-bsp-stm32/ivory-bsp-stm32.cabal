@@ -83,7 +83,6 @@ library
 
                        --Ivory.BSP.STM32.Driver.UART,
 
-                       Ivory.BSP.STM32F405.ClockConfig,
                        Ivory.BSP.STM32F405.MemoryMap,
                        Ivory.BSP.STM32F405.Interrupt,
                        Ivory.BSP.STM32F405.Interrupt.API,
