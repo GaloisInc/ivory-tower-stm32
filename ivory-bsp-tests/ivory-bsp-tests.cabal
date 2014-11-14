@@ -28,6 +28,7 @@ library
                        ivory-stdlib,
                        ivory-hw,
                        tower              >= 0.9,
+                       tower-config,
                        tower-statemachine >= 0.9,
                        tower-freertos-stm32 >= 0.9,
                        ivory-bsp-stm32
@@ -69,6 +70,7 @@ executable bsp-led-test-gen
                        ivory-stdlib,
                        ivory-hw,
                        tower                >= 0.9,
+                       tower-config,
                        tower-freertos-stm32 >= 0.9,
                        ivory-bsp-stm32,
                        ivory-bsp-tests

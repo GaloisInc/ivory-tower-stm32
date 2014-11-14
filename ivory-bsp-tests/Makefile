@@ -3,8 +3,11 @@ default:
 	cabal build
 
 led-test:
-	cabal run bsp-led-test-gen -- --src-dir=bsp-led-test --platform=px4fmuXXX
+	cabal run bsp-led-test-gen -- --src-dir=bsp-led-test
 	make -C bsp-led-test
+
+led-test-clean:
+	rm -rf bsp-led-test
 
 create-sandbox:
 	cabal sandbox init

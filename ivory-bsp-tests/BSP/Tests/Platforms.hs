@@ -5,7 +5,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 
 module BSP.Tests.Platforms
-  ( ColoredLEDs(..)
+  ( testPlatformParser
+  , ColoredLEDs(..)
   , TestUART(..)
   , TestSPI(..)
   , TestI2C(..)
@@ -15,6 +16,9 @@ module BSP.Tests.Platforms
   , f4discovery
   , open407vc
   ) where
+
+import Tower.Config
+import Data.Char (toUpper)
 
 import qualified Ivory.BSP.STM32F405.CAN         as F405
 import qualified Ivory.BSP.STM32F405.UART        as F405
@@ -31,6 +35,16 @@ import Ivory.BSP.STM32.Peripheral.I2C
 import Ivory.OS.FreeRTOS.Tower.STM32.Config
 
 import BSP.Tests.LED
+
+testPlatformParser :: ConfigParser (TestPlatform F405.Interrupt)
+testPlatformParser = do
+  p <- withDefault (subsection "args" $ subsection "platform" string)
+                   "px4fmuv17"
+  case map toUpper p of
+    "PX4FMUV17"   -> return px4fmuv17
+    "F4DISCOVERY" -> return f4discovery
+    "OPEN407VC"   -> return open407vc
+    _ -> fail ("no such platform " ++ p)
 
 data ColoredLEDs =
   ColoredLEDs
