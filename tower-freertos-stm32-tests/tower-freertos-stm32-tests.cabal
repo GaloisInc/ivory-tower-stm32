@@ -13,7 +13,6 @@ flag werror
 
 executable tower-example-simple
   main-is:             Simple.hs
-  other-modules:       Examples
   hs-source-dirs:      examples
   ghc-options:          -Wall
   build-depends:       base >= 4.6,

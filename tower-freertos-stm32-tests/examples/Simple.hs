@@ -1,4 +1,6 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -7,16 +9,14 @@ module Main where
 import Ivory.Language
 import Ivory.Tower
 import Ivory.Tower.Compile
+import Tower.Config
 import Ivory.OS.FreeRTOS.Tower.STM32
 
 -- Just using the PlatformClock constraint to make sure it works.
 import Ivory.BSP.STM32.ClockConfig
 
-instance HasClockConfig Config where
-  getClockConfig = config_clock `fmap` getEnv
-
-test1_per :: (HasClockConfig e) => Tower e ()
-test1_per = do
+test1_per :: (e -> ClockConfig) -> Tower e ()
+test1_per _tocc = do
   (c1in, c1out) <- channel
   per <- period (Microseconds 1000)
   monitor "m1" $ do
@@ -33,4 +33,12 @@ test1_per = do
         refCopy s m
 
 main :: IO ()
-main = towerCompile stm32FreeRTOS test1_per
+main = towerCompile p (test1_per stm32config_clock)
+  where
+  p topts = do
+    (c, t') <- getConfig topts
+    case fromConfig c of
+      Just stm32cfg ->
+        return $ stm32FreeRTOS id stm32cfg
+      Nothing ->
+        topts_error t' "Error parsing config document to STM32Config"
