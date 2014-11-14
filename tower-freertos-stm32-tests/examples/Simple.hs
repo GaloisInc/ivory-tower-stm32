@@ -34,11 +34,6 @@ test1_per _tocc = do
 
 main :: IO ()
 main = towerCompile p (test1_per stm32config_clock)
-  where
-  p topts = do
-    (c, t') <- getConfig topts
-    case fromConfig c of
-      Just stm32cfg ->
-        return $ stm32FreeRTOS id stm32cfg
-      Nothing ->
-        topts_error t' "Error parsing config document to STM32Config"
+  where p topts = do
+            (cfg, t') <- getConfig topts stm32ConfigParser
+            return $ stm32FreeRTOS id cfg
