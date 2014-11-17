@@ -38,12 +38,12 @@ import BSP.Tests.LED
 
 testPlatformParser :: ConfigParser (TestPlatform F405.Interrupt)
 testPlatformParser = do
-  p <- withDefault (subsection "args" $ subsection "platform" string)
-                   "px4fmuv17"
+  p <- subsection "args" $ subsection "platform" string
   case map toUpper p of
     "PX4FMUV17"   -> return px4fmuv17
     "F4DISCOVERY" -> return f4discovery
     "OPEN407VC"   -> return open407vc
+    "PORT407Z"    -> return port407z
     _ -> fail ("no such platform " ++ p)
 
 data ColoredLEDs =
@@ -151,6 +151,35 @@ open407vc = TestPlatform
   { testplatform_leds = ColoredLEDs
       { redLED  = LED F405.pinD12 ActiveHigh
       , blueLED = LED F405.pinD13 ActiveHigh
+      }
+  , testplatform_uart = TestUART
+      { testUART = F405.uart2
+      }
+  , testplatform_spi = TestSPI
+      { testSPI = F405.spi3
+      }
+  , testplatform_i2c = TestI2C
+      { testI2C = F405.i2c1
+      , testSDA = F405.pinB6
+      , testSCL = F405.pinB7
+      }
+  , testplatform_can = TestCAN
+      { testCAN = F405.can1
+      , testCANRX = F405.pinD0
+      , testCANTX = F405.pinD1
+      , testCANFilters = F405.canFilters
+      }
+  , testplatform_stm32 = stm32f405Defaults 8
+  }
+
+
+---------- Port407Z -----------------------------------------------------------
+
+port407z :: TestPlatform F405.Interrupt
+port407z = TestPlatform
+  { testplatform_leds = ColoredLEDs
+      { redLED  = LED F405.pinA4 ActiveHigh -- LED1
+      , blueLED = LED F405.pinA5 ActiveHigh -- LED2
       }
   , testplatform_uart = TestUART
       { testUART = F405.uart2
