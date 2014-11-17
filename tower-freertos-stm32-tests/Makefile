@@ -1,4 +1,7 @@
 
+IVORY_REPO ?= ../../ivory
+TOWER_REPO ?= ../../tower
+
 default:
 	cabal build
 
@@ -15,14 +18,14 @@ simple-test:
 
 create-sandbox:
 	cabal sandbox init
-	cabal sandbox add-source ../../ivory/ivory
-	cabal sandbox add-source ../../ivory/ivory-artifact
-	cabal sandbox add-source ../../ivory/ivory-hw
-	cabal sandbox add-source ../../ivory/ivory-opts
-	cabal sandbox add-source ../../ivory/ivory-stdlib
-	cabal sandbox add-source ../../ivory/ivory-backend-c
-	cabal sandbox add-source ../../tower/tower
-	cabal sandbox add-source ../../tower/tower-config
+	cabal sandbox add-source $(IVORY_REPO)/ivory
+	cabal sandbox add-source $(IVORY_REPO)/ivory-artifact
+	cabal sandbox add-source $(IVORY_REPO)/ivory-hw
+	cabal sandbox add-source $(IVORY_REPO)/ivory-opts
+	cabal sandbox add-source $(IVORY_REPO)/ivory-stdlib
+	cabal sandbox add-source $(IVORY_REPO)/ivory-backend-c
+	cabal sandbox add-source $(TOWER_REPO)/tower
+	cabal sandbox add-source $(TOWER_REPO)/tower-config
 	cabal sandbox add-source ../ivory-freertos-bindings
 	cabal sandbox add-source ../ivory-bsp-stm32
 	cabal sandbox add-source ../tower-freertos-stm32

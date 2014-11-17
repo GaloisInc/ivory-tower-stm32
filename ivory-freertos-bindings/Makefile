@@ -1,11 +1,13 @@
 
+IVORY_REPO ?= ../../ivory
+
 default:
 	cabal build
 
 create-sandbox:
 	cabal sandbox init
-	cabal sandbox add-source ../../ivory/ivory
-	cabal sandbox add-source ../../ivory/ivory-artifact
+	cabal sandbox add-source $(IVORY_REPO)/ivory
+	cabal sandbox add-source $(IVORY_REPO)/ivory-artifact
 	cabal install --dependencies-only
 
 clean:
