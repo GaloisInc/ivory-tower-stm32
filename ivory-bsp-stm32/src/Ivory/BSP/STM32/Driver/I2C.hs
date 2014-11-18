@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleContexts #-}
 
 module Ivory.BSP.STM32.Driver.I2C
   ( i2cTower
@@ -14,12 +14,10 @@ module Ivory.BSP.STM32.Driver.I2C
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
-import Ivory.Tower.Signal (withUnsafeSignalEvent)
 import Ivory.HW
-import Ivory.HW.Module
-
 
 import Ivory.BSP.STM32.Interrupt
+import Ivory.BSP.STM32.ClockConfig
 
 import Ivory.BSP.STM32.Peripheral.GPIOF4
 import Ivory.BSP.STM32.Peripheral.I2C.Regs
@@ -30,251 +28,262 @@ import Ivory.BSP.STM32.Driver.I2C.I2CDeviceAddr
 import Ivory.BSP.STM32.Driver.I2C.I2CDriverState
 
 
-
-i2cTower :: (Env ClockConfig e, STM32Signal p)
-         => I2CPeriph (InterruptType p)
+i2cTower :: (STM32Interrupt s)
+         => (e -> ClockConfig)
+         -> I2CPeriph s
          -> GPIOPin
          -> GPIOPin
-         -> Tower e ( ChannelSource (Struct "i2c_transaction_request")
-                    , ChannelSink   (Struct "i2c_transaction_result"))
-i2cTower periph sda scl = do
+         -> Tower e ( ChanInput  (Struct "i2c_transaction_request")
+                    , ChanOutput (Struct "i2c_transaction_result"))
+i2cTower tocc periph sda scl = do
   towerDepends i2cTowerTypes
   towerModule  i2cTowerTypes
-  reqchan <- channel' (Proxy :: Proxy 2) Nothing
-  reschan <- channel' (Proxy :: Proxy 2) Nothing
-  task ((i2cName periph) ++ "PeripheralDriver") $
-    i2cPeripheralDriver periph sda scl (snk reqchan) (src reschan)
-  return (src reqchan, snk reschan)
+  reqchan <- channel
+  reschan <- channel
+  evt_irq <- signalUnsafe
+                (Interrupt (i2cIntEvent periph))
+                (Microseconds 50)
+                (do debugToggle debugPin1
+                    modifyReg (i2cRegCR2 periph)
+                      (clearBit i2c_cr2_itbufen >> clearBit i2c_cr2_itevten)
+                    interrupt_disable (i2cIntEvent periph))
+
+  err_irq <- signalUnsafe
+                (Interrupt (i2cIntError periph))
+                (Microseconds 50)
+                (do debugToggle debugPin2
+                    modifyReg (i2cRegCR2 periph)
+                      (clearBit i2c_cr2_iterren)
+                    interrupt_disable (i2cIntError periph))
+  monitor ((i2cName periph) ++ "PeripheralDriver") $
+    i2cPeripheralDriver tocc periph sda scl evt_irq err_irq
+      (snd reqchan) (fst reschan)
+  return (fst reqchan, snd reschan)
 
 i2cTowerTypes :: Module
 i2cTowerTypes = package "i2cTowerTypes" $ do
   defStruct (Proxy :: Proxy "i2c_transaction_request")
   defStruct (Proxy :: Proxy "i2c_transaction_result")
 
-i2cPeripheralDriver :: forall p e
-                     . (STM32Signal p, Env ClockConfig e)
-                    => I2CPeriph (InterruptType p)
+
+i2cPeripheralDriver :: forall s e
+                     . (STM32Interrupt s)
+                    => (e -> ClockConfig)
+                    -> I2CPeriph s
                     -> GPIOPin
                     -> GPIOPin
-                    -> ChannelSink   (Struct "i2c_transaction_request")
-                    -> ChannelSource (Struct "i2c_transaction_result")
-                    -> Task e ()
-i2cPeripheralDriver periph sda scl req_sink res_source = do
-  taskModuleDef $ hw_moduledef
+                    -> ChanOutput (Stored ITime)
+                    -> ChanOutput (Stored ITime)
+                    -> ChanOutput (Struct "i2c_transaction_request")
+                    -> ChanInput  (Struct "i2c_transaction_result")
+                    -> Monitor e ()
+i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan = do
+  clockConfig <- fmap tocc getEnv
+  monitorModuleDef $ hw_moduledef
 
-  requestEvent  <- withChannelEvent   req_sink   "req_sink"
-  resultEmitter <- withChannelEmitter res_source "res_source"
+  driverstate <- stateInit "driverstate" (ival stateInactive)
 
-  state <- taskLocalInit "state" (ival stateInactive)
-
-  taskInit $ do
+  handler systemInit "init" $ callback $ const $ do
     debugSetup     debugPin1
     debugSetup     debugPin2
     debugSetup     debugPin3
     debugSetup     debugPin4
-    i2cInit        periph sda scl (Proxy :: Proxy p)
+    i2cInit        periph sda scl clockConfig
     -- Setup hardware for interrupts
     interrupt_set_to_syscall_priority (i2cIntEvent periph)
     interrupt_set_to_syscall_priority (i2cIntError periph)
     interrupt_enable (i2cIntEvent periph)
     interrupt_enable (i2cIntError periph)
 
-  (reqbuffer :: Ref Global (Struct "i2c_transaction_request")) <- taskLocal "reqbuffer"
-  (reqbufferpos :: Ref Global (Stored (Ix 128)))               <- taskLocal "reqbufferpos"
+  (reqbuffer :: Ref Global (Struct "i2c_transaction_request")) <- state "reqbuffer"
+  (reqbufferpos :: Ref Global (Stored (Ix 128)))               <- state "reqbufferpos"
 
-  (resbuffer :: Ref Global (Struct "i2c_transaction_result"))  <- taskLocal "resbuffer"
-  (resbufferpos :: Ref Global (Stored (Ix 128)))               <- taskLocal "resbufferpos"
+  (resbuffer :: Ref Global (Struct "i2c_transaction_result"))  <- state "resbuffer"
+  (resbufferpos :: Ref Global (Stored (Ix 128)))               <- state "resbufferpos"
 
-  taskPriority 4
+  (invalid_request :: Ref Global (Stored Uint32)) <- state "invalid_request"
 
-  (invalid_request :: Ref Global (Stored Uint32)) <- taskLocal "invalid_request"
 
-  evt_irq <- withUnsafeSignalEvent
-                (stm32Interrupt (i2cIntEvent periph))
-                "event_interrupt"
-                (do debugToggle debugPin1
-                    modifyReg (i2cRegCR2 periph)
-                      (clearBit i2c_cr2_itbufen >> clearBit i2c_cr2_itevten)
-                    interrupt_disable (i2cIntEvent periph))
-
-  err_irq <- withUnsafeSignalEvent
-                (stm32Interrupt (i2cIntError periph))
-                "error_interrupt"
-                (do debugToggle debugPin2
-                    modifyReg (i2cRegCR2 periph)
-                      (clearBit i2c_cr2_iterren)
-                    interrupt_disable (i2cIntError periph))
-
-  let sendresult :: Ref s (Struct "i2c_transaction_result") -> Uint8 -> Ivory eff ()
-      sendresult res code = do
+  let sendresult :: Emitter (Struct "i2c_transaction_result")
+                 -> Ref s' (Struct "i2c_transaction_result")
+                 -> Uint8
+                 -> Ivory eff ()
+      sendresult e res code = do
           debugToggle debugPin4
           store (res ~> resultcode) code
-          emit_ resultEmitter (constRef res)
+          emit e (constRef res)
 
-  handle err_irq "error_irq" $ \_ -> do
-    -- Must read these registers, sometimes reading dr helps too??
-    sr1  <- getReg (i2cRegSR1 periph)
-    _sr2 <- getReg (i2cRegSR2 periph)
-    _dr  <- getReg (i2cRegDR periph)
+  handler err_irq "error_irq" $ do
+    res_emitter <- emitter res_chan 1
+    callback $ \_ -> do
+      -- Must read these registers, sometimes reading dr helps too??
+      sr1  <- getReg (i2cRegSR1 periph)
+      _sr2 <- getReg (i2cRegSR2 periph)
+      _dr  <- getReg (i2cRegDR periph)
 
-    -- If bus error (BERR), acknowledge failure (AF), send Stop
-    let must_release = bitToBool (sr1 #. i2c_sr1_berr)
-                   .|| bitToBool (sr1 #. i2c_sr1_af)
-    when must_release $ setStop periph
+      -- If bus error (BERR), acknowledge failure (AF), send Stop
+      let must_release = bitToBool (sr1 #. i2c_sr1_berr)
+                     .|| bitToBool (sr1 #. i2c_sr1_af)
+      when must_release $ setStop periph
 
-    clearSR1 periph
+      clearSR1 periph
 
-    -- If there is an active transaction, terminate it
-    s <- deref state
-    cond_
-      [ (s ==? stateActive) ==> do
-          store state stateInactive
-          sendresult resbuffer 1
-      , (s ==? stateError) ==> do
-          store state stateInactive
-      ]
+      -- If there is an active transaction, terminate it
+      s <- deref driverstate
+      cond_
+        [ (s ==? stateActive) ==> do
+            store driverstate stateInactive
+            sendresult res_emitter resbuffer 1
+        , (s ==? stateError) ==> do
+            store driverstate stateInactive
+        ]
 
-    -- Re-enable interrupt
-    modifyReg (i2cRegCR2 periph)
-      (setBit i2c_cr2_iterren)
-    interrupt_enable (i2cIntError periph)
+      -- Re-enable interrupt
+      modifyReg (i2cRegCR2 periph)
+        (setBit i2c_cr2_iterren)
+      interrupt_enable (i2cIntError periph)
 
-  handle evt_irq "event_irq" $ \_ -> do
-    debugOn debugPin3
-    s <- deref state
-    cond_
-      [ (s ==? stateActive) ==> do
-          -- Hardware requires us to read both status registers.
-          -- We don't actually need the contents of SR2.
-          sr1  <- getReg (i2cRegSR1 periph)
-          _sr2 <- getReg (i2cRegSR2 periph)
-
-
-          btf <- assign (bitToBool (sr1 #. i2c_sr1_btf))
-
-          when (bitToBool (sr1 #. i2c_sr1_sb)) $ do
-            tx_sz  <- deref (reqbuffer ~> tx_len)
-            tx_pos <- deref reqbufferpos
-            tx_ad <- deref (reqbuffer ~> tx_addr)
-            let write_remaining = tx_sz - tx_pos
-            -- Start bit sent. Send addr field:
-            addr <- assign ((write_remaining >? 0) ?
-                              (writeAddr tx_ad, readAddr tx_ad))
-            modifyReg (i2cRegDR periph) $
-              setField i2c_dr_data (fromRep addr)
-
-          when (bitToBool (sr1 #. i2c_sr1_addr)) $ do
-            tx_pos <- deref reqbufferpos
-            tx_sz  <- deref (reqbuffer ~> tx_len)
-            rx_pos <- deref resbufferpos
-            rx_sz  <- deref (reqbuffer ~> rx_len)
-
-            let write_remaining = tx_sz - tx_pos
-                read_remaining =  rx_sz - rx_pos
-
-            cond_
-              [ (write_remaining >? 0) ==> do
-                  -- Writing: take a byte off the write buffer, write to DR
-                  w <- deref ((reqbuffer ~> tx_buf) ! tx_pos)
-                  store reqbufferpos (tx_pos + 1)
-                  modifyReg (i2cRegDR periph) $
-                    setField i2c_dr_data (fromRep w)
-              , (read_remaining >? 1) ==> do
-                  -- Send an ack on the next byte
-                  modifyReg (i2cRegCR1 periph) $
-                    setBit i2c_cr1_ack
-              , true ==> do
-                  -- One byte left to read, send a stop afterwards
-                  setStop periph
-              ]
-          when (bitToBool (sr1 #. i2c_sr1_rxne)) $ do
-            rx_pos <- deref resbufferpos
-            rx_sz  <- deref (reqbuffer ~> rx_len)
-
-            let read_remaining =  rx_sz - rx_pos
-            -- Read into the read buffer
-            dr <- getReg (i2cRegDR periph)
-            r  <- assign (toRep (dr #. i2c_dr_data))
-            store ((resbuffer ~> rx_buf) ! rx_pos) r
-            store resbufferpos (rx_pos + 1)
+  handler evt_irq "event_irq" $ do
+    res_emitter <- emitter res_chan 1
+    callback $ \_ -> do
+      debugOn debugPin3
+      s <- deref driverstate
+      cond_
+        [ (s ==? stateActive) ==> do
+            -- Hardware requires us to read both status registers.
+            -- We don't actually need the contents of SR2.
+            sr1  <- getReg (i2cRegSR1 periph)
+            _sr2 <- getReg (i2cRegSR2 periph)
 
 
-            when btf $ do
-              comment "missed received byte??"
-              modifyReg (i2cRegCR1 periph) $
-                clearBit i2c_cr1_ack
-              setStop periph
-              store state stateError
-              sendresult resbuffer 1
+            btf <- assign (bitToBool (sr1 #. i2c_sr1_btf))
 
-            when (read_remaining ==? 2) $ do
-               -- Now 1 remaining
-               -- Unset Ack, then Stop
-               modifyReg (i2cRegCR1 periph) $
-                 clearBit i2c_cr1_ack
-               setStop periph
+            when (bitToBool (sr1 #. i2c_sr1_sb)) $ do
+              tx_sz  <- deref (reqbuffer ~> tx_len)
+              tx_pos <- deref reqbufferpos
+              tx_ad <- deref (reqbuffer ~> tx_addr)
+              let write_remaining = tx_sz - tx_pos
+              -- Start bit sent. Send addr field:
+              addr <- assign ((write_remaining >? 0) ?
+                                (writeAddr tx_ad, readAddr tx_ad))
+              modifyReg (i2cRegDR periph) $
+                setField i2c_dr_data (fromRep addr)
 
-            when ((read_remaining ==? 1) .&& iNot btf) $ do
-               -- Now 0 remaining
-               store state stateInactive
-               sendresult resbuffer 0
+            when (bitToBool (sr1 #. i2c_sr1_addr)) $ do
+              tx_pos <- deref reqbufferpos
+              tx_sz  <- deref (reqbuffer ~> tx_len)
+              rx_pos <- deref resbufferpos
+              rx_sz  <- deref (reqbuffer ~> rx_len)
 
-          when (bitToBool (sr1 #. i2c_sr1_txe) .&& iNot btf) $ do
+              let write_remaining = tx_sz - tx_pos
+                  read_remaining =  rx_sz - rx_pos
 
-            tx_pos <- deref reqbufferpos
-            tx_sz  <- deref (reqbuffer ~> tx_len)
-            rx_pos <- deref resbufferpos
-            rx_sz  <- deref (reqbuffer ~> rx_len)
+              cond_
+                [ (write_remaining >? 0) ==> do
+                    -- Writing: take a byte off the write buffer, write to DR
+                    w <- deref ((reqbuffer ~> tx_buf) ! tx_pos)
+                    store reqbufferpos (tx_pos + 1)
+                    modifyReg (i2cRegDR periph) $
+                      setField i2c_dr_data (fromRep w)
+                , (read_remaining >? 1) ==> do
+                    -- Send an ack on the next byte
+                    modifyReg (i2cRegCR1 periph) $
+                      setBit i2c_cr1_ack
+                , true ==> do
+                    -- One byte left to read, send a stop afterwards
+                    setStop periph
+                ]
+            when (bitToBool (sr1 #. i2c_sr1_rxne)) $ do
+              rx_pos <- deref resbufferpos
+              rx_sz  <- deref (reqbuffer ~> rx_len)
 
-            let write_remaining = tx_sz - tx_pos
-                read_remaining =  rx_sz - rx_pos
-            cond_
-              -- TXE set, BTF clear: tx buffer is empty, still writing
-              [ (write_remaining >? 0) ==> do
-                  w <- deref ((reqbuffer ~> tx_buf) ! tx_pos)
-                  store reqbufferpos (tx_pos + 1)
-                  modifyReg (i2cRegDR periph) $
-                    setField i2c_dr_data (fromRep w)
-              , (read_remaining >? 0) ==> do
-                  -- Done writing, ready to read: send repeated start
-                  setStart periph
-              , true ==> do
-                  setStop periph
-                  -- Done, send response
-                  store state stateInactive
-                  sendresult resbuffer 0
-              ]
-      , (s ==? stateError) ==> do
-          modifyReg (i2cRegCR1 periph) $ clearBit i2c_cr1_pe
-          debugToggle debugPin2 -- XXX PLACEHOLDER
-          store state stateInactive
-      ]
+              let read_remaining =  rx_sz - rx_pos
+              -- Read into the read buffer
+              dr <- getReg (i2cRegDR periph)
+              r  <- assign (toRep (dr #. i2c_dr_data))
+              store ((resbuffer ~> rx_buf) ! rx_pos) r
+              store resbufferpos (rx_pos + 1)
 
-    debugOff debugPin3
-    modifyReg (i2cRegCR2 periph)
-      (setBit i2c_cr2_itbufen >> setBit i2c_cr2_itevten)
-    interrupt_enable (i2cIntEvent periph)
 
-  handle requestEvent "request" $ \req -> do
-    debugOn debugPin3
-    s <- deref state
-    cond_
-      [ (s ==? stateInactive) ==> do
-          -- Setup state
-          modifyReg (i2cRegCR1 periph) $ setBit i2c_cr1_pe
-          store state stateActive
-          refCopy reqbuffer req
-          store reqbufferpos 0
-          store resbufferpos 0
-          setStart periph
-      , true ==> do
-          invalid_request %= (+1)
-          -- XXX how do we want to handle this error?
-          sendresult resbuffer 1
-      ]
-    debugOff debugPin3
+              when btf $ do
+                comment "missed received byte??"
+                modifyReg (i2cRegCR1 periph) $
+                  clearBit i2c_cr1_ack
+                setStop periph
+                store driverstate stateError
+                sendresult res_emitter resbuffer 1
 
-setStop :: I2CPeriph p -> Ivory (ProcEffects eff ()) ()
+              when (read_remaining ==? 2) $ do
+                 -- Now 1 remaining
+                 -- Unset Ack, then Stop
+                 modifyReg (i2cRegCR1 periph) $
+                   clearBit i2c_cr1_ack
+                 setStop periph
+
+              when ((read_remaining ==? 1) .&& iNot btf) $ do
+                 -- Now 0 remaining
+                 store driverstate stateInactive
+                 sendresult res_emitter resbuffer 0
+
+            when (bitToBool (sr1 #. i2c_sr1_txe) .&& iNot btf) $ do
+
+              tx_pos <- deref reqbufferpos
+              tx_sz  <- deref (reqbuffer ~> tx_len)
+              rx_pos <- deref resbufferpos
+              rx_sz  <- deref (reqbuffer ~> rx_len)
+
+              let write_remaining = tx_sz - tx_pos
+                  read_remaining =  rx_sz - rx_pos
+              cond_
+                -- TXE set, BTF clear: tx buffer is empty, still writing
+                [ (write_remaining >? 0) ==> do
+                    w <- deref ((reqbuffer ~> tx_buf) ! tx_pos)
+                    store reqbufferpos (tx_pos + 1)
+                    modifyReg (i2cRegDR periph) $
+                      setField i2c_dr_data (fromRep w)
+                , (read_remaining >? 0) ==> do
+                    -- Done writing, ready to read: send repeated start
+                    setStart periph
+                , true ==> do
+                    setStop periph
+                    -- Done, send response
+                    store driverstate stateInactive
+                    sendresult res_emitter resbuffer 0
+                ]
+        , (s ==? stateError) ==> do
+            modifyReg (i2cRegCR1 periph) $ clearBit i2c_cr1_pe
+            debugToggle debugPin2 -- XXX PLACEHOLDER
+            store driverstate stateInactive
+        ]
+
+      debugOff debugPin3
+      modifyReg (i2cRegCR2 periph)
+        (setBit i2c_cr2_itbufen >> setBit i2c_cr2_itevten)
+      interrupt_enable (i2cIntEvent periph)
+
+  handler req_chan "request" $ do
+    res_emitter <- emitter res_chan 1
+    callback $ \req -> do
+      debugOn debugPin3
+      s <- deref driverstate
+      cond_
+        [ (s ==? stateInactive) ==> do
+            -- Setup state
+            modifyReg (i2cRegCR1 periph) $ setBit i2c_cr1_pe
+            store driverstate stateActive
+            refCopy reqbuffer req
+            store reqbufferpos 0
+            store resbufferpos 0
+            setStart periph
+        , true ==> do
+            invalid_request %= (+1)
+            -- XXX how do we want to handle this error?
+            sendresult res_emitter resbuffer 1
+        ]
+      debugOff debugPin3
+
+
+setStop :: I2CPeriph p -> Ivory (AllocEffects s) ()
 setStop periph = do
   -- Generate an I2C Stop condition. Per the reference manual, we must
   -- wait for the hardware to clear the stop bit before any further writes
@@ -285,7 +294,7 @@ setStop periph = do
     unless (bitToBool (cr1 #. i2c_cr1_stop)) $
       breakOut
 
-setStart :: I2CPeriph p -> Ivory (ProcEffects eff ()) ()
+setStart :: I2CPeriph p -> Ivory (AllocEffects s) ()
 setStart periph = do
   -- Generate an I2C Start condition. Per the reference manual, we must
   -- wait for the hardware to clear the start bit before any further writes
@@ -345,7 +354,7 @@ debugOn Nothing  = return ()
 
 debugToggle :: Maybe GPIOPin -> Ivory eff ()
 debugToggle p = do
-  -- turn it on three times just to take a bit longer. sometimes my
+  -- turn it on a couple of times just to take a bit longer. sometimes my
   -- logic analyzer can't catch a single on/off blip.
   debugOn p
   debugOn p
@@ -362,6 +371,3 @@ debugToggle p = do
   debugOff p
   debugOff p
   debugOff p
-
-
-
