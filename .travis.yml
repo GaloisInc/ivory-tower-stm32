@@ -2,8 +2,9 @@ language: haskell
 before_install:
   - wget https://launchpad.net/gcc-arm-embedded/4.8/4.8-2014-q3-update/+download/gcc-arm-none-eabi-4_8-2014q3-20140805-linux.tar.bz2
   - tar xf gcc-arm-none-eabi-4_8-2014q3-20140805-linux.tar.bz2
-  - sudo cp gcc-arm-none-eabi-4_8-2014q3/bin/* /usr/local/bin/
+  - export PATH=$PATH:/$PWD/gcc-arm-none-eabi-4_8-2014q3/bin
   - sudo chmod a+x /usr/local/bin/*
+  - echo $PATH
   - which arm-none-eabi-gcc
   - which arm-none-eabi-ld
   - git clone https://github.com/galoisinc/ivory
@@ -14,6 +15,11 @@ install:
   - cabal install alex
   - cabal install happy
 script:
+  - echo $IVORY_REPO
+  - echo $TOWER_REPO
+  - echo $PATH
+  - which arm-none-eabi-gcc
+  - arm-none-eabi-gcc --version
   - IVORY_REPO=$IVORY_REPO TOWER_REPO=$TOWER_REPO make
 ghc:
   - 7.6.3
