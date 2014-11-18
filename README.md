@@ -14,7 +14,7 @@ programming in C, without sacrificing expressivity.
 composes Ivory programs into monitors which communicate with synchronous
 channels.
 
-[![Build Status](https://travis-ci.org/GaloisInc/ivory-tower-stm32.svg)](https://travis-ci.org/GaloisInc/ivory-tower-stm32)
+[![Build Status](https://travis-ci.org/GaloisInc/ivory-tower-stm32.svg?branch=master)](https://travis-ci.org/GaloisInc/ivory-tower-stm32)
 
 ## Copyright and license
 Copyright 2014 [Galois, Inc.][galois]
