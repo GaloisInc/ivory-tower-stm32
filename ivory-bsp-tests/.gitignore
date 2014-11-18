@@ -1,4 +1,5 @@
 dist
 bsp-led-test
 bsp-spi-test
+bsp-i2c-test
 .gdbinit

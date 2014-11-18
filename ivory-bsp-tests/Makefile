@@ -19,6 +19,13 @@ spi-test:
 spi-test-clean:
 	rm -rf bsp-spi-test
 
+i2c-test:
+	cabal run bsp-i2c-test-gen -- --src-dir=bsp-i2c-test
+	make -C bsp-i2c-test
+
+i2c-test-clean:
+	rm -rf bsp-i2c-test
+
 create-sandbox:
 	cabal sandbox init
 	cabal sandbox add-source $(IVORY_REPO)/ivory

@@ -14,4 +14,5 @@ default:
 	make -C ivory-bsp-tests
 	make -C ivory-bsp-tests led-test
 	make -C ivory-bsp-tests spi-test
+	make -C ivory-bsp-tests i2c-test
 
