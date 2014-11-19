@@ -26,6 +26,13 @@ i2c-test:
 i2c-test-clean:
 	rm -rf bsp-i2c-test
 
+uart-test:
+	cabal run bsp-uart-test-gen -- --src-dir=bsp-uart-test
+	make -C bsp-uart-test
+
+uart-test-clean:
+	rm -rf bsp-uart-test
+
 create-sandbox:
 	cabal sandbox init
 	cabal sandbox add-source $(IVORY_REPO)/ivory
@@ -45,7 +52,7 @@ create-sandbox:
 dist-clean:
 	-rm -rf dist
 
-clean: dist-clean
+clean: dist-clean led-test-clean spi-test-clean i2c-test-clean uart-test-clean
 
 clean-sandbox: clean
 	-rm -rf .cabal-sandbox
