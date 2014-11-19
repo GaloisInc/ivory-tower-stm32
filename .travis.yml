@@ -1,8 +1,8 @@
 language: haskell
 before_install:
-  - sudo add-apt-repository "deb http://mirrors.kernel.org/ubuntu/ trusty main universe"
-  - sudo apt-get install gcc-arm-none-eabi
-  - sudo apt-get install -f
+  - sudo add-apt-repository -y ppa:terry.guo/gcc-arm-embedded
+  - sudo apt-get update -qq
+  - sudo apt-get install -y gcc-arm-none-eabi
   - uname -a
   - which arm-none-eabi-gcc
   - which arm-none-eabi-ld
