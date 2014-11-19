@@ -6,10 +6,11 @@ before_install:
   - chmod a+x gcc-arm-none-eabi-4_8-2014q3/bin/*
   - chmod a+x gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/bin/*
   - echo $PATH
+  - uname -a
   - which arm-none-eabi-gcc
   - which arm-none-eabi-ld
-  - arm-none-eabi-gcc --version
   - ls -l gcc-arm-none-eabi-4_8-2014q3/bin/
+  - arm-none-eabi-gcc --version
   - git clone https://github.com/galoisinc/ivory
   - export IVORY_REPO=$PWD/ivory
   - git clone --branch tower-9 https://github.com/galoisinc/tower
