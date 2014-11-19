@@ -8,6 +8,8 @@ before_install:
   - echo $PATH
   - which arm-none-eabi-gcc
   - which arm-none-eabi-ld
+  - arm-none-eabi-gcc --version
+  - ls -l gcc-arm-none-eabi-4_8-2014q3/bin/
   - git clone https://github.com/galoisinc/ivory
   - export IVORY_REPO=$PWD/ivory
   - git clone --branch tower-9 https://github.com/galoisinc/tower
@@ -16,9 +18,8 @@ install:
   - cabal install alex
   - cabal install happy
 script:
-  - echo $IVORY_REPO
-  - echo $TOWER_REPO
   - echo $PATH
+  - ls -l gcc-arm-none-eabi-4_8-2014q3/bin/
   - which arm-none-eabi-gcc
   - arm-none-eabi-gcc --version
   - IVORY_REPO=$IVORY_REPO TOWER_REPO=$TOWER_REPO make
