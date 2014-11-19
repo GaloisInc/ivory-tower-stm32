@@ -1,11 +1,8 @@
 language: haskell
 before_install:
-  - wget https://launchpad.net/gcc-arm-embedded/4.8/4.8-2014-q3-update/+download/gcc-arm-none-eabi-4_8-2014q3-20140805-linux.tar.bz2
-  - tar xf gcc-arm-none-eabi-4_8-2014q3-20140805-linux.tar.bz2
-  - export PATH=$PATH:$PWD/gcc-arm-none-eabi-4_8-2014q3/bin
-  - chmod a+x gcc-arm-none-eabi-4_8-2014q3/bin/*
-  - chmod a+x gcc-arm-none-eabi-4_8-2014q3/arm-none-eabi/bin/*
-  - echo $PATH
+  - sudo add-apt-repository "deb http://mirrors.kernel.org/ubuntu/ trusty main universe"
+  - sudo apt-get install gcc-arm-none-eabi
+  - sudo apt-get install -f
   - uname -a
   - which arm-none-eabi-gcc
   - which arm-none-eabi-ld
