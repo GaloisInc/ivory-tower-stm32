@@ -69,6 +69,8 @@ library
                        Ivory.BSP.STM32.Peripheral.UART.Regs,
                        Ivory.BSP.STM32.Peripheral.UART.Peripheral,
 
+                       Ivory.BSP.STM32.Driver.RingBuffer,
+
                        --Ivory.BSP.STM32.Driver.CAN,
                        --Ivory.BSP.STM32.Driver.CAN.Types,
 
@@ -81,7 +83,7 @@ library
                        Ivory.BSP.STM32.Driver.SPI.Types,
                        Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle,
 
-                       --Ivory.BSP.STM32.Driver.UART,
+                       Ivory.BSP.STM32.Driver.UART,
 
                        Ivory.BSP.STM32F405.MemoryMap,
                        Ivory.BSP.STM32F405.Interrupt,
