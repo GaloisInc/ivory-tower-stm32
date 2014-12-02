@@ -1,7 +1,5 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleContexts #-}
 
 module Ivory.OS.FreeRTOS.Tower.STM32
   ( stm32FreeRTOS
@@ -16,7 +14,8 @@ import qualified Ivory.Tower.AST as AST
 import qualified Ivory.OS.FreeRTOS as FreeRTOS
 import qualified Ivory.Tower.Types.TowerPlatform as T
 
-import Ivory.OS.FreeRTOS.Tower.System
+import           Ivory.OS.FreeRTOS.Tower.System
+import           Ivory.OS.FreeRTOS.Tower.Time (time_module)
 import qualified Ivory.OS.FreeRTOS.Tower.STM32.Build as STM32
 import           Ivory.OS.FreeRTOS.Tower.STM32.Config
 
@@ -33,7 +32,7 @@ stm32FreeRTOS fromEnv e = T.TowerPlatform
   }
 
 stm32Modules :: STM32Config -> AST.Tower -> [Module]
-stm32Modules conf ast = systemModules ast ++ [ main_module ]
+stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]
   where
   main_module :: Module
   main_module = package "stm32_main" $ do
@@ -59,6 +58,7 @@ stm32Modules conf ast = systemModules ast ++ [ main_module ]
   init_libc = importProc "init_libc" "stm32_freertos_init.h"
   main_proc :: Def('[]:->())
   main_proc = importProc "main" "stm32_freertos_init.h"
+
 
 stm32Artifacts :: STM32Config -> AST.Tower -> [Module] -> [Artifact]
 stm32Artifacts conf ast ms = (systemArtifacts ast ms) ++ as

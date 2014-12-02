@@ -19,7 +19,8 @@ library
                         Ivory.OS.FreeRTOS.Tower.Init,
                         Ivory.OS.FreeRTOS.Tower.Monitor,
                         Ivory.OS.FreeRTOS.Tower.Signal,
-                        Ivory.OS.FreeRTOS.Tower.System
+                        Ivory.OS.FreeRTOS.Tower.System,
+                        Ivory.OS.FreeRTOS.Tower.Time
 
   other-modules:        Paths_tower_freertos_stm32
 
