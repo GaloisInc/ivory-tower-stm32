@@ -3,5 +3,6 @@ freertos-test
 tower-example-simple
 tower-example-statemachine
 cabal.sandbox.config
+user.conf
 .cabal-sandbox
 .gdbinit
