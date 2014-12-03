@@ -3,4 +3,5 @@ bsp-led-test
 bsp-spi-test
 bsp-i2c-test
 bsp-uart-test
+user.conf
 .gdbinit
