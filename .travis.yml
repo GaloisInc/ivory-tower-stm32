@@ -18,8 +18,13 @@ script:
   - echo $PATH
   - which arm-none-eabi-gcc
   - arm-none-eabi-gcc --version
-  - IVORY_REPO=$IVORY_REPO TOWER_REPO=$TOWER_REPO make
+  - IVORY_REPO=$IVORY_REPO TOWER_REPO=$TOWER_REPO make $ENV_TEST_TARGET
 ghc:
   - 7.6.3
   - 7.8.3
-
+env:
+  - ENV_TEST_TARGET=ivory-freertos-bindings
+  - ENV_TEST_TARGET=ivory-bsp-stm32
+  - ENV_TEST_TARGET=tower-freertos-stm32
+  - ENV_TEST_TARGET=tower-freertos-stm32-tests
+  - ENV_TEST_TARGET=ivory-bsp-tests
