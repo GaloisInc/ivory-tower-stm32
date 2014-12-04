@@ -21,7 +21,8 @@ library
 
                        BSP.Tests.SPI.TestApp
                        --BSP.Tests.UART.DebugApp,
-                       BSP.Tests.UART.TestApp
+                       BSP.Tests.UART.TestApp,
+                       BSP.Tests.UART.TestStateMachine
 
   build-depends:       base >= 4.6,
                        monadLib,
@@ -85,6 +86,21 @@ executable bsp-i2c-test-gen
 
 executable bsp-uart-test-gen
   main-is:             UARTTest.hs
+  hs-source-dirs:      tests
+  build-depends:       base >= 4.6,
+                       ivory,
+                       ivory-stdlib,
+                       ivory-backend-c,
+                       ivory-hw,
+                       tower          >= 0.9,
+                       tower-config,
+                       tower-freertos-stm32,
+                       ivory-bsp-stm32,
+                       ivory-bsp-tests
+  ghc-options:          -Wall
+
+executable bsp-uart-sm-test-gen
+  main-is:             UARTStateMachineTest.hs
   hs-source-dirs:      tests
   build-depends:       base >= 4.6,
                        ivory,

@@ -33,6 +33,13 @@ uart-test:
 uart-test-clean:
 	rm -rf bsp-uart-test
 
+uart-sm-test:
+	cabal run bsp-uart-sm-test-gen -- --src-dir=bsp-uart-sm-test
+	make -C bsp-uart-sm-test
+
+uart-sm-test-clean:
+	rm -rf bsp-uart-sm-test
+
 create-sandbox:
 	cabal sandbox init
 	cabal sandbox add-source $(IVORY_REPO)/ivory
