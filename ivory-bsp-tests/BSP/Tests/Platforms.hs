@@ -12,6 +12,7 @@ module BSP.Tests.Platforms
   , TestI2C(..)
   , TestCAN(..)
   , TestPlatform(..)
+  , testplatform_clockconfig
   , px4fmuv17
   , f4discovery
   , open407vc
@@ -32,6 +33,7 @@ import Ivory.BSP.STM32.Peripheral.GPIOF4
 import Ivory.BSP.STM32.Peripheral.UART
 import Ivory.BSP.STM32.Peripheral.SPI hiding (ActiveHigh, ActiveLow)
 import Ivory.BSP.STM32.Peripheral.I2C
+import Ivory.BSP.STM32.ClockConfig
 import Ivory.OS.FreeRTOS.Tower.STM32.Config
 
 import BSP.Tests.LED
@@ -86,6 +88,9 @@ data TestPlatform s =
     , testplatform_can   :: TestCAN s
     , testplatform_stm32 :: STM32Config
     }
+
+testplatform_clockconfig :: TestPlatform s -> ClockConfig
+testplatform_clockconfig = stm32config_clock . testplatform_stm32
 
 ---------- PX4FMUv17 ----------------------------------------------------------
 
