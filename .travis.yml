@@ -9,7 +9,7 @@ before_install:
   - arm-none-eabi-gcc --version
   - git clone https://github.com/galoisinc/ivory
   - export IVORY_REPO=$PWD/ivory
-  - git clone --branch tower-9 https://github.com/galoisinc/tower
+  - git clone https://github.com/galoisinc/tower
   - export TOWER_REPO=$PWD/tower
 install:
   - cabal install alex
