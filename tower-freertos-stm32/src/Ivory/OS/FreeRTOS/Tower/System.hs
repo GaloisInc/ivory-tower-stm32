@@ -33,19 +33,18 @@ import qualified Ivory.OS.FreeRTOS.Task as Task
 import qualified Ivory.OS.FreeRTOS.Time as Time
 
 systemArtifacts :: AST.Tower -> [Module] -> [Artifact]
-systemArtifacts twr ms =
+systemArtifacts twr mods =
   [ artifactString "debug_mods.txt" dbg
   , artifactString "debug_ast.txt" (ppShow twr)
   , artifactString "out.dot" (G.graphviz (G.messageGraph twr))
   ]
   where
-  dbg = (show mods)
-  mods = map moduleName ms
+  dbg = show (map moduleName mods)
 
 monitorModules :: GeneratedCode -> AST.Tower -> [Module]
-monitorModules gc _twr = concatMap permon ms
+monitorModules gc _twr = concatMap permon mods
   where
-  ms = Map.toList (generatedcode_monitors gc)
+  mods = Map.toList (generatedcode_monitors gc)
   permon (ast, code) = generateMonitorCode gc code ast
 
 threadModules :: GeneratedCode -> AST.Tower-> [Module]
@@ -105,23 +104,28 @@ threadLoopModdef _gc twr thr@(AST.PeriodThread p) = do
   where
   period_ms :: Uint32
   period_ms = fromIntegral (toMilliseconds (AST.period_dt p))
-
   cgi = codegenInit thr
   tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
   tloopProc = proc (threadLoopProcName thr) $ const $ body $ noReturn $ do
     codegeninit_block cgi
 
-    t_init <- call Time.getTickCount
-    t_last_wake <- local (ival (t_init))
+    tick_rate <- call Time.getTickRateMilliseconds
+    let tickITime :: Uint32 -> ITime
+        tickITime t = fromIMilliseconds (t `iDiv` tick_rate)
+        timeToTick :: ITime -> Uint32
+        timeToTick t = castWith 0 (toIMicroseconds t) * tick_rate
 
-    t_rate <- call Time.getTickRateMilliseconds
-    let toITime :: Uint32 -> ITime
-        toITime t = fromIMilliseconds (t `iDiv` t_rate)
+    ticks_now <- call Time.getTickCount -- XXX add phase
+    let tick_init = ticks_now + timeToTick (toITime (AST.period_phase p))
+    ticks_last_wake <- local (ival (tick_init))
 
     forever $ noBreak $ do
-      call_ Time.delayUntil t_last_wake (t_rate * period_ms)
-      now <- deref t_last_wake
-      t <- local (ival (toITime now))
+      -- Invariant: delayUntil stores the sum of the two arguments in
+      -- ticks_last_wake. It does not store the actual time at which it last
+      -- woke.
+      call_ Time.delayUntil ticks_last_wake (tick_rate * period_ms)
+      now <- deref ticks_last_wake
+      t <- local (ival (tickITime now))
       threadLoopRunHandlers twr thr t
 
 threadLoopModdef gc twr thr@(AST.SignalThread s) = do
@@ -138,13 +142,13 @@ threadLoopModdef gc twr thr@(AST.SignalThread s) = do
   tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
   tloopProc = proc (threadLoopProcName thr) $ const $ body $ noReturn $ do
     t_rate <- call Time.getTickRateMilliseconds
-    let toITime :: Uint32 -> ITime
-        toITime t = fromIMilliseconds (t `iDiv` t_rate)
+    let tickITime :: Uint32 -> ITime
+        tickITime t = fromIMilliseconds (t `iDiv` t_rate)
     codegeninit_block cgi
     forever $ noBreak $ do
       codegensignal_wait cgs
       now <- call Time.getTickCount
-      t <- local (ival (toITime now))
+      t <- local (ival (tickITime now))
       threadLoopRunHandlers twr thr t
 
 threadLoopModdef _gc twr thr@(AST.InitThread _) = do
