@@ -5,39 +5,50 @@ TOWER_REPO ?= ../../tower
 default:
 	cabal build
 
-led-test:
+test: bsp-led-test
+test: bsp-spi-test
+test: bsp-i2c-test
+test: bsp-uart-test
+test: bsp-uart-sm-test
+
+.PHONY: bsp-led-test
+bsp-led-test:
 	cabal run bsp-led-test-gen -- --src-dir=bsp-led-test
 	make -C bsp-led-test
 
-led-test-clean:
+bsp-led-test-clean:
 	rm -rf bsp-led-test
 
-spi-test:
+.PHONY: bsp-spi-test
+bsp-spi-test:
 	cabal run bsp-spi-test-gen -- --src-dir=bsp-spi-test
 	make -C bsp-spi-test
 
-spi-test-clean:
+bsp-spi-test-clean:
 	rm -rf bsp-spi-test
 
-i2c-test:
+.PHONY: bsp-i2c-test
+bsp-i2c-test:
 	cabal run bsp-i2c-test-gen -- --src-dir=bsp-i2c-test
 	make -C bsp-i2c-test
 
-i2c-test-clean:
+bsp-i2c-test-clean:
 	rm -rf bsp-i2c-test
 
-uart-test:
+.PHONY: bsp-uart-test
+bsp-uart-test:
 	cabal run bsp-uart-test-gen -- --src-dir=bsp-uart-test
 	make -C bsp-uart-test
 
-uart-test-clean:
+bsp-uart-test-clean:
 	rm -rf bsp-uart-test
 
-uart-sm-test:
+.PHONY: bsp-uart-sm-test
+bsp-uart-sm-test:
 	cabal run bsp-uart-sm-test-gen -- --src-dir=bsp-uart-sm-test
 	make -C bsp-uart-sm-test
 
-uart-sm-test-clean:
+bsp-uart-sm-test-clean:
 	rm -rf bsp-uart-sm-test
 
 create-sandbox:
@@ -59,7 +70,12 @@ create-sandbox:
 dist-clean:
 	-rm -rf dist
 
-clean: dist-clean led-test-clean spi-test-clean i2c-test-clean uart-test-clean
+clean: dist-clean
+clean: bsp-led-test-clean
+clean: bsp-spi-test-clean
+clean: bsp-i2c-test-clean
+clean: bsp-uart-test-clean
+clean: bsp-uart-sm-test-clean
 
 clean-sandbox: clean
 	-rm -rf .cabal-sandbox

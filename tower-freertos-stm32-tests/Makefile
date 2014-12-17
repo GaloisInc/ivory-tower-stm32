@@ -5,18 +5,21 @@ TOWER_REPO ?= ../../tower
 default:
 	cabal build
 
+test: freertos-test
+test: tower-example-simple
+
 .PHONY: freertos-test
 freertos-test:
 	cabal run freertos-bindings-test -- --src-dir=freertos-test
 	make -C freertos-test
 
-.PHONY: simple-test
-simple-test:
+.PHONY: tower-example-simple
+tower-example-simple:
 	cabal run tower-example-simple -- --src-dir=tower-example-simple
 	make -C tower-example-simple
 
-.PHONY: statemachine-test
-statemachine-test:
+.PHONY: tower-example-statemachine
+tower-example-statemachine:
 	cabal run tower-example-statemachine -- --src-dir=tower-example-statemachine
 	make -C tower-example-statemachine
 
@@ -39,18 +42,21 @@ create-sandbox:
 dist-clean:
 	-rm -rf dist
 
-simple-clean: dist-clean
-	-rm -rf tower-exmple-simple
-
 freertos-test-clean: dist-clean
 	-rm -rf freertos-test
 
-statemachine-test-clean: dist-clean
+tower-example-simple-clean: dist-clean
+	-rm -rf tower-exmple-simple
+
+tower-example-statemachine-clean: dist-clean
 	-rm -rf tower-example-statemachine
 
-
-clean: dist-clean simple-clean freertos-test-clean statemachine-test-clean
+clean: dist-clean
+clean: freertos-test-clean
+clean: tower-example-simple-clean
+clean: tower-example-statemachine-clean
 
 clean-sandbox: clean
 	-rm -rf .cabal-sandbox
 	-rm cabal.sandbox.config
+
