@@ -49,7 +49,8 @@ echoPrompt :: String
            -> ChanOutput (Stored Uint8)
            -> ChanInput  (Stored IBool)
            -> Tower p ()
-echoPrompt greeting ostream istream ledctl = monitor "echoprompt" $ do
+echoPrompt greeting ostream istream ledctl = do
+  p <- period (Milliseconds 1)
 
   let puts :: (GetAlloc eff ~ Scope cs)
            => Emitter (Stored Uint8) -> String -> Ivory eff ()
@@ -59,23 +60,28 @@ echoPrompt greeting ostream istream ledctl = monitor "echoprompt" $ do
            => Emitter (Stored Uint8) -> Uint8 -> Ivory eff ()
       putc = emitV
 
-  handler systemInit "init" $ do
-    o <- emitter ostream 32
-    callback $ const $ do
-      puts o (greeting ++ "\n")
-      puts o prompt
+  monitor "echoprompt" $ do
+    initialized <- stateInit "initialized" (ival false)
+    handler p "init" $ do
+      o <- emitter ostream 32
+      callback $ const $ do
+        i <- deref initialized
+        unless i $ do
+          store initialized true
+          puts o (greeting ++ "\n")
+          puts o prompt
 
-  handler istream "istream" $ do
-    l <- emitter ledctl 1
-    o <- emitter ostream 32
-    callbackV $ \input -> do
-      putc o input -- echo to terminal
-      let testChar = (input `isChar`)
-      cond_
-        [ testChar '1'  ==> emitV l true
-        , testChar '2'  ==> emitV l false
-        , testChar '\n' ==> puts o prompt
-        ]
+    handler istream "istream" $ do
+      l <- emitter ledctl 1
+      o <- emitter ostream 32
+      callbackV $ \input -> do
+        putc o input -- echo to terminal
+        let testChar = (input `isChar`)
+        cond_
+          [ testChar '1'  ==> emitV l true
+          , testChar '2'  ==> emitV l false
+          , testChar '\n' ==> puts o prompt
+          ]
   where prompt = "tower> "
 
 isChar :: Uint8 -> Char -> IBool
