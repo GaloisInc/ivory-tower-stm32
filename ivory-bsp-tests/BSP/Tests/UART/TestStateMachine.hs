@@ -41,5 +41,9 @@ smTestMonitor :: ChanInput  (Stored Uint8)
               -> ChanOutput (Stored Uint8)
               -> Tower p ()
 smTestMonitor ostream istream = monitor "smTestMonitor" $ do
+  -- Echoes all characters to the screen immediately, unless it recieves a '\n'
+  -- character, in which case it waits 1 second, dropping all characters
+  -- received while waiting, and prints a '\n'.  It then returns to echoing all
+  -- characters immediately.
   echo_ex istream ostream
 
