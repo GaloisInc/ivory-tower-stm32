@@ -7,7 +7,6 @@
 
 module Ivory.BSP.STM32.Driver.UART
   ( uartTower
-  --, uartTowerFlushable
   , uartTowerDebuggable
   , UARTTowerDebugger(..)
   ) where
@@ -58,27 +57,6 @@ uartTower :: (STM32Interrupt s, ANat n)
                      , ChanInput  (Stored Uint8))
 uartTower tocc u b s = uartTowerDebuggable tocc u b s emptyDbg
 
-{-
-uartTowerFlushable :: forall n p
-           . (ANat n, Env ClockConfig p, STM32Signal p)
-          => UART (InterruptType p)
-          -> Integer
-          -> Proxy (n :: Nat)
-          -> Tower p ( ChanOutput   (Stored Uint8)
-                     , ChanInput (Stored Uint8)
-                     , ChanInput (Stored ITime))
-uartTowerFlushable uart baud sizeproxy = do
-  (src_ostream, snk_ostream) <- channel
-  (src_istream, snk_istream) <- channel
-  (src_flush, snk_flush) <- channel
-
-  monitor (uartName uart ++ "_flushable_driver") $ do
-    txcheck_evt <- withChannelEvent snk_flush "flush"
-    uartTowerMonitor uart baud snk_ostream src_istream txcheck_evt emptyDbg
-
-  return (snk_istream, src_ostream, src_flush)
--}
-
 uartTowerDebuggable :: (STM32Interrupt s, ANat n)
                     => (e -> ClockConfig)
                     -> UART s
@@ -92,23 +70,18 @@ uartTowerDebuggable tocc uart baud sizeproxy dbg = do
   (src_ostream, snk_ostream) <- channel
   (src_istream, snk_istream) <- channel
 
-  txcheck_evt <- period txcheck_period
   interrupt <- signalUnsafe
     (Interrupt (uartInterrupt uart))
-    (Microseconds 50)
+    (Microseconds 50) -- XXX calculate from baud rate.
     (do debug_isr dbg
-        setTXEIE uart false
-        setRXNEIE uart false
+        --setTXEIE uart false
+        --setRXNEIE uart false
         interrupt_disable (uartInterrupt uart))
 
   monitor (uartName uart ++ "_driver") $ do
-    uartTowerMonitor tocc uart baud sizeproxy interrupt snk_ostream src_istream txcheck_evt dbg
+    uartTowerMonitor tocc uart baud sizeproxy interrupt snk_ostream src_istream dbg
 
   return (snk_istream, src_ostream)
-
-  where
-  txcheck_period = Milliseconds 1
-
 
 uartTowerMonitor :: forall e n s
                   . (ANat n, STM32Interrupt s)
@@ -119,41 +92,35 @@ uartTowerMonitor :: forall e n s
                  -> ChanOutput (Stored ITime)
                  -> ChanOutput (Stored Uint8)
                  -> ChanInput (Stored Uint8)
-                 -> ChanOutput (Stored ITime)
                  -> UARTTowerDebugger
                  -> Monitor e ()
-uartTowerMonitor tocc uart baud _ interrupt ostream istream txcheck_evt dbg = do
+uartTowerMonitor tocc uart baud _ interrupt ostream istream dbg = do
   clockConfig <- fmap tocc getEnv
-  -- XXX need internal queue for ostream:
 
   monitorModuleDef $ hw_moduledef
 
   rxoverruns    <- stateInit (named "rx_overruns") (ival (0 :: Uint32))
   rxsuccess     <- stateInit (named "rx_success") (ival (0 :: Uint32))
-  txpending     <- state (named "tx_pending")
-  txpendingbyte <- state (named "tx_pendingbyte")
 
 
   handler systemInit "init" $ callback $ const $ do
     debug_init dbg
-    store txpending false
     uartInit    uart clockConfig (fromIntegral baud)
-    uartInitISR uart
+    --uartInitISR uart
 
   (outbuf :: RingBuffer n (Stored Uint8)) <- monitorRingBuffer "outbuf"
 
-  handler ostream "ostream" $ callback $ \b -> do
-    _ <- ringbuffer_push outbuf b
-    return ()
-
   let pop :: Ref s' (Stored Uint8) -> Ivory eff IBool
       pop b = ringbuffer_pop outbuf b
+
+  handler ostream "ostream" $ callback $ \b -> do
+    _ <- ringbuffer_push outbuf b
+    setTXEIE uart true
 
   handler interrupt "interrupt" $ do
     i <- emitter istream 1
     callback $ const $ do
       debug_evthandler_start dbg
-      continueTXEIE <- local (ival false)
       sr <- getReg (uartRegSR uart)
       when (bitToBool (sr #. uart_sr_orne)) $ do
         byte <- readDR uart
@@ -167,36 +134,15 @@ uartTowerMonitor tocc uart baud _ interrupt ostream istream txcheck_evt dbg = do
         emit i (constRef bref)
         rxsuccess %= (+1) -- For debugging
       when (bitToBool (sr #. uart_sr_txe)) $ do
-        pending <- deref txpending
-        ifte_ pending
-          (do store txpending false
-              tosend <- deref txpendingbyte
-              store continueTXEIE true
-              setDR uart tosend)
-          (do byte <- local (ival 0)
-              rv   <- pop byte
-              when rv $ do
-                tosend <- deref byte
-                store continueTXEIE true
-                setDR uart tosend)
+        byte <- local (ival 0)
+        rv   <- pop byte
+        when rv $ do
+          tosend <- deref byte
+          setDR uart tosend
       debug_evthandler_end dbg
-      setTXEIE uart =<< deref continueTXEIE
-      setRXNEIE uart true
+      txdone <- ringbuffer_empty outbuf
+      setTXEIE uart (iNot txdone)
       interrupt_enable (uartInterrupt uart)
 
-  handler txcheck_evt "txcheck" $ callback $ \_ -> do
-    txeie <- getTXEIE uart
-    pending <- deref txpending
-    unless (txeie .&& iNot pending) $ do
-      debug_txcheck dbg
-      byte <- local (ival 0)
-      txready <- pop byte
-      when txready $ do
-        debug_txcheck_pend dbg
-        store txpending true
-        store txpendingbyte =<< deref byte
-        setTXEIE uart true
-
-
-  where named n = (uartName uart) ++ "_"++ n
+  where named n = uartName uart ++ "_" ++ n
 

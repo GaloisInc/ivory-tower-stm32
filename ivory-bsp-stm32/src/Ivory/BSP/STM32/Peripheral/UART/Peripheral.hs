@@ -125,7 +125,7 @@ setParity uart x =
     setField uart_cr1_pce (boolToBit x)
 
 -- | Initialize a UART device given a baud rate.
-uartInit :: (GetAlloc eff ~ Scope s)
+uartInit :: (GetAlloc eff ~ Scope s, STM32Interrupt i)
          => UART i -> ClockConfig -> Uint32 -> Ivory eff ()
 uartInit uart clockconfig baud = do
   -- Enable the peripheral clock and set up GPIOs.
@@ -139,18 +139,24 @@ uartInit uart clockconfig baud = do
   setWordLen  uart uart_word_len_8
   setParity   uart false
 
-  -- Enable the UART, transmitter, and receiver.
+  interrupt_set_to_syscall_priority inter
+  interrupt_enable                  inter
+
+  -- enable rxne interrupt, transmitter, and receiver.
   modifyReg (uartRegCR1 uart) $ do
-    setBit uart_cr1_ue
+    -- XXX: we shouldn't have to set txeie here - but if we don't, txe interrupt
+    -- will never fire until an rxneie interrupt has occured. this wasn't the
+    -- case in the old hwf4 code, and i can't explain the root cause of this
+    -- bug.
+    setBit uart_cr1_txeie
+    setBit uart_cr1_rxneie
     setBit uart_cr1_te
     setBit uart_cr1_re
 
-uartInitISR :: (STM32Interrupt i, GetAlloc eff ~ Scope s)
-            => UART i -> Ivory eff ()
-uartInitISR uart = do
-  interrupt_set_to_syscall_priority inter
-  interrupt_enable                  inter
-  setRXNEIE uart true
+  -- Enable the UART
+  modifyReg (uartRegCR1 uart) $ do
+    setBit uart_cr1_ue
+
   where
   inter = uartInterrupt uart
 
