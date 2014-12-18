@@ -20,6 +20,7 @@ data RingBuffer (n :: Nat) a =
   RingBuffer
     { ringbuffer_push   :: forall s eff . ConstRef s a -> Ivory eff IBool
     , ringbuffer_pop    :: forall s eff .      Ref s a -> Ivory eff IBool
+    , ringbuffer_empty  :: forall s eff . Ivory eff IBool
     , ringbuffer_moddef :: ModuleDef
     }
 
@@ -40,6 +41,7 @@ ringBuffer :: forall n a
 ringBuffer s = RingBuffer
   { ringbuffer_push   = call push_proc
   , ringbuffer_pop    = call pop_proc
+  , ringbuffer_empty  = empty
   , ringbuffer_moddef = do
       incl push_proc
       incl pop_proc
