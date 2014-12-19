@@ -14,6 +14,7 @@ module BSP.Tests.Platforms
   , TestPlatform(..)
   , testplatform_clockconfig
   , px4fmuv17
+  , px4fmuv17_ioar
   , f4discovery
   , open407vc
   ) where
@@ -42,10 +43,11 @@ testPlatformParser :: ConfigParser (TestPlatform F405.Interrupt)
 testPlatformParser = do
   p <- subsection "args" $ subsection "platform" string
   case map toUpper p of
-    "PX4FMUV17"   -> return px4fmuv17
-    "F4DISCOVERY" -> return f4discovery
-    "OPEN407VC"   -> return open407vc
-    "PORT407Z"    -> return port407z
+    "PX4FMUV17"       -> return px4fmuv17
+    "PX4FMUV17_IOAR"  -> return px4fmuv17_ioar
+    "F4DISCOVERY"     -> return f4discovery
+    "OPEN407VC"       -> return open407vc
+    "PORT407Z"        -> return port407z
     _ -> fail ("no such platform " ++ p)
 
 data ColoredLEDs =
@@ -118,6 +120,14 @@ px4fmuv17 = TestPlatform
       , testCANFilters = F405.canFilters
       }
   , testplatform_stm32 = stm32f405Defaults 24
+  }
+
+-- On IOAR carrier board, we use the FTDI style pinout, attached to uart1.
+px4fmuv17_ioar :: TestPlatform F405.Interrupt
+px4fmuv17_ioar = px4fmuv17
+  { testplatform_uart = TestUART
+    { testUART = F405.uart1
+    }
   }
 
 
