@@ -53,7 +53,7 @@ threadModules gc twr = concatMap pertask (Map.elems (generatedcode_threads gc))
   pertask tc = [threadUserModule tc, threadGenModule tc]
   threadUserModule tc =
     let t = threadcode_thread tc in
-    package (threadUserCodeModName t) $ do
+    package (AST.threadUserCodeModName t) $ do
       dependencies
       threadMonitorDeps t monitorStateModName
       depend (threadGenModule tc)
@@ -61,7 +61,7 @@ threadModules gc twr = concatMap pertask (Map.elems (generatedcode_threads gc))
       threadcode_user tc
   threadGenModule tc =
     let t = threadcode_thread tc in
-    package (threadGenCodeModName t) $ do
+    package (AST.threadGenCodeModName t) $ do
       dependencies
       depend (threadUserModule tc)
       threadMonitorDeps t monitorGenModName
@@ -74,16 +74,6 @@ threadModules gc twr = concatMap pertask (Map.elems (generatedcode_threads gc))
   threadMonitorDeps t mname = sequence_
     [ depend $ package (mname m) $ return ()
     | (m,_) <- AST.threadHandlers (AST.messageGraph twr) t ]
-
-threadUserCodeModName :: AST.Thread -> String
-threadUserCodeModName t = "tower_user_" ++ AST.threadName t
-
-threadGenCodeModName :: AST.Thread -> String
-threadGenCodeModName t = "tower_gen_" ++ AST.threadName t
-
-threadLoopProcName :: AST.Thread -> String
-threadLoopProcName t = "loop_" ++ AST.threadName t
-
 
 threadLoopRunHandlers :: AST.Tower -> AST.Thread
                       -> Ref s (Stored ITime) -> Ivory eff ()
@@ -106,7 +96,7 @@ threadLoopModdef _gc twr thr@(AST.PeriodThread p) = do
   period_ms = fromIntegral (toMilliseconds (AST.period_dt p))
   cgi = codegenInit thr
   tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
-  tloopProc = proc (threadLoopProcName thr) $ const $ body $ noReturn $ do
+  tloopProc = proc (AST.threadLoopProcName thr) $ const $ body $ noReturn $ do
     codegeninit_block cgi
 
     tick_rate <- call Time.getTickRateMilliseconds
@@ -140,7 +130,7 @@ threadLoopModdef gc twr thr@(AST.SignalThread s) = do
   cgs = codegenSignal thr
   cgi = codegenInit thr
   tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
-  tloopProc = proc (threadLoopProcName thr) $ const $ body $ noReturn $ do
+  tloopProc = proc (AST.threadLoopProcName thr) $ const $ body $ noReturn $ do
     t_rate <- call Time.getTickRateMilliseconds
     let tickITime :: Uint32 -> ITime
         tickITime t = fromIMilliseconds (t `iDiv` t_rate)
@@ -156,11 +146,11 @@ threadLoopModdef _gc twr thr@(AST.InitThread _) = do
   Time.moddef
   incl tloopProc
   forM_ (AST.towerThreads twr) $ \t -> when (t /= thr) $
-    depend (package (threadGenCodeModName t) (return ()))
+    depend (package (AST.threadGenCodeModName t) (return ()))
 
   where
   tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
-  tloopProc = proc (threadLoopProcName thr) $ const $ body $ noReturn $ do
+  tloopProc = proc (AST.threadLoopProcName thr) $ const $ body $ noReturn $ do
     t <- local (ival 0)
     threadLoopRunHandlers twr thr t
     forM_ (AST.towerThreads twr) (codegeninit_unblock . codegenInit)
@@ -173,7 +163,7 @@ systemModules twr = [initModule]
     Task.moddef
     sequence_ [ depend (package (monitorGenModName m) (return ()))
               | m <- AST.tower_monitors twr ]
-    sequence_ [ depend (package (threadGenCodeModName t) (return ()))
+    sequence_ [ depend (package (AST.threadGenCodeModName t) (return ()))
               | t <- AST.towerThreads twr ]
     incl entryProc
     where
@@ -193,7 +183,7 @@ systemModules twr = [initModule]
                   stacksize priority debugname
     where
     threadLoopProcStub :: Def('[Ref s (Struct "taskarg")]:->())
-    threadLoopProcStub = proc (threadLoopProcName thr)
+    threadLoopProcStub = proc (AST.threadLoopProcName thr)
                           (const (body (return ())))
     stacksize :: Uint32
     stacksize = 1024 -- XXX need some story for computing this
