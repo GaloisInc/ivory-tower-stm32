@@ -11,7 +11,7 @@ module Ivory.OS.FreeRTOS.Tower.System
 import Control.Monad (forM_, when)
 import qualified Data.Map as Map
 import Data.String (fromString)
-import Data.List (sort, elemIndex)
+import Data.List (partition, sort, elemIndex)
 
 import Text.Show.Pretty
 
@@ -25,7 +25,6 @@ import qualified Ivory.Tower.AST as AST
 import Ivory.Language
 import Ivory.Artifact
 
-import Ivory.OS.FreeRTOS.Tower.Init
 import Ivory.OS.FreeRTOS.Tower.Signal
 import Ivory.OS.FreeRTOS.Tower.Monitor
 
@@ -89,16 +88,12 @@ threadLoopModdef _gc twr thr@(AST.PeriodThread p) = do
   Task.moddef
   Time.moddef
   incl tloopProc
-  codegeninit_moddef cgi
 
   where
   period_ms :: Uint32
   period_ms = fromIntegral (toMilliseconds (AST.period_dt p))
-  cgi = codegenInit thr
   tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
   tloopProc = proc (AST.threadLoopProcName thr) $ const $ body $ noReturn $ do
-    codegeninit_block cgi
-
     tick_rate <- call Time.getTickRateMilliseconds
     let tickITime :: Uint32 -> ITime
         tickITime t = fromIMilliseconds (t `iDiv` tick_rate)
@@ -123,18 +118,15 @@ threadLoopModdef gc twr thr@(AST.SignalThread s) = do
   Time.moddef
   incl tloopProc
   codegensignal_moddef cgs
-  codegeninit_moddef cgi
 
   unGeneratedSignal (generatedCodeForSignal s gc) $ codegensignal_ready cgs
   where
   cgs = codegenSignal thr
-  cgi = codegenInit thr
   tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
   tloopProc = proc (AST.threadLoopProcName thr) $ const $ body $ noReturn $ do
     t_rate <- call Time.getTickRateMilliseconds
     let tickITime :: Uint32 -> ITime
         tickITime t = fromIMilliseconds (t `iDiv` t_rate)
-    codegeninit_block cgi
     forever $ noBreak $ do
       codegensignal_wait cgs
       now <- call Time.getTickCount
@@ -142,19 +134,15 @@ threadLoopModdef gc twr thr@(AST.SignalThread s) = do
       threadLoopRunHandlers twr thr t
 
 threadLoopModdef _gc twr thr@(AST.InitThread _) = do
-  Task.moddef
   Time.moddef
-  incl tloopProc
-  forM_ (AST.towerThreads twr) $ \t -> when (t /= thr) $
-    depend (package (AST.threadGenCodeModName t) (return ()))
-
-  where
-  tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
-  tloopProc = proc (AST.threadLoopProcName thr) $ const $ body $ noReturn $ do
+  incl $ proc (AST.threadLoopProcName thr) $ body $ do
     t <- local (ival 0)
-    threadLoopRunHandlers twr thr t
-    forM_ (AST.towerThreads twr) (codegeninit_unblock . codegenInit)
-    forever $ noBreak $ return ()
+    noReturn $ threadLoopRunHandlers twr thr t
+    retVoid
+
+isInitThread :: AST.Thread -> Bool
+isInitThread (AST.InitThread _) = True
+isInitThread _ = False
 
 systemModules :: AST.Tower -> [Module]
 systemModules twr = [initModule]
@@ -173,9 +161,12 @@ systemModules twr = [initModule]
         call_ (monitorInitProc m)
       forM_ (AST.towerThreads twr) $ \thr -> do
         codegensignal_init (codegenSignal thr)
-        codegeninit_init (codegenInit thr)
-      forM_ (AST.towerThreads twr) $ \thr -> do
-        threadBegin thr
+
+      -- Init threads don't need actual threads.
+      let (initThreads, otherThreads) = partition isInitThread $ AST.towerThreads twr
+      forM_ initThreads $ \ thr ->
+        call_ $ proc (AST.threadLoopProcName thr) $ body $ retVoid
+      forM_ otherThreads threadBegin
 
   threadBegin :: AST.Thread -> Ivory eff ()
   threadBegin thr = do
