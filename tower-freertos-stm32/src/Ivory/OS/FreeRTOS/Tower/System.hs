@@ -133,10 +133,11 @@ threadLoopModdef gc twr thr@(AST.SignalThread s) = do
       t <- local (ival (tickITime now))
       threadLoopRunHandlers twr thr t
 
-threadLoopModdef _gc twr thr@(AST.InitThread _) = do
+threadLoopModdef gc twr thr@(AST.InitThread _) = do
   Time.moddef
   incl $ proc (AST.threadLoopProcName thr) $ body $ do
     t <- local (ival 0)
+    generatedcode_init gc
     noReturn $ threadLoopRunHandlers twr thr t
     retVoid
 
