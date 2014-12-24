@@ -23,14 +23,8 @@ data IRQ i = Exception Exception
            deriving (Eq, Show)
 
 instance (STM32Interrupt i) => Signalable (IRQ i) where
-  signalName (Exception e) = exceptionHandlerName e
-  signalName (Interrupt i) = interruptHandlerName i
-  signalHandler (Exception e) b = incl handlerProc
-    where handlerProc :: Def('[]:->())
-          handlerProc = proc (exceptionHandlerName e) (body b)
-  signalHandler (Interrupt i) b = incl handlerProc
-    where handlerProc :: Def('[]:->())
-          handlerProc = proc (interruptHandlerName i) (body b)
+  signalName = irqHandlerName
+  signalHandler i b = incl $ proc (irqHandlerName i) $ body $ b >> retVoid
 
 interrupt_set_to_syscall_priority :: (STM32Interrupt i) => i -> Ivory eff ()
 interrupt_set_to_syscall_priority i =
