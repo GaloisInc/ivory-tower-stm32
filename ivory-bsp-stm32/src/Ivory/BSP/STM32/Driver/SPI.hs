@@ -77,7 +77,6 @@ spiPeripheralDriver tocc periph devices req_out res_in irq = do
     debugSetup     debugPin2
     debugSetup     debugPin3
     spiInit        periph
-    interrupt_set_to_syscall_priority interrupt
     mapM_ spiDeviceInit devices
     store done true
 

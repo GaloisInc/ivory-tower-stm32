@@ -99,11 +99,7 @@ spiInit spi = do
 
 spiInitISR :: (STM32Interrupt i, GetAlloc eff ~ Scope s)
            => SPIPeriph i -> Ivory eff ()
-spiInitISR spi = do
-  interrupt_set_to_syscall_priority inter
-  interrupt_enable                  inter
-  where
-  inter = spiInterrupt spi
+spiInitISR spi = interrupt_enable $ spiInterrupt spi
 
 -- Clock Polarity and Phase: see description
 -- of CPOL and CPHA in ST reference manual RM0090

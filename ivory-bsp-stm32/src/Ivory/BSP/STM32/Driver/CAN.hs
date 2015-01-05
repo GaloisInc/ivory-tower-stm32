@@ -70,11 +70,8 @@ canPeripheralDriver periph bitrate rxpin txpin req_sink res_source pendingReques
       setBit can_ier_tmeie
       setBit can_ier_fmpie0
       setBit can_ier_fmpie1
-    interrupt_set_to_syscall_priority $ canIntTX periph
-    interrupt_set_to_syscall_priority $ canIntSCE periph
     interrupt_enable $ canIntTX periph
     forM_ (canRegRX periph) $ \ fifo -> do
-      interrupt_set_to_syscall_priority $ canIntRX fifo
       interrupt_enable $ canIntRX fifo
 
   taskPriority 4

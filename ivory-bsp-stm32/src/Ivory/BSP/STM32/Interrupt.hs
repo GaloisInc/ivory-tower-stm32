@@ -25,13 +25,12 @@ data IRQ i = Exception Exception
 instance (STM32Interrupt i) => Signalable (IRQ i) where
   signalName = irqHandlerName
   signalHandler i b = incl $ proc (irqHandlerName i) $ body $ b >> retVoid
-
-interrupt_set_to_syscall_priority :: (STM32Interrupt i) => i -> Ivory eff ()
-interrupt_set_to_syscall_priority i =
-  interrupt_set_priority i max_syscall_priority
-  -- XXX MAGIC NUMBER: in tower/freertos, syscalls must be lower (numerically greater
-  -- than) level 11. XXX how to make this cross OS platform safely?
-  where max_syscall_priority = (12::Uint8)
+  signalInit (Exception _) = return ()
+  signalInit (Interrupt i) =
+    interrupt_set_priority i max_syscall_priority
+    -- XXX MAGIC NUMBER: in tower/freertos, syscalls must be lower (numerically greater
+    -- than) level 11. XXX how to make this cross OS platform safely?
+    where max_syscall_priority = (12::Uint8)
 
 irqn :: (STM32Interrupt i) => IRQ i -> IRQn
 irqn (Exception e) = exceptionIRQn e

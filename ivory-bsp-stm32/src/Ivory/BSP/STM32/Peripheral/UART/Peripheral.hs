@@ -139,8 +139,7 @@ uartInit uart clockconfig baud = do
   setWordLen  uart uart_word_len_8
   setParity   uart false
 
-  interrupt_set_to_syscall_priority inter
-  interrupt_enable                  inter
+  interrupt_enable $ uartInterrupt uart
 
   -- enable rxne interrupt, transmitter, and receiver.
   modifyReg (uartRegCR1 uart) $ do
@@ -156,9 +155,6 @@ uartInit uart clockconfig baud = do
   -- Enable the UART
   modifyReg (uartRegCR1 uart) $ do
     setBit uart_cr1_ue
-
-  where
-  inter = uartInterrupt uart
 
 -- | Set the UART data register.
 setDR :: UART i -> Uint8 -> Ivory eff ()

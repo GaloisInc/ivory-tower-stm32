@@ -90,8 +90,6 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan = do
     debugSetup     debugPin4
     i2cInit        periph sda scl clockConfig
     -- Setup hardware for interrupts
-    interrupt_set_to_syscall_priority (i2cIntEvent periph)
-    interrupt_set_to_syscall_priority (i2cIntError periph)
     interrupt_enable (i2cIntEvent periph)
     interrupt_enable (i2cIntError periph)
 
