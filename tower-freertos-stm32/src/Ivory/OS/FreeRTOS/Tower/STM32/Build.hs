@@ -19,7 +19,7 @@ makefile userobjs = artifactString "Makefile" $ unlines
   , "CFLAGS := \\"
   , "  -g3 -Wall -Werror -O2 \\"
   , "  -std=gnu99 \\"
---  , "  -Wno-parenthesis \\"
+  , "  -Wno-parentheses \\"
   , "  -Wno-unused-function \\"
   , "  -Wno-unused-variable \\"
   , "  -mlittle-endian \\"
