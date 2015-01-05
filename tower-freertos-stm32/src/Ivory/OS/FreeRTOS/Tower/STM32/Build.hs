@@ -26,7 +26,6 @@ makefile userobjs = artifactString "Makefile" $ unlines
   , "  -mthumb -mcpu=cortex-m4 \\"
   , "  -mfloat-abi=hard -mfpu=fpv4-sp-d16 \\"
   , "  -DIVORY_TEST \\"
-  , "  -DARM \\"
   , "  -I."
   , ""
   , "LDFLAGS := \\"
