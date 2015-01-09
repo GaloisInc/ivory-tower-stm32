@@ -18,7 +18,7 @@ import Ivory.Language
 
 newtype Mutex =
   Mutex (Ptr Global (Stored Uint8))
-  deriving (IvoryType, IvoryVar, IvoryStore)
+  deriving (IvoryType, IvoryVar, IvoryStore, IvoryZeroVal)
 type MutexHandle = Ref Global (Stored Mutex)
 
 semaphoreWrapperHeader :: String

@@ -18,7 +18,7 @@ import Ivory.Language
 
 newtype BinarySemaphore =
   BinarySemaphore (Ptr Global (Stored Uint8))
-  deriving (IvoryType, IvoryVar, IvoryStore)
+  deriving (IvoryType, IvoryVar, IvoryStore, IvoryZeroVal)
 type BinarySemaphoreHandle = Ref Global (Stored BinarySemaphore)
 
 semaphoreWrapperHeader :: String
