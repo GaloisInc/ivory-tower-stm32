@@ -26,7 +26,7 @@ data RingBuffer (n :: Nat) a =
 
 
 monitorRingBuffer :: forall e n a
-                   . (ANat n, IvoryArea a)
+                   . (ANat n, IvoryArea a, IvoryZero a)
                   => String -> Monitor e (RingBuffer n a)
 monitorRingBuffer name = do
   n <- freshname name
@@ -36,7 +36,7 @@ monitorRingBuffer name = do
   return b
 
 ringBuffer :: forall n a
-            . (ANat n, IvoryArea a)
+            . (ANat n, IvoryArea a, IvoryZero a)
            => String -> RingBuffer n a
 ringBuffer s = RingBuffer
   { ringbuffer_push   = call push_proc

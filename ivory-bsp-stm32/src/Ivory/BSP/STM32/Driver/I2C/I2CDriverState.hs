@@ -12,7 +12,7 @@ module Ivory.BSP.STM32.Driver.I2C.I2CDriverState
 import Ivory.Language
 
 newtype I2CDriverState = I2CDriverState Uint8
-  deriving (IvoryType, IvoryVar, IvoryExpr, IvoryEq, IvoryStore, IvoryInit)
+  deriving (IvoryType, IvoryVar, IvoryExpr, IvoryEq, IvoryStore, IvoryInit, IvoryZeroVal)
 
 stateInactive :: I2CDriverState
 stateInactive =  I2CDriverState 0
