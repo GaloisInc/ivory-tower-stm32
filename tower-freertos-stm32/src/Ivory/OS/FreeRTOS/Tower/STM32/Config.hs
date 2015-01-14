@@ -11,7 +11,7 @@ module Ivory.OS.FreeRTOS.Tower.STM32.Config
 
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Processor
-import Tower.Config
+import Ivory.Tower.Config
 
 data STM32Config =
   STM32Config

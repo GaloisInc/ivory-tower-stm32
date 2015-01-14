@@ -9,7 +9,7 @@ module Main where
 import Ivory.Language
 import Ivory.Tower
 import Ivory.Tower.Compile
-import Tower.Config
+import Ivory.Tower.Config
 import Ivory.OS.FreeRTOS.Tower.STM32
 
 -- Just using the PlatformClock constraint to make sure it works.

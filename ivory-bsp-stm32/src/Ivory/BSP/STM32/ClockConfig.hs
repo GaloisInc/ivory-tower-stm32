@@ -1,7 +1,7 @@
 
 module Ivory.BSP.STM32.ClockConfig where
 
-import Tower.Config
+import Ivory.Tower.Config
 
 data ClockSource = External Integer | Internal deriving (Eq, Show)
 

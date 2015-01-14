@@ -5,7 +5,7 @@ module Ivory.BSP.STM32.Processor
   ) where
 
 import Data.Char (toUpper)
-import Tower.Config
+import Ivory.Tower.Config
 
 data Processor
   = STM32F405

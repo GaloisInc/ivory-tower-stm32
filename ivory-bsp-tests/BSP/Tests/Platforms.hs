@@ -19,7 +19,7 @@ module BSP.Tests.Platforms
   , open407vc
   ) where
 
-import Tower.Config
+import Ivory.Tower.Config
 import Data.Char (toUpper)
 
 import qualified Ivory.BSP.STM32F405.CAN         as F405

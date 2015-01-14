@@ -5,7 +5,7 @@ import Ivory.Tower
 import Ivory.Tower.StateMachine.Example
 
 import Ivory.Tower.Compile
-import Tower.Config
+import Ivory.Tower.Config
 import Ivory.OS.FreeRTOS.Tower.STM32
 
 t :: Tower e ()
