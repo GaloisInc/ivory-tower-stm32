@@ -106,7 +106,6 @@ uartTowerMonitor tocc uart baud _ interrupt ostream istream dbg = do
   handler systemInit "init" $ callback $ const $ do
     debug_init dbg
     uartInit    uart clockConfig (fromIntegral baud)
-    --uartInitISR uart
 
   (outbuf :: RingBuffer n (Stored Uint8)) <- monitorRingBuffer "outbuf"
 
