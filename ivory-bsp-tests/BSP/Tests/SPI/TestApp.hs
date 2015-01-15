@@ -23,7 +23,7 @@ app :: (e -> ClockConfig)
     -> Tower e ()
 app tocc tospi = do
   testspi <- fmap tospi getEnv
-  (req, res) <- spiTower tocc [ testdevice1 testspi, testdevice2 testspi ]
+  (req, res, _ready) <- spiTower tocc [ testdevice1 testspi, testdevice2 testspi ]
   per <- period (Milliseconds 250)
   monitor "simplecontroller" $ do
     handler per "periodic" $ do

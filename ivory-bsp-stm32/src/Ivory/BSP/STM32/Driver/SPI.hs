@@ -32,19 +32,21 @@ spiTower :: forall s e
          => (e -> ClockConfig)
          -> [SPIDevice s]
          -> Tower e ( ChanInput (Struct "spi_transaction_request")
-                    , ChanOutput   (Struct "spi_transaction_result"))
+                    , ChanOutput (Struct "spi_transaction_result")
+                    , ChanOutput (Stored ITime))
 spiTower tocc devices = do
   towerDepends spiDriverTypes
   towerModule  spiDriverTypes
   reqchan <- channel
   reschan <- channel
+  readychan <- channel
   irq <- signalUnsafe (Interrupt interrupt)
                 (Microseconds 20)
                 (do debugToggle debugPin1
                     interrupt_disable interrupt)
   monitor (periphname ++ "PeripheralDriver") $
-    spiPeripheralDriver tocc periph devices (snd reqchan) (fst reschan) irq
-  return (fst reqchan, snd reschan)
+    spiPeripheralDriver tocc periph devices (snd reqchan) (fst reschan) (fst readychan) irq
+  return (fst reqchan, snd reschan, snd readychan)
   where
   interrupt = spiInterrupt periph
   periphname = spiName periph
@@ -66,19 +68,23 @@ spiPeripheralDriver :: forall s e
                     -> [SPIDevice s]
                     -> ChanOutput   (Struct "spi_transaction_request")
                     -> ChanInput    (Struct "spi_transaction_result")
+                    -> ChanInput    (Stored ITime)
                     -> ChanOutput (Stored ITime)
                     -> Monitor e ()
-spiPeripheralDriver tocc periph devices req_out res_in irq = do
+spiPeripheralDriver tocc periph devices req_out res_in ready_in irq = do
   clockconfig <- fmap tocc getEnv
   monitorModuleDef $ hw_moduledef
   done <- state "done"
-  handler systemInit "initialize_hardware"$ callback $ \_ -> do
-    debugSetup     debugPin1
-    debugSetup     debugPin2
-    debugSetup     debugPin3
-    spiInit        periph
-    mapM_ spiDeviceInit devices
-    store done true
+  handler systemInit "initialize_hardware" $ do
+    send_ready <- emitter ready_in 1
+    callback $ \ now -> do
+      debugSetup     debugPin1
+      debugSetup     debugPin2
+      debugSetup     debugPin3
+      spiInit        periph
+      mapM_ spiDeviceInit devices
+      store done true
+      emit send_ready now
 
   reqbuffer    <- state "reqbuffer"
   reqbufferpos <- state "reqbufferpos"
