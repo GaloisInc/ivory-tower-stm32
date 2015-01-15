@@ -35,6 +35,7 @@ data GPIOPort = GPIOPort
   , gpioPortAFRH        :: BitDataReg GPIO_AFRH
   , gpioPortRCCEnable   :: forall eff . Ivory eff ()
   , gpioPortRCCDisable  :: forall eff . Ivory eff ()
+  , gpioPortNumber      :: Int
   , gpioPortName        :: String
   }
 

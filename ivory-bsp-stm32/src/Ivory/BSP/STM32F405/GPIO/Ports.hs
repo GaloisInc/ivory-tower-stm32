@@ -25,9 +25,9 @@ import Ivory.BSP.STM32F405.MemoryMap
 mkGPIOPort :: Integer
            -> (forall eff . Ivory eff ())
            -> (forall eff . Ivory eff ())
-           -> String
+           -> Int
            -> GPIOPort
-mkGPIOPort base rccen rccdis n =
+mkGPIOPort base rccen rccdis idx =
   GPIOPort
     { gpioPortMODER          = reg 0x00 "mode"
     , gpioPortOTYPER         = reg 0x04 "otype"
@@ -39,9 +39,11 @@ mkGPIOPort base rccen rccdis n =
     , gpioPortAFRH           = reg 0x24 "afrh"
     , gpioPortRCCEnable      = rccen
     , gpioPortRCCDisable     = rccdis
+    , gpioPortNumber         = idx
     , gpioPortName           = n
     }
   where
+  n = "gpio" ++ [toEnum (fromEnum 'A' + idx)]
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
 
@@ -49,55 +51,55 @@ gpioA :: GPIOPort
 gpioA = mkGPIOPort gpioa_periph_base
           (rccEnable rcc_ahb1en_gpioa)
           (rccDisable rcc_ahb1en_gpioa)
-          "gpioA"
+          0
 
 gpioB :: GPIOPort
 gpioB = mkGPIOPort gpiob_periph_base
           (rccEnable rcc_ahb1en_gpiob)
           (rccDisable rcc_ahb1en_gpiob)
-          "gpioB"
+          1
 
 gpioC :: GPIOPort
 gpioC = mkGPIOPort gpioc_periph_base
           (rccEnable rcc_ahb1en_gpioc)
           (rccDisable rcc_ahb1en_gpioc)
-          "gpioC"
+          2
 
 gpioD :: GPIOPort
 gpioD = mkGPIOPort gpiod_periph_base
           (rccEnable rcc_ahb1en_gpiod)
           (rccDisable rcc_ahb1en_gpiod)
-          "gpioD"
+          3
 
 gpioE :: GPIOPort
 gpioE = mkGPIOPort gpioe_periph_base
           (rccEnable rcc_ahb1en_gpioe)
           (rccDisable rcc_ahb1en_gpioe)
-          "gpioE"
+          4
 
 gpioF :: GPIOPort
 gpioF = mkGPIOPort gpiof_periph_base
           (rccEnable rcc_ahb1en_gpiof)
           (rccDisable rcc_ahb1en_gpiof)
-          "gpioF"
+          5
 
 gpioG :: GPIOPort
 gpioG = mkGPIOPort gpiog_periph_base
           (rccEnable rcc_ahb1en_gpiog)
           (rccDisable rcc_ahb1en_gpiog)
-          "gpioG"
+          6
 
 gpioH :: GPIOPort
 gpioH = mkGPIOPort gpioh_periph_base
           (rccEnable rcc_ahb1en_gpioh)
           (rccDisable rcc_ahb1en_gpioh)
-          "gpioH"
+          7
 
 gpioI :: GPIOPort
 gpioI = mkGPIOPort gpioi_periph_base
           (rccEnable rcc_ahb1en_gpioi)
           (rccDisable rcc_ahb1en_gpioi)
-          "gpioI"
+          8
 
 rccEnable :: BitDataField RCC_AHB1ENR Bit -> Ivory eff ()
 rccEnable f = modifyReg regRCC_AHB1ENR $ setBit f
