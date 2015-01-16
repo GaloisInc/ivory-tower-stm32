@@ -34,12 +34,14 @@ i2cTower :: (STM32Interrupt s)
          -> GPIOPin
          -> GPIOPin
          -> Tower e ( ChanInput  (Struct "i2c_transaction_request")
-                    , ChanOutput (Struct "i2c_transaction_result"))
+                    , ChanOutput (Struct "i2c_transaction_result")
+                    , ChanOutput (Stored ITime))
 i2cTower tocc periph sda scl = do
   towerDepends i2cTowerTypes
   towerModule  i2cTowerTypes
   reqchan <- channel
   reschan <- channel
+  readychan <- channel
   evt_irq <- signalUnsafe
                 (Interrupt (i2cIntEvent periph))
                 (Microseconds 50)
@@ -57,8 +59,8 @@ i2cTower tocc periph sda scl = do
                     interrupt_disable (i2cIntError periph))
   monitor ((i2cName periph) ++ "PeripheralDriver") $
     i2cPeripheralDriver tocc periph sda scl evt_irq err_irq
-      (snd reqchan) (fst reschan)
-  return (fst reqchan, snd reschan)
+      (snd reqchan) (fst reschan) (fst readychan)
+  return (fst reqchan, snd reschan, snd readychan)
 
 i2cTowerTypes :: Module
 i2cTowerTypes = package "i2cTowerTypes" $ do
@@ -76,22 +78,26 @@ i2cPeripheralDriver :: forall s e
                     -> ChanOutput (Stored ITime)
                     -> ChanOutput (Struct "i2c_transaction_request")
                     -> ChanInput  (Struct "i2c_transaction_result")
+                    -> ChanInput  (Stored ITime)
                     -> Monitor e ()
-i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan = do
+i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_in = do
   clockConfig <- fmap tocc getEnv
   monitorModuleDef $ hw_moduledef
 
   driverstate <- stateInit "driverstate" (ival stateInactive)
 
-  handler systemInit "init" $ callback $ const $ do
-    debugSetup     debugPin1
-    debugSetup     debugPin2
-    debugSetup     debugPin3
-    debugSetup     debugPin4
-    i2cInit        periph sda scl clockConfig
-    -- Setup hardware for interrupts
-    interrupt_enable (i2cIntEvent periph)
-    interrupt_enable (i2cIntError periph)
+  handler systemInit "init" $ do
+    send_ready <- emitter ready_in 1
+    callback $ \ now -> do
+      debugSetup     debugPin1
+      debugSetup     debugPin2
+      debugSetup     debugPin3
+      debugSetup     debugPin4
+      i2cInit        periph sda scl clockConfig
+      -- Setup hardware for interrupts
+      interrupt_enable (i2cIntEvent periph)
+      interrupt_enable (i2cIntError periph)
+      emit send_ready now
 
   (reqbuffer :: Ref Global (Struct "i2c_transaction_request")) <- state "reqbuffer"
   (reqbufferpos :: Ref Global (Stored (Ix 128)))               <- state "reqbufferpos"
