@@ -107,6 +107,7 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
 
   (invalid_request :: Ref Global (Stored Uint32)) <- state "invalid_request"
 
+  (transaction_delayed :: Ref Global (Stored Uint32)) <- state "transaction_delayed"
 
   let sendresult :: Emitter (Struct "i2c_transaction_result")
                  -> Ref s' (Struct "i2c_transaction_result")
@@ -159,8 +160,9 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
             sr1  <- getReg (i2cRegSR1 periph)
             _sr2 <- getReg (i2cRegSR2 periph)
 
-
-            btf <- assign (bitToBool (sr1 #. i2c_sr1_btf))
+            when (bitToBool (sr1 #. i2c_sr1_btf)) $ do
+              comment "transaction delayed because byte transfer finished before we woke up again"
+              transaction_delayed %= (+1)
 
             when (bitToBool (sr1 #. i2c_sr1_sb)) $ do
               tx_sz  <- deref (reqbuffer ~> tx_len)
@@ -208,15 +210,6 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
               store ((resbuffer ~> rx_buf) ! rx_pos) r
               store resbufferpos (rx_pos + 1)
 
-
-              when btf $ do
-                comment "missed received byte??"
-                modifyReg (i2cRegCR1 periph) $
-                  clearBit i2c_cr1_ack
-                setStop periph
-                store driverstate stateError
-                sendresult res_emitter resbuffer 1
-
               when (read_remaining ==? 2) $ do
                  -- Now 1 remaining
                  -- Unset Ack, then Stop
@@ -224,12 +217,12 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
                    clearBit i2c_cr1_ack
                  setStop periph
 
-              when ((read_remaining ==? 1) .&& iNot btf) $ do
+              when (read_remaining ==? 1) $ do
                  -- Now 0 remaining
                  store driverstate stateInactive
                  sendresult res_emitter resbuffer 0
 
-            when (bitToBool (sr1 #. i2c_sr1_txe) .&& iNot btf) $ do
+            when (bitToBool (sr1 #. i2c_sr1_txe)) $ do
 
               tx_pos <- deref reqbufferpos
               tx_sz  <- deref (reqbuffer ~> tx_len)
@@ -239,7 +232,7 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
               let write_remaining = tx_sz - tx_pos
                   read_remaining =  rx_sz - rx_pos
               cond_
-                -- TXE set, BTF clear: tx buffer is empty, still writing
+                -- TXE set: tx buffer is empty, still writing
                 [ (write_remaining >? 0) ==> do
                     w <- deref ((reqbuffer ~> tx_buf) ! tx_pos)
                     store reqbufferpos (tx_pos + 1)
