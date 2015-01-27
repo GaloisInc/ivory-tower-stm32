@@ -6,6 +6,7 @@ module Ivory.OS.FreeRTOS.Tower.STM32
   , module Ivory.OS.FreeRTOS.Tower.STM32.Config
   ) where
 
+import System.FilePath
 import Ivory.Language
 import Ivory.Artifact
 import Ivory.HW
@@ -67,7 +68,12 @@ stm32Artifacts conf ast ms = (systemArtifacts ast ms) ++ as
     ++ FreeRTOS.kernel fconfig ++ FreeRTOS.wrapper
     ++ hw_artifacts
 
-  makeobjs = FreeRTOS.objects ++ [ moduleName m ++ ".o" | m <- ms ]
+  makeobjs = FreeRTOS.objects
+          ++ [ moduleName m ++ ".o" | m <- ms ]
+          ++ [ replaceExtension a ".o"
+             | a <- AST.tower_artifact_fs ast
+             , takeExtension a == ".c"
+             ]
   fconfig = FreeRTOS.defaultConfig
     { FreeRTOS.max_priorities = fromIntegral (length (AST.towerThreads ast)) + 1
     -- XXX expand tower config to fill in the rest of these values
