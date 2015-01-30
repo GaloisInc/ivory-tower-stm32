@@ -1,6 +1,6 @@
 
 --
--- MemoryMap.hs -- Memory map (addresses) for STM32F4
+-- MemoryMap.hs -- Memory map (addresses) for STM32F405
 --
 -- Copyright (C) 2013, Galois, Inc.
 -- All Rights Reserved.

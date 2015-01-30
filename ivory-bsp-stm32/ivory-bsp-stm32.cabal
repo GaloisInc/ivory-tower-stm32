@@ -87,8 +87,6 @@ library
 
                        Ivory.BSP.STM32F405.MemoryMap,
                        Ivory.BSP.STM32F405.Interrupt,
-                       Ivory.BSP.STM32F405.Interrupt.API,
-                       Ivory.BSP.STM32F405.Interrupt.Types,
                        Ivory.BSP.STM32F405.CAN,
                        Ivory.BSP.STM32F405.SPI,
                        Ivory.BSP.STM32F405.I2C,
