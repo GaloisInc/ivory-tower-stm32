@@ -98,7 +98,9 @@ library
                        Ivory.BSP.STM32F405.GPIO.Pins,
                        Ivory.BSP.STM32F405.GTIM2345,
                        Ivory.BSP.STM32F405.ATIM18,
-                       Ivory.BSP.STM32F405.UART
+                       Ivory.BSP.STM32F405.UART,
+
+                       Ivory.BSP.STM32F427.MemoryMap
 
   other-modules:       Paths_ivory_bsp_stm32
 
