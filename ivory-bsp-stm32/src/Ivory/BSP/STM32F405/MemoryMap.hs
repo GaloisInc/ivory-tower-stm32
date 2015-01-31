@@ -128,10 +128,9 @@ gpioi_periph_base :: Integer
 gpioi_periph_base = ahb1_periph_base + 0x2000
 crc_periph_base :: Integer
 crc_periph_base = ahb1_periph_base + 0x3000
---rcc_periph_base :: Integer
---rcc_periph_base = ahb1_periph_base + 0x3800
---flash_r_periph_base :: Integer
---flash_r_periph_base = ahb1_periph_base + 0x3C00
+-- skipping rcc_periph_base and flash_r_periph_base:
+-- These are the same across the whole STM32 line, so we
+-- declare them in Ivory.BSP.STM32.MemoryMap
 dma1_periph_base :: Integer
 dma1_periph_base = ahb1_periph_base + 0x6000
 dma2_periph_base :: Integer

@@ -75,9 +75,9 @@ can2_periph_base = apb1_periph_base + 0x6800
 dac_periph_base :: Integer
 dac_periph_base = apb1_periph_base + 0x7400
 uart7_periph_base :: Integer
-uart7_periph_base :: apb1_periph_base + 0x7800
+uart7_periph_base = apb1_periph_base + 0x7800
 uart8_periph_base :: Integer
-uart8_periph_base :: apb1_periph_base + 0x7C00
+uart8_periph_base = apb1_periph_base + 0x7C00
 
 
 -- APB2 Peripherals
@@ -148,10 +148,9 @@ gpiok_periph_base :: Integer
 gpiok_periph_base = ahb1_periph_base + 0x2800
 crc_periph_base :: Integer
 crc_periph_base = ahb1_periph_base + 0x3000
---rcc_periph_base :: Integer
---rcc_periph_base = ahb1_periph_base + 0x3800
---flash_r_periph_base :: Integer
---flash_r_periph_base = ahb1_periph_base + 0x3C00
+-- skipping rcc_periph_base and flash_r_periph_base:
+-- These are the same across the whole STM32 line, so we
+-- declare them in Ivory.BSP.STM32.MemoryMap
 dma1_periph_base :: Integer
 dma1_periph_base = ahb1_periph_base + 0x6000
 dma2_periph_base :: Integer
