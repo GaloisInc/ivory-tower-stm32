@@ -8,7 +8,7 @@ module Ivory.OS.FreeRTOS.Tower.System
   , systemArtifacts
   ) where
 
-import Control.Monad (forM_, when)
+import Control.Monad (forM_)
 import qualified Data.Map as Map
 import Data.String (fromString)
 import Data.List (partition, sort, elemIndex)
