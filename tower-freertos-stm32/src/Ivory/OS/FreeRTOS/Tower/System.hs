@@ -178,7 +178,7 @@ systemModules twr = [initModule]
     threadLoopProcStub = proc (AST.threadLoopProcName thr)
                           (const (body (return ())))
     stacksize :: Uint32
-    stacksize = 1024 -- XXX need some story for computing this
+    stacksize = 4096 -- XXX need some story for computing this
 
     debugname :: IString
     debugname = fromString (AST.threadName thr)
