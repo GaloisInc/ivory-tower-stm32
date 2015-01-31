@@ -16,7 +16,7 @@ import Ivory.OS.FreeRTOS.Tower.STM32.Config
 makefile :: [FilePath] -> Artifact
 makefile userobjs = artifactString "Makefile" $ unlines
   [ "CC := arm-none-eabi-gcc"
-  , "CFLAGS := -O2"
+  , "CFLAGS := -Os"
   , "TOWER_STM32_CFLAGS := \\"
   , "  -g3 -Wall -Werror \\"
   , "  -std=gnu99 \\"
