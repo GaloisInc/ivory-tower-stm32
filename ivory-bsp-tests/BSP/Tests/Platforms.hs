@@ -25,6 +25,7 @@ import Data.Char (toUpper)
 import qualified Ivory.BSP.STM32F405.CAN         as F405
 import qualified Ivory.BSP.STM32F405.UART        as F405
 import qualified Ivory.BSP.STM32F405.GPIO        as F405
+import qualified Ivory.BSP.STM32F405.GPIO.AF     as F405
 import qualified Ivory.BSP.STM32F405.SPI         as F405
 import qualified Ivory.BSP.STM32F405.I2C         as F405
 import qualified Ivory.BSP.STM32F405.Interrupt   as F405
@@ -63,7 +64,8 @@ data TestUART s =
 
 data TestSPI s =
   TestSPI
-    { testSPI :: SPIPeriph s
+    { testSPIPeriph :: SPIPeriph s
+    , testSPIPins   :: SPIPins
     }
 
 data TestI2C s =
@@ -106,7 +108,8 @@ px4fmuv17 = TestPlatform
       { testUART = F405.uart5
       }
   , testplatform_spi = TestSPI
-      { testSPI = F405.spi3
+      { testSPIPeriph = F405.spi3
+      , testSPIPins   = spi3_pins
       }
   , testplatform_i2c = TestI2C
       { testI2C = F405.i2c1
@@ -143,7 +146,8 @@ f4discovery = TestPlatform
       { testUART = F405.uart1
       }
   , testplatform_spi = TestSPI
-      { testSPI = F405.spi3
+      { testSPIPeriph = F405.spi3
+      , testSPIPins   = spi3_pins
       }
   , testplatform_i2c = TestI2C
       { testI2C = F405.i2c1
@@ -171,7 +175,8 @@ open407vc = TestPlatform
       { testUART = F405.uart2
       }
   , testplatform_spi = TestSPI
-      { testSPI = F405.spi3
+      { testSPIPeriph = F405.spi3
+      , testSPIPins   = spi3_pins
       }
   , testplatform_i2c = TestI2C
       { testI2C = F405.i2c1
@@ -200,7 +205,8 @@ port407z = TestPlatform
       { testUART = F405.uart2
       }
   , testplatform_spi = TestSPI
-      { testSPI = F405.spi3
+      { testSPIPeriph = F405.spi3
+      , testSPIPins   = spi3_pins
       }
   , testplatform_i2c = TestI2C
       { testI2C = F405.i2c1
@@ -216,4 +222,10 @@ port407z = TestPlatform
   , testplatform_stm32 = stm32f405Defaults 8
   }
 
-
+spi3_pins :: SPIPins
+spi3_pins = SPIPins
+  { spiPinMiso = F405.pinC12
+  , spiPinMosi = F405.pinC11
+  , spiPinSck  = F405.pinC10
+  , spiPinAF   = F405.gpio_af_spi3
+  }
