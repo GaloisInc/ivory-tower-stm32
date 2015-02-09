@@ -91,7 +91,6 @@ library
                        Ivory.BSP.STM32F405.SPI,
                        Ivory.BSP.STM32F405.I2C,
                        Ivory.BSP.STM32F405.RCC,
-                       Ivory.BSP.STM32F405.RCC.Regs,
                        Ivory.BSP.STM32F405.GPIO,
                        Ivory.BSP.STM32F405.GPIO.AF,
                        Ivory.BSP.STM32F405.GPIO.Ports,
@@ -102,8 +101,7 @@ library
 
                        Ivory.BSP.STM32F427.MemoryMap,
 
-                       Ivory.BSP.STM32F427.RCC,
-                       Ivory.BSP.STM32F427.RCC.Regs
+                       Ivory.BSP.STM32F427.RCC
 
   other-modules:       Paths_ivory_bsp_stm32
 

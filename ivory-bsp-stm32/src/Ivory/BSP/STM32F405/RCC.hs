@@ -9,7 +9,7 @@
 -- All Rights Reserved.
 --
 
-module Ivory.BSP.STM32F405.RCC.Regs where
+module Ivory.BSP.STM32F405.RCC where
 
 import Ivory.Language
 import Ivory.HW

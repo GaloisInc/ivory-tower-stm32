@@ -21,32 +21,6 @@ import Ivory.BSP.STM32.Peripheral.GPIOF4.Peripheral
 import Ivory.BSP.STM32F405.RCC
 import Ivory.BSP.STM32F405.MemoryMap
 
--- | Create a GPIO port given the base register address.
-mkGPIOPort :: Integer
-           -> (forall eff . Ivory eff ())
-           -> (forall eff . Ivory eff ())
-           -> Int
-           -> GPIOPort
-mkGPIOPort base rccen rccdis idx =
-  GPIOPort
-    { gpioPortMODER          = reg 0x00 "mode"
-    , gpioPortOTYPER         = reg 0x04 "otype"
-    , gpioPortOSPEEDR        = reg 0x08 "ospeed"
-    , gpioPortPUPDR          = reg 0x0C "pupd"
-    , gpioPortIDR            = reg 0x10 "idr"
-    , gpioPortBSRR           = reg 0x18 "bsrr"
-    , gpioPortAFRL           = reg 0x20 "afrl"
-    , gpioPortAFRH           = reg 0x24 "afrh"
-    , gpioPortRCCEnable      = rccen
-    , gpioPortRCCDisable     = rccdis
-    , gpioPortNumber         = idx
-    , gpioPortName           = n
-    }
-  where
-  n = "gpio" ++ [toEnum (fromEnum 'A' + idx)]
-  reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
-  reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
-
 gpioA :: GPIOPort
 gpioA = mkGPIOPort gpioa_periph_base
           (rccEnable rcc_ahb1en_gpioa)
