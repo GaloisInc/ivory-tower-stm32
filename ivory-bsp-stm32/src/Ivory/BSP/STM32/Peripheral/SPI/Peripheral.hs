@@ -33,27 +33,26 @@ data SPIPeriph i = SPIPeriph
   , spiRegDR       :: BitDataReg SPI_DR
   , spiRCCEnable   :: forall eff . Ivory eff ()
   , spiRCCDisable  :: forall eff . Ivory eff ()
-  , spiPinMiso     :: GPIOPin
-  , spiPinMosi     :: GPIOPin
-  , spiPinSck      :: GPIOPin
-  , spiPinAF       :: GPIO_AF
   , spiInterrupt   :: i
   , spiPClk        :: PClk
   , spiName        :: String
   }
 
+data SPIPins = SPIPins
+  { spiPinMiso     :: GPIOPin
+  , spiPinMosi     :: GPIOPin
+  , spiPinSck      :: GPIOPin
+  , spiPinAF       :: GPIO_AF
+  }
+
 mkSPIPeriph :: Integer
             -> (forall eff . Ivory eff ())
             -> (forall eff . Ivory eff ())
-            -> GPIOPin
-            -> GPIOPin
-            -> GPIOPin
-            -> GPIO_AF
             -> i
             -> PClk
             -> String
             -> SPIPeriph i
-mkSPIPeriph base rccen rccdis miso mosi sck af inter pclk n =
+mkSPIPeriph base rccen rccdis inter pclk n =
   SPIPeriph
     { spiRegCR1      = reg 0x00 "cr1"
     , spiRegCR2      = reg 0x04 "cr2"
@@ -61,10 +60,6 @@ mkSPIPeriph base rccen rccdis miso mosi sck af inter pclk n =
     , spiRegDR       = reg 0x0C "dr"
     , spiRCCEnable   = rccen
     , spiRCCDisable  = rccdis
-    , spiPinMiso     = miso
-    , spiPinMosi     = mosi
-    , spiPinSck      = sck
-    , spiPinAF       = af
     , spiInterrupt   = inter
     , spiPClk        = pclk
     , spiName        = n
@@ -90,12 +85,12 @@ initOutPin pin af = do
 
 -- | Enable peripheral and setup GPIOs. Must be performed
 --   before any other SPI peripheral actions.
-spiInit :: (GetAlloc eff ~ Scope s) => SPIPeriph i -> Ivory eff ()
-spiInit spi = do
+spiInit :: (GetAlloc eff ~ Scope s) => SPIPeriph i -> SPIPins -> Ivory eff ()
+spiInit spi pins = do
   spiRCCEnable spi
-  initInPin  (spiPinMiso spi) (spiPinAF spi)
-  initOutPin (spiPinMosi spi) (spiPinAF spi)
-  initOutPin (spiPinSck  spi) (spiPinAF spi)
+  initInPin  (spiPinMiso pins) (spiPinAF pins)
+  initOutPin (spiPinMosi pins) (spiPinAF pins)
+  initOutPin (spiPinSck  pins) (spiPinAF pins)
 
 spiInitISR :: (STM32Interrupt i, GetAlloc eff ~ Scope s)
            => SPIPeriph i -> Ivory eff ()

@@ -31,10 +31,11 @@ spiTower :: forall s e
           . (STM32Interrupt s)
          => (e -> ClockConfig)
          -> [SPIDevice s]
+         -> SPIPins
          -> Tower e ( ChanInput (Struct "spi_transaction_request")
                     , ChanOutput (Struct "spi_transaction_result")
                     , ChanOutput (Stored ITime))
-spiTower tocc devices = do
+spiTower tocc devices pins = do
   towerDepends spiDriverTypes
   towerModule  spiDriverTypes
   reqchan <- channel
@@ -45,7 +46,7 @@ spiTower tocc devices = do
                 (do debugToggle debugPin1
                     interrupt_disable interrupt)
   monitor (periphname ++ "PeripheralDriver") $
-    spiPeripheralDriver tocc periph devices (snd reqchan) (fst reschan) (fst readychan) irq
+    spiPeripheralDriver tocc periph pins devices (snd reqchan) (fst reschan) (fst readychan) irq
   return (fst reqchan, snd reschan, snd readychan)
   where
   interrupt = spiInterrupt periph
@@ -65,13 +66,14 @@ spiPeripheralDriver :: forall s e
                      . (STM32Interrupt s)
                     => (e -> ClockConfig)
                     -> SPIPeriph s
+                    -> SPIPins
                     -> [SPIDevice s]
                     -> ChanOutput   (Struct "spi_transaction_request")
                     -> ChanInput    (Struct "spi_transaction_result")
                     -> ChanInput    (Stored ITime)
                     -> ChanOutput (Stored ITime)
                     -> Monitor e ()
-spiPeripheralDriver tocc periph devices req_out res_in ready_in irq = do
+spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
   clockconfig <- fmap tocc getEnv
   monitorModuleDef $ hw_moduledef
   done <- state "done"
@@ -81,7 +83,7 @@ spiPeripheralDriver tocc periph devices req_out res_in ready_in irq = do
       debugSetup     debugPin1
       debugSetup     debugPin2
       debugSetup     debugPin3
-      spiInit        periph
+      spiInit        periph pins
       mapM_ spiDeviceInit devices
       store done true
       emit send_ready now
