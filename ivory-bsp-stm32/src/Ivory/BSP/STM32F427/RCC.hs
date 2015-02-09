@@ -36,8 +36,8 @@ import Ivory.BSP.STM32.MemoryMap (rcc_periph_base)
   , _                     :: Bits 5
   , rcc_ahb1en_crc        :: Bit
   , _                     :: Bit
-  , rcc_ahb1en_gpioj      :: Bit
   , rcc_ahb1en_gpiok      :: Bit
+  , rcc_ahb1en_gpioj      :: Bit
   , rcc_ahb1en_gpioi      :: Bit
   , rcc_ahb1en_gpioh      :: Bit
   , rcc_ahb1en_gpiog      :: Bit
