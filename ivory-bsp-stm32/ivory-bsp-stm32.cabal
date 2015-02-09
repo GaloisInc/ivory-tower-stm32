@@ -100,8 +100,10 @@ library
                        Ivory.BSP.STM32F405.UART,
 
                        Ivory.BSP.STM32F427.MemoryMap,
-
-                       Ivory.BSP.STM32F427.RCC
+                       Ivory.BSP.STM32F427.RCC,
+                       Ivory.BSP.STM32F427.GPIO.AF,
+                       Ivory.BSP.STM32F427.GPIO.Ports,
+                       Ivory.BSP.STM32F427.GPIO.Pins
 
   other-modules:       Paths_ivory_bsp_stm32
 
