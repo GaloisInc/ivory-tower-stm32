@@ -3,7 +3,7 @@ module BSP.Tests.LED where
 
 import Ivory.Language
 
-import Ivory.BSP.STM32F405.GPIO
+import Ivory.BSP.STM32.Peripheral.GPIOF4
 
 data LEDPolarity = ActiveHigh | ActiveLow
 data LED = LED GPIOPin LEDPolarity
