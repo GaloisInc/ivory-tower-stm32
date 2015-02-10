@@ -51,21 +51,23 @@ emptyDbg =
 uartTower :: (STM32Interrupt s, ANat n)
           => (e -> ClockConfig)
           -> UART s
+          -> UARTPins
           -> Integer
           -> Proxy (n :: Nat)
           -> Tower e ( ChanOutput (Stored Uint8)
                      , ChanInput  (Stored Uint8))
-uartTower tocc u b s = uartTowerDebuggable tocc u b s emptyDbg
+uartTower tocc u p b s = uartTowerDebuggable tocc u p b s emptyDbg
 
 uartTowerDebuggable :: (STM32Interrupt s, ANat n)
                     => (e -> ClockConfig)
                     -> UART s
+                    -> UARTPins
                     -> Integer
                     -> Proxy (n :: Nat)
                     -> UARTTowerDebugger
                     -> Tower e ( ChanOutput (Stored Uint8)
                                , ChanInput  (Stored Uint8))
-uartTowerDebuggable tocc uart baud sizeproxy dbg = do
+uartTowerDebuggable tocc uart pins baud sizeproxy dbg = do
 
   (src_ostream, snk_ostream) <- channel
   (src_istream, snk_istream) <- channel
@@ -79,7 +81,7 @@ uartTowerDebuggable tocc uart baud sizeproxy dbg = do
         interrupt_disable (uartInterrupt uart))
 
   monitor (uartName uart ++ "_driver") $ do
-    uartTowerMonitor tocc uart baud sizeproxy interrupt snk_ostream src_istream dbg
+    uartTowerMonitor tocc uart pins baud sizeproxy interrupt snk_ostream src_istream dbg
 
   return (snk_istream, src_ostream)
 
@@ -87,6 +89,7 @@ uartTowerMonitor :: forall e n s
                   . (ANat n, STM32Interrupt s)
                  => (e -> ClockConfig)
                  -> UART s
+                 -> UARTPins
                  -> Integer
                  -> Proxy (n :: Nat)
                  -> ChanOutput (Stored ITime)
@@ -94,7 +97,7 @@ uartTowerMonitor :: forall e n s
                  -> ChanInput (Stored Uint8)
                  -> UARTTowerDebugger
                  -> Monitor e ()
-uartTowerMonitor tocc uart baud _ interrupt ostream istream dbg = do
+uartTowerMonitor tocc uart pins baud _ interrupt ostream istream dbg = do
   clockConfig <- fmap tocc getEnv
 
   monitorModuleDef $ hw_moduledef
@@ -105,7 +108,7 @@ uartTowerMonitor tocc uart baud _ interrupt ostream istream dbg = do
 
   handler systemInit "init" $ callback $ const $ do
     debug_init dbg
-    uartInit    uart clockConfig (fromIntegral baud)
+    uartInit uart pins clockConfig (fromIntegral baud)
 
   (outbuf :: RingBuffer n (Stored Uint8)) <- monitorRingBuffer "outbuf"
 

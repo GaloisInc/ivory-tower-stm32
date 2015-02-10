@@ -109,7 +109,8 @@ library
                        Ivory.BSP.STM32F427.GPIO.Ports,
                        Ivory.BSP.STM32F427.GPIO.Pins,
                        Ivory.BSP.STM32F427.GTIM2345,
-                       Ivory.BSP.STM32F427.ATIM18
+                       Ivory.BSP.STM32F427.ATIM18,
+                       Ivory.BSP.STM32F427.UART
 
   other-modules:       Paths_ivory_bsp_stm32
 
