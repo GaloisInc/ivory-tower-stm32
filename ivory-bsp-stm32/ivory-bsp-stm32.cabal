@@ -105,6 +105,7 @@ library
                        Ivory.BSP.STM32F427.CAN,
                        Ivory.BSP.STM32F427.SPI,
                        Ivory.BSP.STM32F427.I2C,
+                       Ivory.BSP.STM32F427.GPIO,
                        Ivory.BSP.STM32F427.GPIO.AF,
                        Ivory.BSP.STM32F427.GPIO.Ports,
                        Ivory.BSP.STM32F427.GPIO.Pins,
