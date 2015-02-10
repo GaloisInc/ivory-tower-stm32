@@ -59,7 +59,8 @@ data ColoredLEDs =
 
 data TestUART s =
   TestUART
-    { testUART :: UART s
+    { testUARTPeriph :: UART s
+    , testUARTPins   :: UARTPins
     }
 
 data TestSPI s =
@@ -105,7 +106,12 @@ px4fmuv17 = TestPlatform
       , blueLED = LED F405.pinB15 ActiveLow
       }
   , testplatform_uart = TestUART
-      { testUART = F405.uart5
+      { testUARTPeriph = F405.uart5
+      , testUARTPins   = UARTPins
+          { uartPinTx = F405.pinC12
+          , uartPinRx = F405.pinD2
+          , uartPinAF = F405.gpio_af_uart5
+          }
       }
   , testplatform_spi = TestSPI
       { testSPIPeriph = F405.spi3
@@ -129,7 +135,12 @@ px4fmuv17 = TestPlatform
 px4fmuv17_ioar :: TestPlatform F405.Interrupt
 px4fmuv17_ioar = px4fmuv17
   { testplatform_uart = TestUART
-    { testUART = F405.uart1
+    { testUARTPeriph = F405.uart1
+    , testUARTPins = UARTPins
+          { uartPinTx = F405.pinB6
+          , uartPinRx = F405.pinB7
+          , uartPinAF = F405.gpio_af_uart1
+          }
     }
   }
 
@@ -143,7 +154,12 @@ f4discovery = TestPlatform
       , blueLED = LED F405.pinD15 ActiveHigh
       }
   , testplatform_uart = TestUART
-      { testUART = F405.uart1
+      { testUARTPeriph = F405.uart1
+      , testUARTPins = UARTPins
+          { uartPinTx = F405.pinB6
+          , uartPinRx = F405.pinB7
+          , uartPinAF = F405.gpio_af_uart1
+          }
       }
   , testplatform_spi = TestSPI
       { testSPIPeriph = F405.spi3
@@ -172,7 +188,12 @@ open407vc = TestPlatform
       , blueLED = LED F405.pinD13 ActiveHigh
       }
   , testplatform_uart = TestUART
-      { testUART = F405.uart2
+      { testUARTPeriph = F405.uart2
+      , testUARTPins = UARTPins
+          { uartPinTx = F405.pinA2
+          , uartPinRx = F405.pinA3
+          , uartPinAF = F405.gpio_af_uart2
+          }
       }
   , testplatform_spi = TestSPI
       { testSPIPeriph = F405.spi3
@@ -202,7 +223,12 @@ port407z = TestPlatform
       , blueLED = LED F405.pinA5 ActiveHigh -- LED2
       }
   , testplatform_uart = TestUART
-      { testUART = F405.uart2
+      { testUARTPeriph = F405.uart2
+      , testUARTPins = UARTPins
+          { uartPinTx = F405.pinA2
+          , uartPinRx = F405.pinA3
+          , uartPinAF = F405.gpio_af_uart2
+          }
       }
   , testplatform_spi = TestSPI
       { testSPIPeriph = F405.spi3
