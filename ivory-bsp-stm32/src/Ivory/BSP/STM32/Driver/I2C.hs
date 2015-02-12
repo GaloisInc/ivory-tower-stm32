@@ -42,6 +42,7 @@ i2cTower tocc periph sda scl = do
   reqchan <- channel
   reschan <- channel
   readychan <- channel
+  ready_per <- period (Milliseconds 1)
   evt_irq <- signalUnsafe
                 (Interrupt (i2cIntEvent periph))
                 (Microseconds 50)
@@ -59,7 +60,7 @@ i2cTower tocc periph sda scl = do
                     interrupt_disable (i2cIntError periph))
   monitor ((i2cName periph) ++ "PeripheralDriver") $
     i2cPeripheralDriver tocc periph sda scl evt_irq err_irq
-      (snd reqchan) (fst reschan) (fst readychan)
+      (snd reqchan) (fst reschan) ready_per (fst readychan)
   return (fst reqchan, snd reschan, snd readychan)
 
 i2cTowerTypes :: Module
@@ -78,16 +79,16 @@ i2cPeripheralDriver :: forall s e
                     -> ChanOutput (Stored ITime)
                     -> ChanOutput (Struct "i2c_transaction_request")
                     -> ChanInput  (Struct "i2c_transaction_result")
+                    -> ChanOutput (Stored ITime)
                     -> ChanInput  (Stored ITime)
                     -> Monitor e ()
-i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_in = do
+i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_per ready_in = do
   clockConfig <- fmap tocc getEnv
   monitorModuleDef $ hw_moduledef
 
   driverstate <- stateInit "driverstate" (ival stateInactive)
 
   handler systemInit "init" $ do
-    send_ready <- emitter ready_in 1
     callback $ \ now -> do
       debugSetup     debugPin1
       debugSetup     debugPin2
@@ -97,7 +98,14 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
       -- Setup hardware for interrupts
       interrupt_enable (i2cIntEvent periph)
       interrupt_enable (i2cIntError periph)
-      emit send_ready now
+
+  ready_sent <- state "ready_sent"
+  handler ready_per "readyPeriod" $ do
+    send_ready <- emitter ready_in 1
+    callback $ \now -> do
+      r <- deref ready_sent
+      unless r $ emit send_ready now
+      store ready_sent true
 
   (reqbuffer :: Ref Global (Struct "i2c_transaction_request")) <- state "reqbuffer"
   (reqbufferpos :: Ref Global (Stored (Ix 128)))               <- state "reqbufferpos"
