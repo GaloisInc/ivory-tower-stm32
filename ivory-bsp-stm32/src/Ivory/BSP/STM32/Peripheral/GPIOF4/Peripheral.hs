@@ -39,6 +39,32 @@ data GPIOPort = GPIOPort
   , gpioPortName        :: String
   }
 
+-- | Create a GPIO port given the base register address.
+mkGPIOPort :: Integer
+           -> (forall eff . Ivory eff ())
+           -> (forall eff . Ivory eff ())
+           -> Int
+           -> GPIOPort
+mkGPIOPort base rccen rccdis idx =
+  GPIOPort
+    { gpioPortMODER          = reg 0x00 "mode"
+    , gpioPortOTYPER         = reg 0x04 "otype"
+    , gpioPortOSPEEDR        = reg 0x08 "ospeed"
+    , gpioPortPUPDR          = reg 0x0C "pupd"
+    , gpioPortIDR            = reg 0x10 "idr"
+    , gpioPortBSRR           = reg 0x18 "bsrr"
+    , gpioPortAFRL           = reg 0x20 "afrl"
+    , gpioPortAFRH           = reg 0x24 "afrh"
+    , gpioPortRCCEnable      = rccen
+    , gpioPortRCCDisable     = rccdis
+    , gpioPortNumber         = idx
+    , gpioPortName           = n
+    }
+  where
+  n = "gpio" ++ [toEnum (fromEnum 'A' + idx)]
+  reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
+  reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
+
 -- | A GPIO alternate function register and bit field.
 data GPIOPinAFR = AFRL (BitDataField GPIO_AFRL GPIO_AF)
                 | AFRH (BitDataField GPIO_AFRH GPIO_AF)

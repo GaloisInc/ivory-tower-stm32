@@ -23,7 +23,9 @@ app :: (e -> ClockConfig)
     -> Tower e ()
 app tocc tospi = do
   testspi <- fmap tospi getEnv
-  (req, res, _ready) <- spiTower tocc [ testdevice1 testspi, testdevice2 testspi ]
+  (req, res, _ready) <- spiTower tocc
+                          [ testdevice1 testspi, testdevice2 testspi ]
+                          (testSPIPins testspi)
   per <- period (Milliseconds 250)
   monitor "simplecontroller" $ do
     handler per "periodic" $ do
@@ -52,7 +54,7 @@ app tocc tospi = do
 
   where
   testdevice1 testspi = SPIDevice
-    { spiDevPeripheral    = testSPI testspi
+    { spiDevPeripheral    = testSPIPeriph testspi
     , spiDevCSPin         = pinE2
     , spiDevClockHz       = 2500000
     , spiDevCSActive      = ActiveLow
@@ -62,7 +64,7 @@ app tocc tospi = do
     , spiDevName          = "testdevice1_2500khz_pinE2"
     }
   testdevice2 testspi = SPIDevice
-    { spiDevPeripheral    = testSPI testspi
+    { spiDevPeripheral    = testSPIPeriph testspi
     , spiDevCSPin         = pinE3
     , spiDevClockHz       = 500000
     , spiDevCSActive      = ActiveLow
@@ -71,3 +73,4 @@ app tocc tospi = do
     , spiDevBitOrder      = MSBFirst
     , spiDevName          = "testdevice2_500khz_pinE3"
     }
+

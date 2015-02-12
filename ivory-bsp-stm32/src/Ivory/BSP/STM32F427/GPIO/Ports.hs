@@ -1,7 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 
-module Ivory.BSP.STM32F405.GPIO.Ports
+module Ivory.BSP.STM32F427.GPIO.Ports
   ( gpioA
   , gpioB
   , gpioC
@@ -11,6 +11,8 @@ module Ivory.BSP.STM32F405.GPIO.Ports
   , gpioG
   , gpioH
   , gpioI
+  , gpioJ
+  , gpioK
   ) where
 
 import Ivory.Language
@@ -18,8 +20,8 @@ import Ivory.HW
 
 import Ivory.BSP.STM32.Peripheral.GPIOF4.Peripheral
 
-import Ivory.BSP.STM32F405.RCC
-import Ivory.BSP.STM32F405.MemoryMap
+import Ivory.BSP.STM32F427.RCC
+import Ivory.BSP.STM32F427.MemoryMap
 
 gpioA :: GPIOPort
 gpioA = mkGPIOPort gpioa_periph_base
@@ -74,6 +76,18 @@ gpioI = mkGPIOPort gpioi_periph_base
           (rccEnable rcc_ahb1en_gpioi)
           (rccDisable rcc_ahb1en_gpioi)
           8
+
+gpioJ :: GPIOPort
+gpioJ = mkGPIOPort gpioj_periph_base
+          (rccEnable rcc_ahb1en_gpioj)
+          (rccDisable rcc_ahb1en_gpioj)
+          9
+
+gpioK :: GPIOPort
+gpioK = mkGPIOPort gpiok_periph_base
+          (rccEnable rcc_ahb1en_gpiok)
+          (rccDisable rcc_ahb1en_gpiok)
+          10
 
 rccEnable :: BitDataField RCC_AHB1ENR Bit -> Ivory eff ()
 rccEnable f = modifyReg regRCC_AHB1ENR $ setBit f

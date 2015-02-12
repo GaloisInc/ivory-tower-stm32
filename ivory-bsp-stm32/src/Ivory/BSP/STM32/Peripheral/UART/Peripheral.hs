@@ -36,25 +36,25 @@ data UART i = UART
   , uartRegGTPR    :: BitDataReg UART_GTPR
   , uartRCCEnable  :: forall eff . Ivory eff ()
   , uartRCCDisable :: forall eff . Ivory eff ()
-  , uartPinTx      :: GPIOPin
-  , uartPinRx      :: GPIOPin
-  , uartPinAF      :: GPIO_AF
   , uartInterrupt  :: i
   , uartPClk       :: PClk
   , uartName       :: String
   }
 
+data UARTPins = UARTPins
+  { uartPinTx      :: GPIOPin
+  , uartPinRx      :: GPIOPin
+  , uartPinAF      :: GPIO_AF
+  }
+
 mkUART :: Integer
        -> (forall eff . Ivory eff ())
        -> (forall eff . Ivory eff ())
-       -> GPIOPin -- Transmit
-       -> GPIOPin -- Receive
-       -> GPIO_AF
        -> i
        -> PClk
        -> String
        -> UART i
-mkUART base rccen rccdis tx rx af interrupt pclk n = UART
+mkUART base rccen rccdis interrupt pclk n = UART
   { uartRegSR      = reg 0x00 "sr"
   , uartRegDR      = reg 0x04 "dr"
   , uartRegBRR     = reg 0x08 "brr"
@@ -64,9 +64,6 @@ mkUART base rccen rccdis tx rx af interrupt pclk n = UART
   , uartRegGTPR    = reg 0x18 "gtpr"
   , uartRCCEnable  = rccen
   , uartRCCDisable = rccdis
-  , uartPinTx      = tx
-  , uartPinRx      = rx
-  , uartPinAF      = af
   , uartInterrupt  = interrupt
   , uartPClk       = pclk
   , uartName       = n
@@ -126,12 +123,12 @@ setParity uart x =
 
 -- | Initialize a UART device given a baud rate.
 uartInit :: (GetAlloc eff ~ Scope s, STM32Interrupt i)
-         => UART i -> ClockConfig -> Uint32 -> Ivory eff ()
-uartInit uart clockconfig baud = do
+         => UART i -> UARTPins -> ClockConfig -> Uint32 -> Ivory eff ()
+uartInit uart pins clockconfig baud = do
   -- Enable the peripheral clock and set up GPIOs.
   uartRCCEnable uart
-  initPin (uartPinTx uart) (uartPinAF uart)
-  initPin (uartPinRx uart) (uartPinAF uart)
+  initPin (uartPinTx pins) (uartPinAF pins)
+  initPin (uartPinRx pins) (uartPinAF pins)
 
   -- Initialize the baud rate and other settings.
   setBaudRate uart clockconfig baud

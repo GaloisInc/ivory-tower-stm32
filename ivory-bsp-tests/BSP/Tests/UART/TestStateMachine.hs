@@ -6,16 +6,11 @@
 
 module BSP.Tests.UART.TestStateMachine (app) where
 
-import Data.Char (ord)
-
 import Ivory.Language
-import Ivory.Stdlib
 import Ivory.Tower
-import Ivory.Tower.StateMachine
 import Ivory.Tower.StateMachine.Example
 
 import BSP.Tests.Platforms
-import BSP.Tests.LED.Blink
 
 import Ivory.BSP.STM32.Driver.UART
 import Ivory.BSP.STM32.ClockConfig
@@ -29,11 +24,11 @@ app :: (e -> ClockConfig)
 app tocc touart = do
   e <- getEnv
   -- Starts a UART (serial) task
-  (istream, ostream) <- uartTower tocc (testUART (touart e)) 115200 (Proxy :: Proxy 256)
+  let u = touart e
+  (istream, ostream) <- uartTower tocc (testUARTPeriph u) (testUARTPins u)
+                                  115200 (Proxy :: Proxy 256)
   -- Start the task defined below
   smTestMonitor ostream istream
-  where
-  p = Milliseconds 333
 
 --------------------------------------------------------------------------------
 

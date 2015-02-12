@@ -33,7 +33,9 @@ app toleds tocc touart = do
   -- A new queue
   redledctl <- channel
   -- Starts a UART (serial) task
-  (istream, ostream) <- uartTower tocc (testUART (touart e)) 115200 (Proxy :: Proxy 256)
+  let u = touart e
+  (istream, ostream) <- uartTower tocc (testUARTPeriph u) (testUARTPins u)
+                                  115200 (Proxy :: Proxy 256)
   -- Start the task defined below
   echoPrompt "hello world" ostream istream (fst redledctl)
   -- A task that takes control input (Boolean) from the echo prompt and controls
