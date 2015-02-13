@@ -89,7 +89,7 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
   driverstate <- stateInit "driverstate" (ival stateInactive)
 
   handler systemInit "init" $ do
-    callback $ \ now -> do
+    callback $ const $ do
       debugSetup     debugPin1
       debugSetup     debugPin2
       debugSetup     debugPin3

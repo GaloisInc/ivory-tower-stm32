@@ -14,8 +14,6 @@ import Ivory.HW
 import Ivory.BSP.STM32.ClockConfig
 
 import Ivory.BSP.STM32F405.RCC
-import Ivory.BSP.STM32F405.GPIO
-import Ivory.BSP.STM32F405.GPIO.AF
 import Ivory.BSP.STM32F405.MemoryMap
 import qualified Ivory.BSP.STM32F405.Interrupt as F405
 

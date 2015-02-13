@@ -20,7 +20,7 @@ data RingBuffer (n :: Nat) a =
   RingBuffer
     { ringbuffer_push   :: forall s eff . ConstRef s a -> Ivory eff IBool
     , ringbuffer_pop    :: forall s eff .      Ref s a -> Ivory eff IBool
-    , ringbuffer_empty  :: forall s eff . Ivory eff IBool
+    , ringbuffer_empty  :: forall eff . Ivory eff IBool
     , ringbuffer_moddef :: ModuleDef
     }
 
