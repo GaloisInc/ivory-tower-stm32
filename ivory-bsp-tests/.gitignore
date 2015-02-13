@@ -4,5 +4,6 @@ bsp-spi-test
 bsp-i2c-test
 bsp-uart-test
 bsp-uart-sm-test
+bsp-can-test
 user.conf
 .gdbinit

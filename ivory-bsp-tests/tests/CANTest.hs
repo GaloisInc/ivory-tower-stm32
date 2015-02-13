@@ -1,14 +1,19 @@
 
 module Main where
 
-import           Ivory.Tower.Frontend
-import qualified Ivory.HW.SearchDir          as HW
-import qualified Ivory.BSP.STM32.SearchDir   as BSP
-import           BSP.Tests.Platforms         (testPlatforms)
-import           BSP.Tests.CAN.TestApp       (app)
+import Ivory.Tower.Config
+import Ivory.Tower.Compile
+import Ivory.OS.FreeRTOS.Tower.STM32
+
+import BSP.Tests.Platforms
+import BSP.Tests.CAN.TestApp (app)
 
 main :: IO ()
-main = compilePlatforms conf (testPlatforms app)
+main = towerCompile p (app (stm32config_clock . testplatform_stm32)
+                           testplatform_can
+                           testplatform_leds)
   where
-  conf = searchPathConf [HW.searchDir, BSP.searchDir]
+  p topts = do
+    cfg <- getConfig topts testPlatformParser
+    return $ stm32FreeRTOS testplatform_stm32 cfg
 

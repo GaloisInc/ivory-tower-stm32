@@ -71,8 +71,8 @@ library
 
                        Ivory.BSP.STM32.Driver.RingBuffer,
 
-                       --Ivory.BSP.STM32.Driver.CAN,
-                       --Ivory.BSP.STM32.Driver.CAN.Types,
+                       Ivory.BSP.STM32.Driver.CAN,
+                       Ivory.BSP.STM32.Driver.CAN.Types,
 
                        Ivory.BSP.STM32.Driver.I2C,
                        Ivory.BSP.STM32.Driver.I2C.Types,

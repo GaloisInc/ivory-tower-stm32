@@ -10,6 +10,7 @@ test: bsp-spi-test
 test: bsp-i2c-test
 test: bsp-uart-test
 test: bsp-uart-sm-test
+test: bsp-can-test
 
 .PHONY: bsp-led-test
 bsp-led-test:
@@ -51,6 +52,14 @@ bsp-uart-sm-test:
 bsp-uart-sm-test-clean:
 	rm -rf bsp-uart-sm-test
 
+.PHONY: bsp-can-test
+bsp-can-test:
+	cabal run bsp-can-test-gen -- --src-dir=bsp-can-test
+	make -C bsp-can-test
+
+bsp-can-test-clean:
+	rm -rf bsp-can-test
+
 create-sandbox:
 	cabal sandbox init
 	cabal sandbox add-source $(IVORY_REPO)/ivory
@@ -76,6 +85,7 @@ clean: bsp-spi-test-clean
 clean: bsp-i2c-test-clean
 clean: bsp-uart-test-clean
 clean: bsp-uart-sm-test-clean
+clean: bsp-can-test-clean
 
 clean-sandbox: clean
 	-rm -rf .cabal-sandbox
