@@ -6,6 +6,7 @@ module Ivory.OS.FreeRTOS.Tower.STM32
   , module Ivory.OS.FreeRTOS.Tower.STM32.Config
   ) where
 
+import Data.List (nub)
 import System.FilePath
 import Ivory.Language
 import Ivory.Artifact
@@ -68,7 +69,7 @@ stm32Artifacts conf ast ms = (systemArtifacts ast ms) ++ as
     ++ FreeRTOS.kernel fconfig ++ FreeRTOS.wrapper
     ++ hw_artifacts
 
-  makeobjs = FreeRTOS.objects
+  makeobjs = nub $ FreeRTOS.objects
           ++ [ moduleName m ++ ".o" | m <- ms ]
           ++ [ replaceExtension a ".o"
              | a <- AST.tower_artifact_fs ast
