@@ -2,6 +2,8 @@
 IVORY_REPO ?= ../../ivory
 TOWER_REPO ?= ../../tower
 
+IVORYFLAGS = --const-fold
+
 default:
 	cabal build
 
@@ -14,7 +16,7 @@ test: bsp-can-test
 
 .PHONY: bsp-led-test
 bsp-led-test:
-	cabal run bsp-led-test-gen -- --src-dir=bsp-led-test
+	cabal run bsp-led-test-gen -- --src-dir=bsp-led-test $(IVORYFLAGS)
 	make -C bsp-led-test
 
 bsp-led-test-clean:
@@ -22,7 +24,7 @@ bsp-led-test-clean:
 
 .PHONY: bsp-spi-test
 bsp-spi-test:
-	cabal run bsp-spi-test-gen -- --src-dir=bsp-spi-test
+	cabal run bsp-spi-test-gen -- --src-dir=bsp-spi-test $(IVORYFLAGS)
 	make -C bsp-spi-test
 
 bsp-spi-test-clean:
@@ -30,7 +32,7 @@ bsp-spi-test-clean:
 
 .PHONY: bsp-i2c-test
 bsp-i2c-test:
-	cabal run bsp-i2c-test-gen -- --src-dir=bsp-i2c-test
+	cabal run bsp-i2c-test-gen -- --src-dir=bsp-i2c-test $(IVORYFLAGS)
 	make -C bsp-i2c-test
 
 bsp-i2c-test-clean:
@@ -38,7 +40,7 @@ bsp-i2c-test-clean:
 
 .PHONY: bsp-uart-test
 bsp-uart-test:
-	cabal run bsp-uart-test-gen -- --src-dir=bsp-uart-test
+	cabal run bsp-uart-test-gen -- --src-dir=bsp-uart-test $(IVORYFLAGS)
 	make -C bsp-uart-test
 
 bsp-uart-test-clean:
@@ -46,7 +48,7 @@ bsp-uart-test-clean:
 
 .PHONY: bsp-uart-sm-test
 bsp-uart-sm-test:
-	cabal run bsp-uart-sm-test-gen -- --src-dir=bsp-uart-sm-test
+	cabal run bsp-uart-sm-test-gen -- --src-dir=bsp-uart-sm-test $(IVORYFLAGS)
 	make -C bsp-uart-sm-test
 
 bsp-uart-sm-test-clean:
@@ -54,7 +56,7 @@ bsp-uart-sm-test-clean:
 
 .PHONY: bsp-can-test
 bsp-can-test:
-	cabal run bsp-can-test-gen -- --src-dir=bsp-can-test
+	cabal run bsp-can-test-gen -- --src-dir=bsp-can-test $(IVORYFLAGS)
 	make -C bsp-can-test
 
 bsp-can-test-clean:
