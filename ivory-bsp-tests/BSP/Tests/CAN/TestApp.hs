@@ -24,7 +24,7 @@ app tocc totestcan toleds = do
   can <- fmap totestcan getEnv
   leds <- fmap toleds getEnv
 
-  (req, res) <- canTower tocc (testCAN can) 500000 (testCANRX can) (testCANTX can)
+  (res, req, _, _) <- canTower tocc (testCAN can) 500000 (testCANRX can) (testCANTX can)
 
   periodic <- period (Milliseconds 250)
 
@@ -36,8 +36,12 @@ app tocc totestcan toleds = do
         ledSetup $ redLED leds
         ledOn $ redLED leds
 
+    tx_pending <- state "tx_pending"
+    last_sent <- state "last_sent"
+
     handler periodic "periodic" $ do
-      req_emitter <- emitter req 1
+      abort_emitter <- emitter (canTXAbortReq req) 1
+      req_emitter <- emitter (canTXReq req) 1
       callbackV $ \ p -> do
         let time :: Uint64
             time = signCast $ toIMicroseconds p
@@ -48,7 +52,19 @@ app tocc totestcan toleds = do
           , tx_buf .= iarray [ ival $ bitCast $ time `iShiftR` fromInteger (8 * i) | i <- [7,6..0] ]
           , tx_len .= ival 8
           ]
-        emit req_emitter $ constRef r
+        refCopy last_sent r
+
+        was_pending <- deref tx_pending
+        ifte_ was_pending (emitV abort_emitter true) $ do
+          emit req_emitter $ constRef last_sent
+          store tx_pending true
+
+    handler (canTXRes req) "tx_complete" $ do
+      req_emitter <- emitter (canTXReq req) 1
+      callbackV $ \ ok -> do
+        ifte_ ok (store tx_pending false) $ do
+          emit req_emitter $ constRef last_sent
+          store tx_pending true
 
     received <- stateInit "can_received_count" (ival (0 :: Uint32))
     handler res "result" $ do

@@ -27,6 +27,9 @@ data CANTXRegs = CANTXRegs
   , canRegTDLR     :: BitDataReg CAN_TDLR
   , canRegTDHR     :: BitDataReg CAN_TDHR
   , canTXEmpty     :: BitDataField CAN_TSR Bit
+  , canTXAbort     :: BitDataField CAN_TSR Bit
+  , canTXRQCP      :: BitDataField CAN_TSR Bit
+  , canTXOK        :: BitDataField CAN_TSR Bit
   }
 
 data CANRXRegs i = CANRXRegs
@@ -79,19 +82,28 @@ mkCANPeriph base rccen rccdis txint rx0int rx1int sceint n =
         , canRegTDTR = reg 0x184 "tdt0r"
         , canRegTDLR = reg 0x188 "tdl0r"
         , canRegTDHR = reg 0x18C "tdh0r"
-        , canTXEmpty = can_tsr_tme0 }
+        , canTXEmpty = can_tsr_tme0
+        , canTXAbort = can_tsr_abrq0
+        , canTXRQCP  = can_tsr_rqcp0
+        , canTXOK    = can_tsr_txok0 }
       , CANTXRegs
         { canRegTIR  = reg 0x190 "ti1r"
         , canRegTDTR = reg 0x194 "tdt1r"
         , canRegTDLR = reg 0x198 "tdl1r"
         , canRegTDHR = reg 0x19C "tdh1r"
-        , canTXEmpty = can_tsr_tme1 }
+        , canTXEmpty = can_tsr_tme1
+        , canTXAbort = can_tsr_abrq1
+        , canTXRQCP  = can_tsr_rqcp1
+        , canTXOK    = can_tsr_txok1 }
       , CANTXRegs
         { canRegTIR  = reg 0x1A0 "ti2r"
         , canRegTDTR = reg 0x1A4 "tdt2r"
         , canRegTDLR = reg 0x1A8 "tdl2r"
         , canRegTDHR = reg 0x1AC "tdh2r"
-        , canTXEmpty = can_tsr_tme2 }
+        , canTXEmpty = can_tsr_tme2
+        , canTXAbort = can_tsr_abrq2
+        , canTXRQCP  = can_tsr_rqcp2
+        , canTXOK    = can_tsr_txok2 }
       ]
     , canRegRX       =
       [ CANRXRegs
