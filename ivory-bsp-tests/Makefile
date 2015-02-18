@@ -11,7 +11,6 @@ test: bsp-led-test
 test: bsp-spi-test
 test: bsp-i2c-test
 test: bsp-uart-test
-test: bsp-uart-sm-test
 test: bsp-can-test
 
 .PHONY: bsp-led-test
@@ -46,14 +45,6 @@ bsp-uart-test:
 bsp-uart-test-clean:
 	rm -rf bsp-uart-test
 
-.PHONY: bsp-uart-sm-test
-bsp-uart-sm-test:
-	cabal run bsp-uart-sm-test-gen -- --src-dir=bsp-uart-sm-test $(IVORYFLAGS)
-	make -C bsp-uart-sm-test
-
-bsp-uart-sm-test-clean:
-	rm -rf bsp-uart-sm-test
-
 .PHONY: bsp-can-test
 bsp-can-test:
 	cabal run bsp-can-test-gen -- --src-dir=bsp-can-test $(IVORYFLAGS)
@@ -72,7 +63,6 @@ create-sandbox:
 	cabal sandbox add-source $(IVORY_REPO)/ivory-backend-c
 	cabal sandbox add-source $(TOWER_REPO)/tower
 	cabal sandbox add-source $(TOWER_REPO)/tower-config
-	cabal sandbox add-source $(TOWER_REPO)/tower-statemachine
 	cabal sandbox add-source ../ivory-freertos-bindings
 	cabal sandbox add-source ../ivory-bsp-stm32
 	cabal sandbox add-source ../tower-freertos-stm32
@@ -86,7 +76,6 @@ clean: bsp-led-test-clean
 clean: bsp-spi-test-clean
 clean: bsp-i2c-test-clean
 clean: bsp-uart-test-clean
-clean: bsp-uart-sm-test-clean
 clean: bsp-can-test-clean
 
 clean-sandbox: clean

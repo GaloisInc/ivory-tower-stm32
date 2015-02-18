@@ -18,11 +18,6 @@ tower-example-simple:
 	cabal run tower-example-simple -- --src-dir=tower-example-simple
 	make -C tower-example-simple
 
-.PHONY: tower-example-statemachine
-tower-example-statemachine:
-	cabal run tower-example-statemachine -- --src-dir=tower-example-statemachine
-	make -C tower-example-statemachine
-
 create-sandbox:
 	cabal sandbox init
 	cabal sandbox add-source $(IVORY_REPO)/ivory
@@ -33,7 +28,6 @@ create-sandbox:
 	cabal sandbox add-source $(IVORY_REPO)/ivory-backend-c
 	cabal sandbox add-source $(TOWER_REPO)/tower
 	cabal sandbox add-source $(TOWER_REPO)/tower-config
-	cabal sandbox add-source $(TOWER_REPO)/tower-statemachine
 	cabal sandbox add-source ../ivory-freertos-bindings
 	cabal sandbox add-source ../ivory-bsp-stm32
 	cabal sandbox add-source ../tower-freertos-stm32
@@ -48,13 +42,9 @@ freertos-test-clean: dist-clean
 tower-example-simple-clean: dist-clean
 	-rm -rf tower-exmple-simple
 
-tower-example-statemachine-clean: dist-clean
-	-rm -rf tower-example-statemachine
-
 clean: dist-clean
 clean: freertos-test-clean
 clean: tower-example-simple-clean
-clean: tower-example-statemachine-clean
 
 clean-sandbox: clean
 	-rm -rf .cabal-sandbox
