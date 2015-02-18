@@ -128,5 +128,9 @@ library
                        tower-config,
                        tower >= 0.9
 
-  ghc-options:         -Wall
+  if impl(ghc >= 7.8)
+    ghc-options:       -Wall -fhpc -fplugin=Ivory.Language.Plugin -fplugin-opt=Ivory.Language.Plugin:kill-foreign-stubs
+  else
+    ghc-options:       -Wall
+
 
