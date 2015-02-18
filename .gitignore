@@ -1,4 +1,3 @@
-dist/
-.hpc/
-.cabal-sandbox/
+dist
+.cabal-sandbox
 cabal.sandbox.config

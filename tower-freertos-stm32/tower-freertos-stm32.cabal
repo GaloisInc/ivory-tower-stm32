@@ -41,8 +41,5 @@ library
 
   hs-source-dirs:       src
   default-language:     Haskell2010
-  if impl(ghc >= 7.8)
-    ghc-options:        -Wall -fno-warn-orphans -fhpc -fplugin=Ivory.Language.Plugin -fplugin-opt=Ivory.Language.Plugin:kill-foreign-stubs
-  else
-    ghc-options:        -Wall -fno-warn-orphans
+  ghc-options:          -Wall -fno-warn-orphans
 

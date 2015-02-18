@@ -34,10 +34,7 @@ library
                        ivory-bsp-stm32
 
   default-language:    Haskell2010
-  if impl(ghc >= 7.8)
-    ghc-options:       -Wall -fhpc -fplugin=Ivory.Language.Plugin -fplugin-opt=Ivory.Language.Plugin:kill-foreign-stubs
-  else
-    ghc-options:       -Wall
+  ghc-options:         -Wall
 
 executable bsp-led-test-gen
   main-is:             LEDTest.hs
@@ -51,10 +48,7 @@ executable bsp-led-test-gen
                        tower-freertos-stm32 >= 0.9,
                        ivory-bsp-stm32,
                        ivory-bsp-tests
-  if impl(ghc >= 7.8)
-    ghc-options:       -Wall -fhpc -fplugin=Ivory.Language.Plugin -fplugin-opt=Ivory.Language.Plugin:kill-foreign-stubs
-  else
-    ghc-options:       -Wall
+  ghc-options:          -Wall
 
 executable bsp-spi-test-gen
   main-is:             SPITest.hs
@@ -69,10 +63,8 @@ executable bsp-spi-test-gen
                        tower-freertos-stm32,
                        ivory-bsp-stm32,
                        ivory-bsp-tests
-  if impl(ghc >= 7.8)
-    ghc-options:       -Wall -fhpc -fplugin=Ivory.Language.Plugin -fplugin-opt=Ivory.Language.Plugin:kill-foreign-stubs
-  else
-    ghc-options:       -Wall
+
+  ghc-options:          -Wall
 
 executable bsp-i2c-test-gen
   main-is:             I2CTest.hs
@@ -87,10 +79,7 @@ executable bsp-i2c-test-gen
                        tower-freertos-stm32,
                        ivory-bsp-stm32,
                        ivory-bsp-tests
-  if impl(ghc >= 7.8)
-    ghc-options:       -Wall -fhpc -fplugin=Ivory.Language.Plugin -fplugin-opt=Ivory.Language.Plugin:kill-foreign-stubs
-  else
-    ghc-options:       -Wall
+  ghc-options:          -Wall
 
 
 executable bsp-uart-test-gen
@@ -106,10 +95,7 @@ executable bsp-uart-test-gen
                        tower-freertos-stm32,
                        ivory-bsp-stm32,
                        ivory-bsp-tests
-  if impl(ghc >= 7.8)
-    ghc-options:       -Wall -fhpc -fplugin=Ivory.Language.Plugin -fplugin-opt=Ivory.Language.Plugin:kill-foreign-stubs
-  else
-    ghc-options:       -Wall
+  ghc-options:          -Wall
 
 --executable bsp-uart-debug-gen
 --  main-is:             UARTDebug.hs
@@ -122,10 +108,7 @@ executable bsp-uart-test-gen
 --                       tower          >= 0.9,
 --                       ivory-bsp-stm32,
 --                       ivory-bsp-tests
---  if impl(ghc >= 7.8)
---    ghc-options:       -Wall -fhpc -fplugin=Ivory.Language.Plugin -fplugin-opt=Ivory.Language.Plugin:kill-foreign-stubs
---  else
---    ghc-options:       -Wall
+--  ghc-options:          -Wall
 
 executable bsp-can-test-gen
   main-is:             CANTest.hs
@@ -140,7 +123,4 @@ executable bsp-can-test-gen
                        tower-freertos-stm32,
                        ivory-bsp-stm32,
                        ivory-bsp-tests
-  if impl(ghc >= 7.8)
-    ghc-options:       -Wall -fhpc -fplugin=Ivory.Language.Plugin -fplugin-opt=Ivory.Language.Plugin:kill-foreign-stubs
-  else
-    ghc-options:       -Wall
+  ghc-options:          -Wall
