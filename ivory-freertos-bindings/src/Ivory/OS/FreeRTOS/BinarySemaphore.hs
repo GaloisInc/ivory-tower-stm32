@@ -25,7 +25,11 @@ semaphoreWrapperHeader :: String
 semaphoreWrapperHeader = "freertos_semaphore_wrapper.h"
 
 moddef :: ModuleDef
-moddef = inclHeader semaphoreWrapperHeader
+moddef = do
+  incl create
+  incl take
+  incl give
+  incl giveFromISR
 
 create :: Def ('[ BinarySemaphoreHandle ] :-> ())
 create = importProc "ivory_freertos_semaphore_create_binary" semaphoreWrapperHeader

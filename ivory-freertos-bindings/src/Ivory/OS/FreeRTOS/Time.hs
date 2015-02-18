@@ -12,7 +12,11 @@ module Ivory.OS.FreeRTOS.Time
 import Ivory.Language
 
 moddef :: ModuleDef
-moddef = inclHeader timeWrapperHeader
+moddef = do
+  incl delay
+  incl delayUntil
+  incl getTickCount
+  incl getTickRateMilliseconds
 
 timeWrapperHeader :: String
 timeWrapperHeader = "freertos_time_wrapper.h"

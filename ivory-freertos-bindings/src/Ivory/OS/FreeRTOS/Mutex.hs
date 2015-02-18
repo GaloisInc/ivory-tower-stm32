@@ -25,7 +25,10 @@ semaphoreWrapperHeader :: String
 semaphoreWrapperHeader = "freertos_semaphore_wrapper.h"
 
 moddef :: ModuleDef
-moddef = inclHeader semaphoreWrapperHeader
+moddef = do
+  incl create
+  incl take
+  incl give
 
 create :: Def ('[ MutexHandle ] :-> ())
 create =

@@ -20,7 +20,9 @@ newtype TaskProc =
     } deriving (IvoryType, IvoryVar)
 
 moddef :: ModuleDef
-moddef = inclHeader taskWrapperHeader
+moddef = do
+  incl begin
+  defStruct (Proxy :: Proxy "taskarg")
 
 taskWrapperHeader :: String
 taskWrapperHeader = "freertos_task_wrapper.h"

@@ -19,5 +19,6 @@ atomicWrapperHeader :: String
 atomicWrapperHeader = "freertos_atomic_wrapper.h"
 
 moddef :: ModuleDef
-moddef = inclHeader atomicWrapperHeader
-
+moddef = do
+  incl enter
+  incl exit

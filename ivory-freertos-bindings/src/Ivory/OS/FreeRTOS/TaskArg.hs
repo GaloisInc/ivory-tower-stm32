@@ -11,7 +11,5 @@ import Ivory.Language
 
 -- Taskarg is a Struct used to stand in for C's void*. It should
 -- only be used as an argument to a TaskProc, and never dereferenced.
--- Don't instantiate this into an Ivory module: defined in
--- freertos_task_wrapper.h (external C header)
 
-[ivory|struct taskarg { taskarg_garbage :: Stored Uint32 }|]
+[ivory|abstract struct taskarg "freertos_task_wrapper.h"|]
