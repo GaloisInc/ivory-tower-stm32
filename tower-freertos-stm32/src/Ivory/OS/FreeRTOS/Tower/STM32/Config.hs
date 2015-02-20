@@ -5,6 +5,7 @@ module Ivory.OS.FreeRTOS.Tower.STM32.Config
   , Processor(..)
   , Bootloader(..)
   , stm32f405Defaults
+  , stm32f427Defaults
   , bootloaderParser
   , stm32ConfigParser
   ) where
@@ -31,6 +32,12 @@ stm32f405Defaults xtal_mhz = STM32Config
   , stm32config_clock = externalXtal xtal_mhz 168
   }
 
+stm32f427Defaults :: Integer -> STM32Config
+stm32f427Defaults xtal_mhz = STM32Config
+  { stm32config_processor = STM32F427
+  , stm32config_bootloader = NoBootloader
+  , stm32config_clock = externalXtal xtal_mhz 168
+  }
 
 bootloaderParser :: ConfigParser Bootloader
 bootloaderParser = string >>= \s ->
