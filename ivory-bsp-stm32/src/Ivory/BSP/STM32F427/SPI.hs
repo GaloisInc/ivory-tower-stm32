@@ -20,22 +20,12 @@ import Ivory.BSP.STM32F427.RCC
 import Ivory.BSP.STM32F427.MemoryMap
 import qualified Ivory.BSP.STM32F427.Interrupt as F427
 
--- legacy: spi1 pins
--- miso = pinA7
--- mosi = pinA6
--- sck  = pinA5
-
-spi1, spi2, spi3, spi4, spi5, spi6 :: SPIPeriph F427.Interrupt
+spi1, spi2, spi3, spi4, spi5, spi6 :: SPIPeriph
 spi1 = mkSPIPeriph spi1_periph_base rccenable rccdisable
           F427.SPI1 PClk2 "spi1"
   where
   rccenable  = modifyReg regRCC_APB2ENR $ setBit rcc_apb2en_spi1
   rccdisable = modifyReg regRCC_APB2ENR $ clearBit rcc_apb2en_spi1
-
--- legacy: spi2 pins
--- miso = pinC3
--- mosi = pinC2
--- sck  = pinB10
 
 spi2 = mkSPIPeriph spi2_periph_base rccenable rccdisable
          F427.SPI2 PClk1 "spi2"

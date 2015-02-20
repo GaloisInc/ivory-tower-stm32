@@ -27,10 +27,9 @@ import Ivory.BSP.STM32.Driver.SPI.Types
 import Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle
 
 
-spiTower :: forall s e
-          . (STM32Interrupt s)
-         => (e -> ClockConfig)
-         -> [SPIDevice s]
+spiTower :: forall e
+          . (e -> ClockConfig)
+         -> [SPIDevice]
          -> SPIPins
          -> Tower e ( ChanInput (Struct "spi_transaction_request")
                     , ChanOutput (Struct "spi_transaction_result")
@@ -62,12 +61,11 @@ spiTower tocc devices pins = do
   err m = error ("spiTower cannot be created " ++ m)
 
 
-spiPeripheralDriver :: forall s e
-                     . (STM32Interrupt s)
-                    => (e -> ClockConfig)
-                    -> SPIPeriph s
+spiPeripheralDriver :: forall e
+                     . (e -> ClockConfig)
+                    -> SPIPeriph
                     -> SPIPins
-                    -> [SPIDevice s]
+                    -> [SPIDevice]
                     -> ChanOutput   (Struct "spi_transaction_request")
                     -> ChanInput    (Struct "spi_transaction_result")
                     -> ChanInput    (Stored ITime)
@@ -132,7 +130,7 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
         ]
       interrupt_enable interrupt
 
-  let deviceBeginProc :: SPIDevice i -> Def('[]:->())
+  let deviceBeginProc :: SPIDevice -> Def('[]:->())
       deviceBeginProc dev = proc ((spiDevName dev) ++ "_devicebegin") $
         body $ do
           spiBusBegin clockconfig dev
@@ -168,7 +166,7 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
   where
   interrupt = spiInterrupt periph
 
-  chooseDevice :: (SPIDevice s -> Ivory eff ())
+  chooseDevice :: (SPIDevice -> Ivory eff ())
                -> Ref Global (Stored SPIDeviceHandle) -> Ivory eff ()
   chooseDevice cb devref = do
     comment "selecting device:"

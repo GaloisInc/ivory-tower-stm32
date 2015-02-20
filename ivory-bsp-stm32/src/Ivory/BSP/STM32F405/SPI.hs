@@ -17,7 +17,7 @@ import Ivory.BSP.STM32F405.RCC
 import Ivory.BSP.STM32F405.MemoryMap
 import qualified Ivory.BSP.STM32F405.Interrupt as F405
 
-spi1, spi2, spi3 :: SPIPeriph F405.Interrupt
+spi1, spi2, spi3 :: SPIPeriph
 spi1 = mkSPIPeriph spi1_periph_base rccenable rccdisable
          F405.SPI1 PClk2 "spi1"
   where
