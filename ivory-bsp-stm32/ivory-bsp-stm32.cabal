@@ -10,7 +10,8 @@ maintainer:          pat@galois.com
 build-type:          Simple
 cabal-version:       >=1.8
 
-data-files: support/vector_table.s.template
+data-files: support/vector_table.s.template,
+            support/linker_script.lds.template
 
 library
   exposed-modules:     Ivory.BSP.ARMv7M.Exception,
@@ -24,6 +25,7 @@ library
 
                        Ivory.BSP.STM32.Interrupt,
                        Ivory.BSP.STM32.VectorTable,
+                       Ivory.BSP.STM32.LinkerScript,
 
                        Ivory.BSP.STM32.Peripheral.ATIM18,
                        Ivory.BSP.STM32.Peripheral.ATIM18.Regs,

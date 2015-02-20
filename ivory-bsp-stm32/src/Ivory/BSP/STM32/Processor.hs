@@ -7,6 +7,7 @@ module Ivory.BSP.STM32.Processor
 import Data.Char (toUpper)
 import Ivory.Tower.Config
 
+
 data Processor
   = STM32F405
   | STM32F427
@@ -18,3 +19,4 @@ processorParser = string >>= \v ->
     "STM32F405" -> return STM32F405
     "STM32F427" -> return STM32F427
     _ -> fail ("expected Processor, got " ++ v)
+
