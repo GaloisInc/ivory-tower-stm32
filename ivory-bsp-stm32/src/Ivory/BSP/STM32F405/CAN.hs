@@ -17,14 +17,14 @@ canFilters = mkCANPeriphFilters can1_periph_base
           (rccEnable rcc_apb1en_can1)
           (rccDisable rcc_apb1en_can1)
 
-can1 :: CANPeriph Interrupt
+can1 :: CANPeriph
 can1 = mkCANPeriph can1_periph_base
           (rccEnable rcc_apb1en_can1)
           (rccDisable rcc_apb1en_can1)
           CAN1_TX CAN1_RX0 CAN1_RX1 CAN1_SCE
           "can1"
 
-can2 :: CANPeriph Interrupt
+can2 :: CANPeriph
 can2 = mkCANPeriph can2_periph_base
           (rccEnable rcc_apb1en_can2)
           (rccDisable rcc_apb1en_can2)

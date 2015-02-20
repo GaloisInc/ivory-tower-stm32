@@ -28,9 +28,8 @@ data CANTransmitAPI = CANTransmitAPI
   , canTXAbortReq :: ChanInput (Stored IBool)
   }
 
-canTower :: STM32Interrupt s
-         => (e -> ClockConfig)
-         -> CANPeriph s
+canTower :: (e -> ClockConfig)
+         -> CANPeriph
          -> Integer
          -> GPIOPin
          -> GPIOPin

@@ -32,16 +32,16 @@ data CANTXRegs = CANTXRegs
   , canTXOK        :: BitDataField CAN_TSR Bit
   }
 
-data CANRXRegs i = CANRXRegs
+data CANRXRegs = CANRXRegs
   { canRegRFR      :: BitDataReg CAN_RFR
   , canRegRIR      :: BitDataReg CAN_RIR
   , canRegRDTR     :: BitDataReg CAN_RDTR
   , canRegRDLR     :: BitDataReg CAN_RDLR
   , canRegRDHR     :: BitDataReg CAN_RDHR
-  , canIntRX       :: i
+  , canIntRX       :: HasSTM32Interrupt
   }
 
-data CANPeriph i = CANPeriph
+data CANPeriph = CANPeriph
   { canRegMCR      :: BitDataReg CAN_MCR
   , canRegMSR      :: BitDataReg CAN_MSR
   , canRegTSR      :: BitDataReg CAN_TSR
@@ -49,15 +49,16 @@ data CANPeriph i = CANPeriph
   , canRegESR      :: BitDataReg CAN_ESR
   , canRegBTR      :: BitDataReg CAN_BTR
   , canRegTX       :: [CANTXRegs]
-  , canRegRX       :: [CANRXRegs i]
+  , canRegRX       :: [CANRXRegs]
   , canRCCEnable   :: forall eff . Ivory eff ()
   , canRCCDisable  :: forall eff . Ivory eff ()
-  , canIntTX       :: i
-  , canIntSCE      :: i
+  , canIntTX       :: HasSTM32Interrupt
+  , canIntSCE      :: HasSTM32Interrupt
   , canName        :: String
   }
 
-mkCANPeriph :: Integer -- Base
+mkCANPeriph :: (STM32Interrupt i)
+            => Integer -- Base
             -> (forall eff . Ivory eff ()) -- RCC Enable
             -> (forall eff . Ivory eff ()) -- RCC Disable
             -> i -- transmit interrupt
@@ -65,7 +66,7 @@ mkCANPeriph :: Integer -- Base
             -> i -- receive FIFO 1 interrupt
             -> i -- error/status change interrupt
             -> String -- Name
-            -> CANPeriph i
+            -> CANPeriph
 mkCANPeriph base rccen rccdis txint rx0int rx1int sceint n =
   CANPeriph
     { canRegMCR      = reg 0x000 "mcr"
@@ -112,19 +113,19 @@ mkCANPeriph base rccen rccdis txint rx0int rx1int sceint n =
         , canRegRDTR = reg 0x1B4 "rdt0r"
         , canRegRDLR = reg 0x1B8 "rdl0r"
         , canRegRDHR = reg 0x1BC "rdh0r"
-        , canIntRX   = rx0int }
+        , canIntRX   = HasSTM32Interrupt rx0int }
       , CANRXRegs
         { canRegRFR  = reg 0x010 "rf1r"
         , canRegRIR  = reg 0x1C0 "ri1r"
         , canRegRDTR = reg 0x1C4 "rdt1r"
         , canRegRDLR = reg 0x1C8 "rdl1r"
         , canRegRDHR = reg 0x1CC "rdh1r"
-        , canIntRX   = rx1int }
+        , canIntRX   = HasSTM32Interrupt rx1int }
       ]
     , canRCCEnable   = rccen
     , canRCCDisable  = rccdis
-    , canIntTX       = txint
-    , canIntSCE      = sceint
+    , canIntTX       = HasSTM32Interrupt txint
+    , canIntSCE      = HasSTM32Interrupt sceint
     , canName        = n
     }
   where
@@ -182,10 +183,9 @@ legalTimings pclk bitrate =
   , t_seg2 >= 1 && t_seg2 <= 8
   ]
 
-canInit :: ( STM32Interrupt i
-           , GetAlloc eff ~ Scope cs
+canInit :: ( GetAlloc eff ~ Scope cs
            , Break ~ GetBreaks (AllowBreak eff))
-        => CANPeriph i -> Integer -> GPIOPin -> GPIOPin -> ClockConfig
+        => CANPeriph -> Integer -> GPIOPin -> GPIOPin -> ClockConfig
         -> Ivory eff ()
 canInit periph bitrate rxpin txpin clockconfig = do
   canRCCEnable periph
