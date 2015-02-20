@@ -1,6 +1,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 module Ivory.BSP.STM32.Interrupt where
 
@@ -13,8 +14,16 @@ import Ivory.BSP.ARMv7M.SystemControl.NVIC
 
 class STM32Interrupt i where
   interruptIRQn             :: i -> IRQn
-  interruptTable            :: [Maybe i]
+  interruptTable            :: i -> [Maybe i]
   interruptHandlerName      :: i -> String
+
+data HasSTM32Interrupt = forall i. (STM32Interrupt i)
+                       => HasSTM32Interrupt i
+
+instance STM32Interrupt HasSTM32Interrupt where
+  interruptIRQn (HasSTM32Interrupt i) = interruptIRQn i
+  interruptTable (HasSTM32Interrupt i) = map (fmap HasSTM32Interrupt) (interruptTable i)
+  interruptHandlerName (HasSTM32Interrupt i) = interruptHandlerName i
 
 data IRQ i = Exception Exception
            | Interrupt i

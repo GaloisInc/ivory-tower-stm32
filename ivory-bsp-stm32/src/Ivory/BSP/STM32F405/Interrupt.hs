@@ -98,5 +98,5 @@ data Interrupt
 
 instance STM32Interrupt Interrupt where
   interruptIRQn = IRQn . fromIntegral . fromEnum
-  interruptTable = map Just (enumFrom WWDG)
+  interruptTable _ = map Just (enumFrom WWDG)
   interruptHandlerName i = (show i) ++ "_IRQHandler"
