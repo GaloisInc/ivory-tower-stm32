@@ -11,13 +11,12 @@ import Ivory.Tower
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Driver.CAN
 import Ivory.BSP.STM32.Peripheral.CAN.Filter
-import qualified Ivory.BSP.STM32F405.Interrupt as F405
 
 import BSP.Tests.LED
 import BSP.Tests.Platforms
 
 app :: (e -> ClockConfig)
-    -> (e -> TestCAN F405.Interrupt)
+    -> (e -> TestCAN)
     -> (e -> ColoredLEDs)
     -> Tower e ()
 app tocc totestcan toleds = do

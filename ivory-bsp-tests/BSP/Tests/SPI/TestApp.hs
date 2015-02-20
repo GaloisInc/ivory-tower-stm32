@@ -13,13 +13,12 @@ import           Ivory.BSP.STM32.Peripheral.SPI
 import           Ivory.BSP.STM32.Driver.SPI
 import           Ivory.BSP.STM32.ClockConfig
 
-import qualified Ivory.BSP.STM32F405.Interrupt   as F405
-import           Ivory.BSP.STM32F405.GPIO
+import           Ivory.BSP.STM32F405.GPIO -- XXX FIXME
 
 import BSP.Tests.Platforms
 
 app :: (e -> ClockConfig)
-    -> (e -> TestSPI F405.Interrupt)
+    -> (e -> TestSPI)
     -> Tower e ()
 app tocc tospi = do
   testspi <- fmap tospi getEnv
@@ -53,6 +52,8 @@ app tocc tospi = do
       assert ((len  ==? 3) .|| (len ==? 4))
 
   where
+  -- XXX MOVE THESE TEST DEVICES INTO THE PLATFORM, SO THEY CAN BE DIFFERENT
+  -- FOR THE PIXHAWK ETC
   testdevice1 testspi = SPIDevice
     { spiDevPeripheral    = testSPIPeriph testspi
     , spiDevCSPin         = pinE2

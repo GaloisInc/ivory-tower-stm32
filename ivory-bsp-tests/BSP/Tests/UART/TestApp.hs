@@ -17,13 +17,12 @@ import BSP.Tests.LED.Blink
 
 import Ivory.BSP.STM32.Driver.UART
 import Ivory.BSP.STM32.ClockConfig
-import qualified Ivory.BSP.STM32F405.Interrupt   as F405
 
 --------------------------------------------------------------------------------
 
 app :: (e -> ColoredLEDs)
     -> (e -> ClockConfig)
-    -> (e -> TestUART F405.Interrupt)
+    -> (e -> TestUART)
     -> Tower e ()
 app toleds tocc touart = do
   e <- getEnv

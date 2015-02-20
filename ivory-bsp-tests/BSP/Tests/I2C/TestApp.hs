@@ -11,12 +11,11 @@ import Ivory.Tower
 
 import Ivory.BSP.STM32.Driver.I2C
 import Ivory.BSP.STM32.ClockConfig
-import qualified Ivory.BSP.STM32F405.Interrupt   as F405
 
 import BSP.Tests.Platforms
 
 app :: (e -> ClockConfig)
-    -> (e -> TestI2C F405.Interrupt)
+    -> (e -> TestI2C)
     -> Tower e ()
 app tocc totesti2c = do
   i2c <- fmap totesti2c getEnv

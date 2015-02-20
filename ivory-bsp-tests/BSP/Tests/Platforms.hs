@@ -3,6 +3,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 module BSP.Tests.Platforms
   ( testPlatformParser
@@ -28,7 +29,13 @@ import qualified Ivory.BSP.STM32F405.GPIO        as F405
 import qualified Ivory.BSP.STM32F405.GPIO.AF     as F405
 import qualified Ivory.BSP.STM32F405.SPI         as F405
 import qualified Ivory.BSP.STM32F405.I2C         as F405
-import qualified Ivory.BSP.STM32F405.Interrupt   as F405
+
+import qualified Ivory.BSP.STM32F427.CAN         as F427
+import qualified Ivory.BSP.STM32F427.UART        as F427
+import qualified Ivory.BSP.STM32F427.GPIO        as F427
+import qualified Ivory.BSP.STM32F427.GPIO.AF     as F427
+import qualified Ivory.BSP.STM32F427.SPI         as F427
+import qualified Ivory.BSP.STM32F427.I2C         as F427
 
 import Ivory.BSP.STM32.Peripheral.CAN
 import Ivory.BSP.STM32.Peripheral.GPIOF4
@@ -40,7 +47,7 @@ import Ivory.OS.FreeRTOS.Tower.STM32.Config
 
 import BSP.Tests.LED
 
-testPlatformParser :: ConfigParser (TestPlatform F405.Interrupt)
+testPlatformParser :: ConfigParser TestPlatform
 testPlatformParser = do
   p <- subsection "args" $ subsection "platform" string
   case map toUpper p of
@@ -49,6 +56,7 @@ testPlatformParser = do
     "F4DISCOVERY"     -> return f4discovery
     "OPEN407VC"       -> return open407vc
     "PORT407Z"        -> return port407z
+    "PX4FMUV24"       -> return px4fmuv24
     _ -> fail ("no such platform " ++ p)
 
 data ColoredLEDs =
@@ -57,49 +65,50 @@ data ColoredLEDs =
     , blueLED :: LED
     }
 
-data TestUART s =
+data TestUART =
   TestUART
-    { testUARTPeriph :: UART s
+    { testUARTPeriph :: UART
     , testUARTPins   :: UARTPins
     }
 
-data TestSPI s =
+data TestSPI =
   TestSPI
-    { testSPIPeriph :: SPIPeriph s
+    { testSPIPeriph :: SPIPeriph
     , testSPIPins   :: SPIPins
     }
 
-data TestI2C s =
+data TestI2C =
   TestI2C
-    { testI2C :: I2CPeriph s
+    { testI2C :: I2CPeriph
     , testSDA :: GPIOPin
     , testSCL :: GPIOPin
     }
 
-data TestCAN s =
+data TestCAN =
   TestCAN
-    { testCAN        :: CANPeriph s
+    { testCAN        :: CANPeriph
     , testCANRX      :: GPIOPin
     , testCANTX      :: GPIOPin
     , testCANFilters :: CANPeriphFilters
     }
 
-data TestPlatform s =
+
+data TestPlatform =
   TestPlatform
     { testplatform_leds  :: ColoredLEDs
-    , testplatform_uart  :: TestUART s
-    , testplatform_spi   :: TestSPI s
-    , testplatform_i2c   :: TestI2C s
-    , testplatform_can   :: TestCAN s
+    , testplatform_uart  :: TestUART
+    , testplatform_spi   :: TestSPI
+    , testplatform_i2c   :: TestI2C
+    , testplatform_can   :: TestCAN
     , testplatform_stm32 :: STM32Config
     }
 
-testplatform_clockconfig :: TestPlatform s -> ClockConfig
+testplatform_clockconfig :: TestPlatform -> ClockConfig
 testplatform_clockconfig = stm32config_clock . testplatform_stm32
 
 ---------- PX4FMUv17 ----------------------------------------------------------
 
-px4fmuv17 :: TestPlatform F405.Interrupt
+px4fmuv17 :: TestPlatform
 px4fmuv17 = TestPlatform
   { testplatform_leds = ColoredLEDs
       { redLED  = LED F405.pinB14 ActiveLow
@@ -132,7 +141,7 @@ px4fmuv17 = TestPlatform
   }
 
 -- On IOAR carrier board, we use the FTDI style pinout, attached to uart1.
-px4fmuv17_ioar :: TestPlatform F405.Interrupt
+px4fmuv17_ioar :: TestPlatform
 px4fmuv17_ioar = px4fmuv17
   { testplatform_uart = TestUART
     { testUARTPeriph = F405.uart1
@@ -144,10 +153,9 @@ px4fmuv17_ioar = px4fmuv17
     }
   }
 
-
 ---------- F4Discovery --------------------------------------------------------
 
-f4discovery :: TestPlatform F405.Interrupt
+f4discovery :: TestPlatform
 f4discovery = TestPlatform
   { testplatform_leds = ColoredLEDs
       { redLED  = LED F405.pinD14 ActiveHigh
@@ -181,7 +189,7 @@ f4discovery = TestPlatform
 
 ---------- Open407VC ----------------------------------------------------------
 
-open407vc :: TestPlatform F405.Interrupt
+open407vc :: TestPlatform
 open407vc = TestPlatform
   { testplatform_leds = ColoredLEDs
       { redLED  = LED F405.pinD12 ActiveHigh
@@ -216,7 +224,7 @@ open407vc = TestPlatform
 
 ---------- Port407Z -----------------------------------------------------------
 
-port407z :: TestPlatform F405.Interrupt
+port407z :: TestPlatform
 port407z = TestPlatform
   { testplatform_leds = ColoredLEDs
       { redLED  = LED F405.pinA4 ActiveHigh -- LED1
@@ -255,3 +263,40 @@ spi3_pins = SPIPins
   , spiPinSck  = F405.pinC10
   , spiPinAF   = F405.gpio_af_spi3
   }
+
+---------- PX4FMU v 2.4 (Pixhawk main processor) -----------
+
+-- XXX FIX THIS: all these pin, peripheral mappings are
+-- wrong, its just a placeholder while we sort out the types
+px4fmuv24 :: TestPlatform
+px4fmuv24 = TestPlatform
+  { testplatform_leds = ColoredLEDs
+      { redLED  = LED F427.pinA4 ActiveHigh
+      , blueLED = LED F427.pinA5 ActiveHigh
+      }
+  , testplatform_uart = TestUART
+      { testUARTPeriph = F427.uart2
+      , testUARTPins = UARTPins
+          { uartPinTx = F427.pinA2
+          , uartPinRx = F427.pinA3
+          , uartPinAF = F427.gpio_af_uart2
+          }
+      }
+  , testplatform_spi = TestSPI
+      { testSPIPeriph = F427.spi3
+      , testSPIPins   = spi3_pins
+      }
+  , testplatform_i2c = TestI2C
+      { testI2C = F427.i2c1
+      , testSDA = F427.pinB6
+      , testSCL = F427.pinB7
+      }
+  , testplatform_can = TestCAN
+      { testCAN = F427.can1
+      , testCANRX = F427.pinD0
+      , testCANTX = F427.pinD1
+      , testCANFilters = F427.canFilters
+      }
+  , testplatform_stm32 = stm32f427Defaults 8
+  }
+
