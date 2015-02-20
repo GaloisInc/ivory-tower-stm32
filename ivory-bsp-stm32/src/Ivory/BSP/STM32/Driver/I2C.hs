@@ -28,9 +28,8 @@ import Ivory.BSP.STM32.Driver.I2C.I2CDeviceAddr
 import Ivory.BSP.STM32.Driver.I2C.I2CDriverState
 
 
-i2cTower :: (STM32Interrupt s)
-         => (e -> ClockConfig)
-         -> I2CPeriph s
+i2cTower :: (e -> ClockConfig)
+         -> I2CPeriph
          -> GPIOPin
          -> GPIOPin
          -> Tower e ( ChanInput  (Struct "i2c_transaction_request")
@@ -69,10 +68,9 @@ i2cTowerTypes = package "i2cTowerTypes" $ do
   defStruct (Proxy :: Proxy "i2c_transaction_result")
 
 
-i2cPeripheralDriver :: forall s e
-                     . (STM32Interrupt s)
-                    => (e -> ClockConfig)
-                    -> I2CPeriph s
+i2cPeripheralDriver :: forall e
+                     . (e -> ClockConfig)
+                    -> I2CPeriph
                     -> GPIOPin
                     -> GPIOPin
                     -> ChanOutput (Stored ITime)
@@ -288,7 +286,7 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
       debugOff debugPin3
 
 
-setStop :: I2CPeriph p -> Ivory (AllocEffects s) ()
+setStop :: I2CPeriph -> Ivory (AllocEffects s) ()
 setStop periph = do
   -- Generate an I2C Stop condition. Per the reference manual, we must
   -- wait for the hardware to clear the stop bit before any further writes
@@ -299,7 +297,7 @@ setStop periph = do
     unless (bitToBool (cr1 #. i2c_cr1_stop)) $
       breakOut
 
-setStart :: I2CPeriph p -> Ivory (AllocEffects s) ()
+setStart :: I2CPeriph -> Ivory (AllocEffects s) ()
 setStart periph = do
   -- Generate an I2C Start condition. Per the reference manual, we must
   -- wait for the hardware to clear the start bit before any further writes
@@ -310,7 +308,7 @@ setStart periph = do
     unless (bitToBool (cr1 #. i2c_cr1_start)) $
       breakOut
 
-clearSR1 :: I2CPeriph p -> Ivory eff ()
+clearSR1 :: I2CPeriph -> Ivory eff ()
 clearSR1 periph = modifyReg (i2cRegSR1 periph) $ do
   clearBit i2c_sr1_smbalert
   clearBit i2c_sr1_timeout

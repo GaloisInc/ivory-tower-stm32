@@ -22,7 +22,7 @@ import Ivory.BSP.STM32.Peripheral.GPIOF4
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Peripheral.I2C.Regs
 
-data I2CPeriph i = I2CPeriph
+data I2CPeriph = I2CPeriph
   { i2cRegCR1      :: BitDataReg I2C_CR1
   , i2cRegCR2      :: BitDataReg I2C_CR2
   , i2cRegOAR1     :: BitDataReg I2C_OAR1
@@ -35,18 +35,19 @@ data I2CPeriph i = I2CPeriph
   , i2cRegFLTR     :: BitDataReg I2C_FLTR
   , i2cRCCEnable   :: forall eff . Ivory eff ()
   , i2cRCCDisable  :: forall eff . Ivory eff ()
-  , i2cIntEvent    :: i
-  , i2cIntError    :: i
+  , i2cIntEvent    :: HasSTM32Interrupt
+  , i2cIntError    :: HasSTM32Interrupt
   , i2cName        :: String
   }
 
-mkI2CPeriph :: Integer -- Base
+mkI2CPeriph :: (STM32Interrupt i)
+            => Integer -- Base
             -> (forall eff . Ivory eff ()) -- RCC Enable
             -> (forall eff . Ivory eff ()) -- RCC Disable
             -> i -- event interrupt
             -> i -- error interrupt
             -> String -- Name
-            -> I2CPeriph i
+            -> I2CPeriph
 mkI2CPeriph base rccenable rccdisable evtint errint n =
   I2CPeriph
     { i2cRegCR1     = reg 0x00 "cr1"
@@ -61,16 +62,16 @@ mkI2CPeriph base rccenable rccdisable evtint errint n =
     , i2cRegFLTR    = reg 0x24 "fltr"
     , i2cRCCEnable  = rccenable
     , i2cRCCDisable = rccdisable
-    , i2cIntEvent   = evtint
-    , i2cIntError   = errint
+    , i2cIntEvent   = HasSTM32Interrupt evtint
+    , i2cIntError   = HasSTM32Interrupt errint
     , i2cName       = n
     }
   where
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
 
-i2cInit :: (STM32Interrupt i, GetAlloc eff ~ Scope cs)
-        => I2CPeriph i -> GPIOPin -> GPIOPin -> ClockConfig -> Ivory eff ()
+i2cInit :: (GetAlloc eff ~ Scope cs)
+        => I2CPeriph -> GPIOPin -> GPIOPin -> ClockConfig -> Ivory eff ()
 i2cInit periph sda scl clockconfig = do
   i2cRCCEnable periph
   pinsetup sda
