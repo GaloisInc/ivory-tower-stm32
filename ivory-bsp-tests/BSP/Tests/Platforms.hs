@@ -75,6 +75,7 @@ data TestSPI =
   TestSPI
     { testSPIPeriph :: SPIPeriph
     , testSPIPins   :: SPIPins
+    -- TODO FIXME: move CS pins for test devices into TestSPI
     }
 
 data TestI2C =
@@ -266,37 +267,41 @@ spi3_pins = SPIPins
 
 ---------- PX4FMU v 2.4 (Pixhawk main processor) -----------
 
--- XXX FIX THIS: all these pin, peripheral mappings are
--- wrong, its just a placeholder while we sort out the types
 px4fmuv24 :: TestPlatform
 px4fmuv24 = TestPlatform
   { testplatform_leds = ColoredLEDs
-      { redLED  = LED F427.pinA4 ActiveHigh
-      , blueLED = LED F427.pinA5 ActiveHigh
+      { redLED  = LED F427.pinE12 ActiveLow -- Amber LED labeled FMU B/E
+      , blueLED = LED F427.pinD4 ActiveLow -- Serial1 RTS line
       }
-  , testplatform_uart = TestUART
+  , testplatform_uart = TestUART -- Telem 1 Port
       { testUARTPeriph = F427.uart2
       , testUARTPins = UARTPins
-          { uartPinTx = F427.pinA2
-          , uartPinRx = F427.pinA3
+          { uartPinTx = F427.pinD5
+          , uartPinRx = F427.pinD6
           , uartPinAF = F427.gpio_af_uart2
           }
       }
-  , testplatform_spi = TestSPI
-      { testSPIPeriph = F427.spi3
-      , testSPIPins   = spi3_pins
+  , testplatform_spi = TestSPI -- SPI port
+      { testSPIPeriph = F427.spi4
+      , testSPIPins   = SPIPins
+        { spiPinMiso = F427.pinE5
+        , spiPinMosi = F427.pinE6
+        , spiPinSck  = F427.pinE2
+        , spiPinAF   = F427.gpio_af_spi4
+        }
+        -- NSS pin on SPI EXT connector: pinE4
       }
-  , testplatform_i2c = TestI2C
+  , testplatform_i2c = TestI2C -- I2C port
       { testI2C = F427.i2c1
-      , testSDA = F427.pinB6
-      , testSCL = F427.pinB7
+      , testSDA = F427.pinB9
+      , testSCL = F427.pinB8
       }
-  , testplatform_can = TestCAN
+  , testplatform_can = TestCAN -- CAN port
       { testCAN = F427.can1
       , testCANRX = F427.pinD0
       , testCANTX = F427.pinD1
       , testCANFilters = F427.canFilters
       }
-  , testplatform_stm32 = stm32f427Defaults 8
+  , testplatform_stm32 = stm32f427Defaults 24
   }
 
