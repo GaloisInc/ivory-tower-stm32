@@ -26,7 +26,7 @@ import Ivory.BSP.STM32.Peripheral.UART.Types
 import Ivory.BSP.STM32.Peripheral.UART.Regs
 
 
-data UART i = UART
+data UART = UART
   { uartRegSR      :: BitDataReg UART_SR
   , uartRegDR      :: BitDataReg UART_DR
   , uartRegBRR     :: BitDataReg UART_BRR
@@ -36,7 +36,7 @@ data UART i = UART
   , uartRegGTPR    :: BitDataReg UART_GTPR
   , uartRCCEnable  :: forall eff . Ivory eff ()
   , uartRCCDisable :: forall eff . Ivory eff ()
-  , uartInterrupt  :: i
+  , uartInterrupt  :: HasSTM32Interrupt
   , uartPClk       :: PClk
   , uartName       :: String
   }
@@ -47,13 +47,14 @@ data UARTPins = UARTPins
   , uartPinAF      :: GPIO_AF
   }
 
-mkUART :: Integer
+mkUART :: (STM32Interrupt i)
+       => Integer
        -> (forall eff . Ivory eff ())
        -> (forall eff . Ivory eff ())
        -> i
        -> PClk
        -> String
-       -> UART i
+       -> UART
 mkUART base rccen rccdis interrupt pclk n = UART
   { uartRegSR      = reg 0x00 "sr"
   , uartRegDR      = reg 0x04 "dr"
@@ -64,7 +65,7 @@ mkUART base rccen rccdis interrupt pclk n = UART
   , uartRegGTPR    = reg 0x18 "gtpr"
   , uartRCCEnable  = rccen
   , uartRCCDisable = rccdis
-  , uartInterrupt  = interrupt
+  , uartInterrupt  = HasSTM32Interrupt interrupt
   , uartPClk       = pclk
   , uartName       = n
   }
@@ -86,7 +87,7 @@ initPin p af = do
 
 -- | Set the BRR register of a UART given a baud rate.
 setBaudRate :: (GetAlloc eff ~ Scope s)
-            => UART i -> ClockConfig -> Uint32 -> Ivory eff ()
+            => UART -> ClockConfig -> Uint32 -> Ivory eff ()
 setBaudRate uart clockconfig baud = do
   --pclk    <- assign =<< getFreqPClk platform (uartPClk uart)
   pclk    <- assign (fromIntegral (clockPClkHz (uartPClk uart)
@@ -104,26 +105,26 @@ setBaudRate uart clockconfig baud = do
     setField uart_brr_div (fromRep (lbits brr))
 
 -- | Configure the stop bits for a UART.
-setStopBits :: UART i -> UART_StopBits -> Ivory eff ()
+setStopBits :: UART -> UART_StopBits -> Ivory eff ()
 setStopBits uart x =
   modifyReg (uartRegCR2 uart) $
     setField uart_cr2_stop x
 
 -- | Configure the word length for a UART.
-setWordLen :: UART i -> UART_WordLen -> Ivory eff ()
+setWordLen :: UART -> UART_WordLen -> Ivory eff ()
 setWordLen uart x =
   modifyReg (uartRegCR1 uart) $
     setField uart_cr1_m x
 
 -- | Configure the parity setting for a UART.
-setParity :: UART i -> IBool -> Ivory eff ()
+setParity :: UART -> IBool -> Ivory eff ()
 setParity uart x =
   modifyReg (uartRegCR1 uart) $
     setField uart_cr1_pce (boolToBit x)
 
 -- | Initialize a UART device given a baud rate.
-uartInit :: (GetAlloc eff ~ Scope s, STM32Interrupt i)
-         => UART i -> UARTPins -> ClockConfig -> Uint32 -> Ivory eff ()
+uartInit :: (GetAlloc eff ~ Scope s)
+         => UART -> UARTPins -> ClockConfig -> Uint32 -> Ivory eff ()
 uartInit uart pins clockconfig baud = do
   -- Enable the peripheral clock and set up GPIOs.
   uartRCCEnable uart
@@ -154,31 +155,31 @@ uartInit uart pins clockconfig baud = do
     setBit uart_cr1_ue
 
 -- | Set the UART data register.
-setDR :: UART i -> Uint8 -> Ivory eff ()
+setDR :: UART -> Uint8 -> Ivory eff ()
 setDR uart b =
   setReg (uartRegDR uart) $
     setField uart_dr_data (fromRep b)
 
 -- | Read the UART data register.
-readDR :: UART i -> Ivory eff Uint8
+readDR :: UART -> Ivory eff Uint8
 readDR uart = do
   dr <- getReg (uartRegDR uart)
   return (toRep (dr #. uart_dr_data))
 
 -- | Enable or disable the "TXE" interrupt.
-setTXEIE :: UART i -> IBool -> Ivory eff ()
+setTXEIE :: UART -> IBool -> Ivory eff ()
 setTXEIE uart x =
   modifyReg (uartRegCR1 uart) $
     setField uart_cr1_txeie (boolToBit x)
 
 -- | See whether "TXE" interrupt is enabled.
-getTXEIE :: UART i -> Ivory eff IBool
+getTXEIE :: UART -> Ivory eff IBool
 getTXEIE uart = do
   cr1 <- getReg (uartRegCR1 uart)
   return $ bitToBool (cr1 #. uart_cr1_txeie)
 
 -- | Enable or disable the "RXNE" interrupt.
-setRXNEIE :: UART i -> IBool -> Ivory eff ()
+setRXNEIE :: UART -> IBool -> Ivory eff ()
 setRXNEIE uart x =
   modifyReg (uartRegCR1 uart) $
     setField uart_cr1_rxneie (boolToBit x)

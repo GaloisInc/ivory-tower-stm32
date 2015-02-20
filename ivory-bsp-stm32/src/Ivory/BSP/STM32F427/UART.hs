@@ -21,7 +21,7 @@ import Ivory.BSP.STM32F427.RCC
 import Ivory.BSP.STM32F427.MemoryMap
 import qualified Ivory.BSP.STM32F427.Interrupt as F427
 
-uart1, uart2, uart3, uart4, uart5, uart6, uart7, uart8 :: UART F427.Interrupt
+uart1, uart2, uart3, uart4, uart5, uart6, uart7, uart8 :: UART
 uart1 = mkUART uart1_periph_base
                 rccenable rccdisable
                 F427.USART1 PClk2 "uart1"

@@ -48,9 +48,9 @@ emptyDbg =
     , debug_txeie = const (return ())
     }
 
-uartTower :: (STM32Interrupt s, ANat n)
+uartTower :: (ANat n)
           => (e -> ClockConfig)
-          -> UART s
+          -> UART
           -> UARTPins
           -> Integer
           -> Proxy (n :: Nat)
@@ -58,9 +58,9 @@ uartTower :: (STM32Interrupt s, ANat n)
                      , ChanInput  (Stored Uint8))
 uartTower tocc u p b s = uartTowerDebuggable tocc u p b s emptyDbg
 
-uartTowerDebuggable :: (STM32Interrupt s, ANat n)
+uartTowerDebuggable :: (ANat n)
                     => (e -> ClockConfig)
-                    -> UART s
+                    -> UART
                     -> UARTPins
                     -> Integer
                     -> Proxy (n :: Nat)
@@ -85,10 +85,10 @@ uartTowerDebuggable tocc uart pins baud sizeproxy dbg = do
 
   return (snk_istream, src_ostream)
 
-uartTowerMonitor :: forall e n s
-                  . (ANat n, STM32Interrupt s)
+uartTowerMonitor :: forall e n
+                  . (ANat n)
                  => (e -> ClockConfig)
-                 -> UART s
+                 -> UART
                  -> UARTPins
                  -> Integer
                  -> Proxy (n :: Nat)

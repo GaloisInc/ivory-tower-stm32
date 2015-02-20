@@ -21,7 +21,7 @@ import Ivory.BSP.STM32F405.RCC
 import Ivory.BSP.STM32F405.MemoryMap
 import qualified Ivory.BSP.STM32F405.Interrupt as F405
 
-uart1, uart2, uart3, uart4, uart5, uart6 :: UART F405.Interrupt
+uart1, uart2, uart3, uart4, uart5, uart6 :: UART
 uart1 = mkUART uart1_periph_base
                 rccenable rccdisable
                 F405.USART1 PClk2 "uart1"
