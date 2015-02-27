@@ -8,14 +8,15 @@ void ivory_freertos_task_create(void (*tsk)(struct taskarg*),
         uint32_t stacksize, uint8_t priority, const char* const name)
 {
     unsigned short usStackDepth = stacksize / sizeof (portSTACK_TYPE);
-    portBASE_TYPE created = xTaskCreate(
-            (void (*)(void*)) tsk, /* pvTaskCode */
-            (const signed char* const) name, /* pcName */
+    TaskHandle_t xHandle = NULL;
+    xTaskCreate(
+            (TaskFunction_t) tsk, /* pvTaskCode */
+            name,                 /* pcName */
             usStackDepth,          /* usStackDepth */
             NULL,                  /* pvParameters */
             priority,              /* uxPriority */
-            NULL);                 /* pxCreatedTask */
-    if (created != pdPASS) {
+            &xHandle);             /* pxCreatedTask */
+    if ( xHandle == NULL) {
         // FAILURE! possible causes:
         // - FreeRTOS heap is out of memory for allocating stack or tcb
         // - priority level is invalid

@@ -12,7 +12,7 @@ module Ivory.OS.FreeRTOS.Task
   ) where
 
 import Ivory.Language
-import Ivory.OS.FreeRTOS.TaskArg ()
+import Ivory.OS.FreeRTOS.Types ()
 
 newtype TaskProc =
   TaskProc
