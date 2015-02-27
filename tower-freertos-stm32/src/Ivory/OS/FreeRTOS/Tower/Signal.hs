@@ -29,9 +29,9 @@ codegenSignal thr@(AST.SignalThread _ ) = CodegenSignal
   , codegensignal_ready = call_ Semaphore.giveFromISR sem
   }
   where
-  sem :: Ref Global (Stored Semaphore.BinarySemaphore)
+  sem :: Semaphore.BinarySemaphoreHandle
   sem = addrOf sem_area
-  sem_area :: MemArea (Stored Semaphore.BinarySemaphore)
+  sem_area :: MemArea Semaphore.BinarySemaphore
   sem_area = area ("signal_semaphore_" ++ AST.threadName thr) Nothing
 codegenSignal _ = CodegenSignal
   { codegensignal_moddef = return ()

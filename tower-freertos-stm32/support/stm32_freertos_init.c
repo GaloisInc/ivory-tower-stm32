@@ -42,7 +42,7 @@ static void tower_launch_task(void *machtnichts) {
 }
 
 int main (void) {
-	xTaskCreate(tower_launch_task, (signed char *)"twrlaunch",
+	xTaskCreate(tower_launch_task, "twrlaunch",
 		256, NULL, 0, NULL);
 	vTaskStartScheduler();
 	for(;;);

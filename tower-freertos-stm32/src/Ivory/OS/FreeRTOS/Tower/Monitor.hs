@@ -49,7 +49,7 @@ generateMonitorCode gc mc mon =
 monitorLockName :: AST.Monitor -> String
 monitorLockName mon = "lock_"  ++ AST.monitorName mon
 
-monitorLockArea :: AST.Monitor -> MemArea (Stored Mutex.Mutex)
+monitorLockArea :: AST.Monitor -> MemArea Mutex.Mutex
 monitorLockArea mon = area (monitorLockName mon) Nothing
 
 monitorLock :: AST.Monitor -> Mutex.MutexHandle
