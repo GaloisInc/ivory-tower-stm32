@@ -26,7 +26,6 @@ import Ivory.BSP.STM32.Peripheral.SPI.Peripheral
 import Ivory.BSP.STM32.Driver.SPI.Types
 import Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle
 
-
 spiTower :: forall e
           . (e -> ClockConfig)
          -> [SPIDevice]
@@ -81,10 +80,12 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
       debugSetup     debugPin1
       debugSetup     debugPin2
       debugSetup     debugPin3
+      debugSetup     debugPin4
       spiInit        periph pins
       mapM_ spiDeviceInit devices
       store done true
       emit send_ready now
+      interrupt_enable interrupt
 
   reqbuffer    <- state "reqbuffer"
   reqbufferpos <- state "reqbufferpos"
@@ -141,6 +142,7 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
 
   handler req_out  "request" $ do
     callback $ \req -> do
+      debugOn debugPin4
       ready <- deref done
       when ready $ do
         store done false
@@ -158,10 +160,10 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
         -- Send the first byte, enable tx empty interrupt
         spiSetDR  periph tx0
         modifyReg (spiRegCR2 periph) (setBit spi_cr2_txeie)
-        interrupt_enable interrupt
 
       unless ready $ do
         return () -- XXX how do we want to handle this error?
+      debugOff debugPin4
 
   where
   interrupt = spiInterrupt periph
@@ -181,13 +183,17 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
 
 
 -- Debugging Helpers: useful for development, disabled for production.
-debugPin1, debugPin2, debugPin3 :: Maybe GPIOPin
+debugPin1, debugPin2, debugPin3, debugPin4 :: Maybe GPIOPin
 debugPin1 = Nothing
 debugPin2 = Nothing
 debugPin3 = Nothing
---debugPin1 = Just pinE2
---debugPin2 = Just pinE4
---debugPin3 = Just pinE5
+debugPin4 = Nothing
+{-
+debugPin1 = Just pinB8
+debugPin2 = Just pinB9
+debugPin3 = Just pinA6
+debugPin4 = Just pinA5
+-}
 
 debugSetup :: Maybe GPIOPin -> Ivory eff ()
 debugSetup (Just p) = do
@@ -197,6 +203,7 @@ debugSetup (Just p) = do
   pinSetPUPD       p gpio_pupd_none
   pinClear         p
   pinSetMode       p gpio_mode_output
+  debugToggle (Just p)
 debugSetup Nothing = return ()
 
 debugOff :: Maybe GPIOPin -> Ivory eff ()
@@ -208,5 +215,18 @@ debugOn (Just p) = pinSet p
 debugOn Nothing  = return ()
 
 debugToggle :: Maybe GPIOPin -> Ivory eff ()
-debugToggle p = debugOn p >> debugOff p
+debugToggle p = do
+  comment "debugToggle: make sure pin stays hi/lo long enough to see on my crummy logic analyzer"
+  debugOn p
+  debugOn p
+  debugOn p
+  debugOn p
+  debugOn p
+  debugOn p
+  debugOff p
+  debugOff p
+  debugOff p
+  debugOff p
+  debugOff p
+  debugOff p
 
