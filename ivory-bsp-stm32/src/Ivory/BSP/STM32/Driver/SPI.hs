@@ -54,8 +54,10 @@ spiTower tocc devices pins = do
     d:ds ->
       let canonicalp = spiDevPeripheral d
       in case and (map (\d' -> canonicalp `eqname` spiDevPeripheral d') ds) of
-        True -> canonicalp
         False -> err "with devices on different peripherals"
+        True -> case and (map (\d' -> spiDevClockHz d > 500000) ds) of
+          False -> err "with any device clock speed over 500khz" -- XXX if we go higher, we drop interrupts
+          True -> canonicalp
   eqname a b = spiName a == spiName b
   err m = error ("spiTower cannot be created " ++ m)
 
