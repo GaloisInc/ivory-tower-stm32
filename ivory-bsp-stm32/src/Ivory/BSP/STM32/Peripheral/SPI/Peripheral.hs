@@ -16,7 +16,6 @@ module Ivory.BSP.STM32.Peripheral.SPI.Peripheral where
 import Ivory.Language
 
 import Ivory.HW
-import Ivory.Stdlib
 
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.ClockConfig
@@ -131,9 +130,7 @@ spiBusBegin clockconfig dev = do
   spiModifyCr1        periph [ spi_cr1_spe ] true
   spiClearCr1         periph
   spiClearCr2         periph
-  -- XXX We can change the spiDevBaud code to just calculate this
-  -- statically
-  baud <- spiDevBaud clockconfig periph (spiDevClockHz dev)
+  let baud = spiDevBaud clockconfig periph (spiDevClockHz dev)
   modifyReg (spiRegCR1 periph) $ do
     setBit   spi_cr1_mstr
     setBit   spi_cr1_ssm
@@ -188,26 +185,19 @@ spiSetDR spi b =
 
 -- Internal Helper Functions ---------------------------------------------------
 
-spiDevBaud :: (GetAlloc eff ~ Scope s)
-           => ClockConfig -> SPIPeriph -> Integer -> Ivory eff SPIBaud
-spiDevBaud clockconfig periph hz = do
-  (fplk :: Uint32) <- assign (fromIntegral (clockPClkHz (spiPClk periph)
-                                              clockconfig))
-  comment ("got fplk, target is " ++ show hz)
-  let bestWithoutGoingOver = map aux tbl
-      target = fromIntegral hz
-      aux (br, brdiv) =
-        ((fplk `iDiv` brdiv) <? target) ==> return br
-  cond (bestWithoutGoingOver ++ [ true ==> return spi_baud_div_256 ])
+spiDevBaud :: ClockConfig -> SPIPeriph -> Integer -> SPIBaud
+spiDevBaud clockconfig periph target = foldl aux spi_baud_div_256 tbl
   where
-  tbl = [( spi_baud_div_2,   2)
-        ,( spi_baud_div_4,   4)
-        ,( spi_baud_div_8,   8)
-        ,( spi_baud_div_16,  16)
-        ,( spi_baud_div_32,  32)
-        ,( spi_baud_div_64,  64)
-        ,( spi_baud_div_128, 128)
-        ,( spi_baud_div_256, 256)]
+  fpclk = clockPClkHz (spiPClk periph) clockconfig
+  aux dflt (divider, spibaud) = if fpclk `div` divider <= target then spibaud else dflt
+  tbl = [( 256, spi_baud_div_256 )
+        ,( 128, spi_baud_div_128 )
+        ,( 64,  spi_baud_div_64 )
+        ,( 32,  spi_baud_div_32 )
+        ,( 16,  spi_baud_div_16 )
+        ,( 8,   spi_baud_div_8 )
+        ,( 4,   spi_baud_div_4 )
+        ,( 2,   spi_baud_div_2 )]
 
 spiDeviceSelect   :: SPIDevice -> Ivory eff ()
 spiDeviceSelect dev = case spiDevCSActive dev of
