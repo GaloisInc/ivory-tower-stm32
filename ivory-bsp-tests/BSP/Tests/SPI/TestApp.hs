@@ -57,12 +57,12 @@ app tocc tospi = do
   testdevice1 testspi = SPIDevice
     { spiDevPeripheral    = testSPIPeriph testspi
     , spiDevCSPin         = pinE2
-    , spiDevClockHz       = 2500000
+    , spiDevClockHz       = 250000
     , spiDevCSActive      = ActiveLow
     , spiDevClockPolarity = ClockPolarityLow
     , spiDevClockPhase    = ClockPhase1
     , spiDevBitOrder      = MSBFirst
-    , spiDevName          = "testdevice1_2500khz_pinE2"
+    , spiDevName          = "testdevice1_250khz_pinE2"
     }
   testdevice2 testspi = SPIDevice
     { spiDevPeripheral    = testSPIPeriph testspi
