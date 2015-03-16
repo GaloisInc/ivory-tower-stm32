@@ -73,6 +73,10 @@ library
                        Ivory.BSP.STM32.Peripheral.UART.Regs,
                        Ivory.BSP.STM32.Peripheral.UART.Peripheral,
 
+                       Ivory.BSP.STM32.Peripheral.RNG,
+                       Ivory.BSP.STM32.Peripheral.RNG.Regs,
+                       Ivory.BSP.STM32.Peripheral.RNG.Peripheral,
+
                        Ivory.BSP.STM32.Driver.RingBuffer,
 
                        Ivory.BSP.STM32.Driver.CAN,
@@ -89,6 +93,8 @@ library
 
                        Ivory.BSP.STM32.Driver.UART,
 
+                       Ivory.BSP.STM32.Driver.RNG,
+
                        Ivory.BSP.STM32F405.MemoryMap,
                        Ivory.BSP.STM32F405.Interrupt,
                        Ivory.BSP.STM32F405.CAN,
@@ -102,6 +108,7 @@ library
                        Ivory.BSP.STM32F405.GTIM2345,
                        Ivory.BSP.STM32F405.ATIM18,
                        Ivory.BSP.STM32F405.UART,
+                       Ivory.BSP.STM32F405.RNG,
 
                        Ivory.BSP.STM32F427.MemoryMap,
                        Ivory.BSP.STM32F427.Interrupt,
@@ -115,7 +122,8 @@ library
                        Ivory.BSP.STM32F427.GPIO.Pins,
                        Ivory.BSP.STM32F427.GTIM2345,
                        Ivory.BSP.STM32F427.ATIM18,
-                       Ivory.BSP.STM32F427.UART
+                       Ivory.BSP.STM32F427.UART,
+                       Ivory.BSP.STM32F427.RNG
 
   other-modules:       Paths_ivory_bsp_stm32
 
