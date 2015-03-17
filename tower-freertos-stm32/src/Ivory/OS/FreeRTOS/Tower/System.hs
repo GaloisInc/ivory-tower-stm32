@@ -58,6 +58,7 @@ threadModules gc twr = concatMap pertask (Map.elems (generatedcode_threads gc))
       depend (threadGenModule tc)
       depend (package "tower_time" (return ())) -- Provide in per-platform codegen
       threadcode_user tc
+      threadcode_emitter tc
   threadGenModule tc =
     let t = threadcode_thread tc in
     package (AST.threadGenCodeModName t) $ do
