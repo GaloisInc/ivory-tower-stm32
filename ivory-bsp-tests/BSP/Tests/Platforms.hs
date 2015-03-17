@@ -29,6 +29,7 @@ import qualified Ivory.BSP.STM32F405.GPIO        as F405
 import qualified Ivory.BSP.STM32F405.GPIO.AF     as F405
 import qualified Ivory.BSP.STM32F405.SPI         as F405
 import qualified Ivory.BSP.STM32F405.I2C         as F405
+import qualified Ivory.BSP.STM32F405.RNG         as F405
 
 import qualified Ivory.BSP.STM32F427.CAN         as F427
 import qualified Ivory.BSP.STM32F427.UART        as F427
@@ -36,12 +37,14 @@ import qualified Ivory.BSP.STM32F427.GPIO        as F427
 import qualified Ivory.BSP.STM32F427.GPIO.AF     as F427
 import qualified Ivory.BSP.STM32F427.SPI         as F427
 import qualified Ivory.BSP.STM32F427.I2C         as F427
+import qualified Ivory.BSP.STM32F427.RNG         as F427
 
 import Ivory.BSP.STM32.Peripheral.CAN
 import Ivory.BSP.STM32.Peripheral.GPIOF4
 import Ivory.BSP.STM32.Peripheral.UART
 import Ivory.BSP.STM32.Peripheral.SPI hiding (ActiveHigh, ActiveLow)
 import Ivory.BSP.STM32.Peripheral.I2C
+import Ivory.BSP.STM32.Peripheral.RNG
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.OS.FreeRTOS.Tower.STM32.Config
 
@@ -101,6 +104,7 @@ data TestPlatform =
     , testplatform_spi   :: TestSPI
     , testplatform_i2c   :: TestI2C
     , testplatform_can   :: TestCAN
+    , testplatform_rng   :: RNG
     , testplatform_stm32 :: STM32Config
     }
 
@@ -138,6 +142,7 @@ px4fmuv17 = TestPlatform
       , testCANTX = F405.pinD1
       , testCANFilters = F405.canFilters
       }
+  , testplatform_rng = F405.rng
   , testplatform_stm32 = stm32f405Defaults 24
   }
 
@@ -185,6 +190,7 @@ f4discovery = TestPlatform
       , testCANTX = F405.pinD1
       , testCANFilters = F405.canFilters
       }
+  , testplatform_rng = F405.rng
   , testplatform_stm32 = stm32f405Defaults 8
   }
 
@@ -219,6 +225,7 @@ open407vc = TestPlatform
       , testCANTX = F405.pinD1
       , testCANFilters = F405.canFilters
       }
+  , testplatform_rng = F405.rng
   , testplatform_stm32 = stm32f405Defaults 8
   }
 
@@ -254,6 +261,7 @@ port407z = TestPlatform
       , testCANTX = F405.pinD1
       , testCANFilters = F405.canFilters
       }
+  , testplatform_rng = F405.rng
   , testplatform_stm32 = stm32f405Defaults 8
   }
 
@@ -302,6 +310,7 @@ px4fmuv24 = TestPlatform
       , testCANTX = F427.pinD1
       , testCANFilters = F427.canFilters
       }
+  , testplatform_rng = F427.rng
   , testplatform_stm32 = stm32f427Defaults 24
   }
 

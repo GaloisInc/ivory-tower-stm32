@@ -12,6 +12,7 @@ test: bsp-spi-test
 test: bsp-i2c-test
 test: bsp-uart-test
 test: bsp-can-test
+test: bsp-rng-test
 
 .PHONY: bsp-led-test
 bsp-led-test:
@@ -53,6 +54,14 @@ bsp-can-test:
 bsp-can-test-clean:
 	rm -rf bsp-can-test
 
+.PHONY: bsp-rng-test
+bsp-rng-test:
+	cabal run bsp-rng-test-gen -- --src-dir=bsp-rng-test $(IVORYFLAGS)
+	make -C bsp-rng-test
+
+bsp-rng-test-clean:
+	rm -rf bsp-rng-test
+
 create-sandbox:
 	cabal sandbox init
 	cabal sandbox add-source $(IVORY_REPO)/ivory
@@ -68,15 +77,15 @@ create-sandbox:
 	cabal sandbox add-source ../tower-freertos-stm32
 	cabal install --dependencies-only
 
-dist-clean:
+distclean:
 	-rm -rf dist
 
-clean: dist-clean
 clean: bsp-led-test-clean
 clean: bsp-spi-test-clean
 clean: bsp-i2c-test-clean
 clean: bsp-uart-test-clean
 clean: bsp-can-test-clean
+clean: bsp-rng-test-clean
 
 clean-sandbox: clean
 	-rm -rf .cabal-sandbox

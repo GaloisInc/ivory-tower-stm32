@@ -17,6 +17,7 @@ library
                        BSP.Tests.LED.TestApp,
                        BSP.Tests.I2C.TestApp,
                        BSP.Tests.CAN.TestApp,
+                       BSP.Tests.RNG,
                        BSP.Tests.Platforms,
 
                        BSP.Tests.SPI.TestApp
@@ -112,6 +113,21 @@ executable bsp-uart-test-gen
 
 executable bsp-can-test-gen
   main-is:             CANTest.hs
+  hs-source-dirs:      tests
+  build-depends:       base >= 4.6,
+                       ivory,
+                       ivory-stdlib,
+                       ivory-backend-c,
+                       ivory-hw,
+                       tower          >= 0.9,
+                       tower-config,
+                       tower-freertos-stm32,
+                       ivory-bsp-stm32,
+                       ivory-bsp-tests
+  ghc-options:          -Wall
+
+executable bsp-rng-test-gen
+  main-is:             RNGTest.hs
   hs-source-dirs:      tests
   build-depends:       base >= 4.6,
                        ivory,
