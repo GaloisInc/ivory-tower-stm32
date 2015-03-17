@@ -47,23 +47,21 @@ monitorModules gc _twr = concatMap permon mods
   permon (ast, code) = generateMonitorCode gc code ast
 
 threadModules :: GeneratedCode -> AST.Tower-> [Module]
-threadModules gc twr = concatMap pertask (Map.elems (generatedcode_threads gc))
+threadModules gc twr = concatMap pertask (Map.toList (generatedcode_threads gc))
   where
   pertask tc = [threadUserModule tc, threadGenModule tc]
-  threadUserModule tc =
-    let t = threadcode_thread tc in
+  threadUserModule (t, tc) =
     package (AST.threadUserCodeModName t) $ do
       dependencies
       threadMonitorDeps t monitorStateModName
-      depend (threadGenModule tc)
+      depend (threadGenModule (t, tc))
       depend (package "tower_time" (return ())) -- Provide in per-platform codegen
       threadcode_user tc
       threadcode_emitter tc
-  threadGenModule tc =
-    let t = threadcode_thread tc in
+  threadGenModule (t, tc) =
     package (AST.threadGenCodeModName t) $ do
       dependencies
-      depend (threadUserModule tc)
+      depend (threadUserModule (t, tc))
       threadMonitorDeps t monitorGenModName
       threadLoopModdef gc twr t
       threadcode_gen tc
