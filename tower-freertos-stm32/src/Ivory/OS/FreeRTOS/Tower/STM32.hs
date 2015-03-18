@@ -62,8 +62,8 @@ stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]
   main_proc = importProc "main" "stm32_freertos_init.h"
 
 
-stm32Artifacts :: STM32Config -> AST.Tower -> [Module] -> [Artifact]
-stm32Artifacts conf ast ms = (systemArtifacts ast ms) ++ as
+stm32Artifacts :: STM32Config -> AST.Tower -> [Module] -> [Artifact] -> [Artifact]
+stm32Artifacts conf ast ms gcas = (systemArtifacts ast ms) ++ as
   where
   as = [ STM32.makefile conf makeobjs ] ++ STM32.artifacts conf
     ++ FreeRTOS.kernel fconfig ++ FreeRTOS.wrapper
@@ -71,9 +71,10 @@ stm32Artifacts conf ast ms = (systemArtifacts ast ms) ++ as
 
   makeobjs = nub $ FreeRTOS.objects
           ++ [ moduleName m ++ ".o" | m <- ms ]
-          ++ [ replaceExtension a ".o"
-             | a <- AST.tower_artifact_fs ast
-             , takeExtension a == ".c"
+          ++ [ replaceExtension f ".o"
+             | a <- gcas
+             , let f = artifactFileName a
+             , takeExtension f == ".c"
              ]
   fconfig = FreeRTOS.defaultConfig
     { FreeRTOS.max_priorities = fromIntegral (length (AST.towerThreads ast)) + 1
