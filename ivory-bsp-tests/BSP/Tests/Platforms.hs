@@ -54,13 +54,18 @@ testPlatformParser :: ConfigParser TestPlatform
 testPlatformParser = do
   p <- subsection "args" $ subsection "platform" string
   case map toUpper p of
-    "PX4FMUV17"       -> return px4fmuv17
-    "PX4FMUV17_IOAR"  -> return px4fmuv17_ioar
-    "F4DISCOVERY"     -> return f4discovery
-    "OPEN407VC"       -> return open407vc
-    "PORT407Z"        -> return port407z
-    "PX4FMUV24"       -> return px4fmuv24
+    "PX4FMUV17"       -> result px4fmuv17
+    "PX4FMUV17_IOAR"  -> result px4fmuv17_ioar
+    "F4DISCOVERY"     -> result f4discovery
+    "OPEN407VC"       -> result open407vc
+    "PORT407Z"        -> result port407z
+    "PX4FMUV24"       -> result px4fmuv24
     _ -> fail ("no such platform " ++ p)
+
+  where
+  result platform = do
+    conf <- stm32ConfigParser (testplatform_stm32 platform)
+    return platform { testplatform_stm32 = conf }
 
 data ColoredLEDs =
   ColoredLEDs
