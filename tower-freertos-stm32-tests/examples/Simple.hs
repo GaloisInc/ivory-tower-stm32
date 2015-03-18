@@ -35,5 +35,5 @@ test1_per _tocc = do
 main :: IO ()
 main = towerCompile p (test1_per stm32config_clock)
   where p topts = do
-            cfg <- getConfig topts stm32ConfigParser
+            cfg <- getConfig topts $ stm32ConfigParser $ stm32f405Defaults 24
             return $ stm32FreeRTOS id cfg
