@@ -65,7 +65,7 @@ stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]
 stm32Artifacts :: STM32Config -> AST.Tower -> [Module] -> [Artifact]
 stm32Artifacts conf ast ms = (systemArtifacts ast ms) ++ as
   where
-  as = [ STM32.makefile makeobjs ] ++ STM32.artifacts conf
+  as = [ STM32.makefile conf makeobjs ] ++ STM32.artifacts conf
     ++ FreeRTOS.kernel fconfig ++ FreeRTOS.wrapper
     ++ hw_artifacts
 

@@ -8,7 +8,11 @@ cabal-version:       >= 1.10
 license:             BSD3
 
 data-files: support/stm32_freertos_init.c,
-            support/stm32_freertos_init.h
+            support/stm32_freertos_init.h,
+            support/px_mkfw.py,
+            support/px_uploader.py,
+            support/px4fmu-v1.prototype,
+            support/px4fmu-v2.prototype
 
 library
   exposed-modules:      Ivory.OS.FreeRTOS.Tower,

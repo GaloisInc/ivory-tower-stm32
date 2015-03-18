@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 
 module Ivory.OS.FreeRTOS.Tower.STM32.Build
   ( makefile
@@ -13,9 +14,10 @@ import Ivory.BSP.STM32.LinkerScript
 
 import Ivory.OS.FreeRTOS.Tower.STM32.Config
 
-makefile :: [FilePath] -> Artifact
-makefile userobjs = artifactString "Makefile" $ unlines
+makefile :: STM32Config -> [FilePath] -> Artifact
+makefile STM32Config{..} userobjs = artifactString "Makefile" $ unlines
   [ "CC := arm-none-eabi-gcc"
+  , "OBJCOPY := arm-none-eabi-objcopy"
   , "CFLAGS := -Os"
   , "TOWER_STM32_CFLAGS := \\"
   , "  -g3 -Wall -Werror \\"
@@ -39,8 +41,9 @@ makefile userobjs = artifactString "Makefile" $ unlines
   , "OBJDIR := obj"
   , "OBJS := $(addprefix $(OBJDIR)/," ++ (L.intercalate " " objects) ++ ")"
   , ""
-  , "default: $(OBJDIR) $(OBJS) image"
+  , "default: $(OBJDIR) $(OBJS) image" ++ bootloader_default_targets
   , ""
+  , bootloader_targets
   , "image: $(OBJS)"
   , "\t$(CC) -o $@ $(LDFLAGS) -Wl,--script=$(LDSCRIPT) -Wl,-Map=$@.map $(OBJS) $(LDLIBS)"
   , ""
@@ -61,20 +64,49 @@ makefile userobjs = artifactString "Makefile" $ unlines
   ]
   where
   objects = userobjs ++  ["stm32_freertos_init.o", "vector_table.o"]
+  bootloader_default_targets = case stm32config_bootloader of
+    NoBootloader -> ""
+    PX4ProjectBootloader _ -> " image.px4"
+  bootloader_targets = case stm32config_bootloader of
+    NoBootloader -> ""
+    PX4ProjectBootloader px4vers -> unlines
+      [ "image.px4: image.bin"
+      , "\tpython px_mkfw.py --prototype=" ++ px4vers_prototype px4vers 
+            ++ "  --image=$< > $@"
+      , ""
+      , "image.bin: image"
+      , "\t$(OBJCOPY) -O binary $< $@"
+      , ""
+      , "upload: image.px4"
+      , "\t@echo \"*** User expected to set UPLOAD_PORT environment variable ***\""
+      , "\tpython px_uploader.py --port=$(UPLOAD_PORT) $<"
+      , ""
+      ]
 
 artifacts :: STM32Config -> [Artifact]
-artifacts conf = [ vector_table (stm32config_processor conf)
-                 , lds conf
-                 ] ++ init_artifacts
+artifacts STM32Config{..} =
+  [ vector_table stm32config_processor
+  , lds
+  ] ++ init_artifacts ++ bl_artifacts
   where
   init_artifacts = map (artifactCabalFile P.getDataDir)
-                ["support/stm32_freertos_init.c", "support/stm32_freertos_init.h"]
+    ["support/stm32_freertos_init.c", "support/stm32_freertos_init.h"]
 
--- Above makefile assumes this will be called "linker_script.lds"
-lds :: STM32Config -> Artifact
-lds conf = linker_script (stm32config_processor conf) bl_offset reset_handler
-  where
-  bl_offset = case stm32config_bootloader conf of
-    PX4ProjectBootloader -> 0x4000
-    NoBootloader         -> 0
+  -- Above makefile assumes this will be called "linker_script.lds"
+  lds :: Artifact
+  lds = linker_script stm32config_processor bl_offset reset_handler
+    where
+    bl_offset = case stm32config_bootloader of
+      PX4ProjectBootloader _ -> 0x4000
+      NoBootloader           -> 0
 
+  bl_artifacts = case stm32config_bootloader of
+    NoBootloader -> []
+    PX4ProjectBootloader px4vers ->
+      map (artifactCabalFile P.getDataDir)
+          (px_python ++ ["support/" ++ px4vers_prototype px4vers])
+  px_python = [ "support/px_mkfw.py", "support/px_uploader.py"] 
+
+px4vers_prototype :: PX4Version -> String
+px4vers_prototype PX4FMU_v1 = "px4fmu-v1.prototype"
+px4vers_prototype PX4FMU_v2 = "px4fmu-v2.prototype"
