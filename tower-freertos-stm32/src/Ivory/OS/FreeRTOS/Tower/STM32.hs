@@ -1,20 +1,30 @@
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Ivory.OS.FreeRTOS.Tower.STM32
   ( stm32FreeRTOS
   , module Ivory.OS.FreeRTOS.Tower.STM32.Config
   ) where
 
+import Control.Arrow (second)
 import Data.List (nub)
+import qualified Data.Map as Map
+import Data.Monoid
 import System.FilePath
 import Ivory.Language
 import Ivory.Artifact
 import Ivory.HW
 import qualified Ivory.Tower.AST as AST
+import Ivory.Tower.Backend
+import Ivory.Tower.Backend.Compat
 
 import qualified Ivory.OS.FreeRTOS as FreeRTOS
 import qualified Ivory.Tower.Types.TowerPlatform as T
+import Ivory.Tower.Types.Dependencies
+import Ivory.Tower.Types.GeneratedCode
+import Ivory.Tower.Types.MonitorCode
+import Ivory.Tower.Types.SignalCode
 
 import           Ivory.OS.FreeRTOS.Tower.System
 import           Ivory.OS.FreeRTOS.Tower.Time (time_module)
@@ -24,14 +34,45 @@ import           Ivory.OS.FreeRTOS.Tower.STM32.Config
 import Ivory.BSP.STM32.VectorTable (reset_handler)
 import Ivory.BSP.STM32.ClockConfig.Init (init_clocks)
 
-stm32FreeRTOS :: (e -> STM32Config) -> e -> T.TowerPlatform e
+newtype Wrapper = Wrapper CompatBackend
+
+unWrapSomeHandler :: SomeHandler Wrapper -> SomeHandler CompatBackend
+unWrapSomeHandler (SomeHandler (WrapHandler h)) = SomeHandler h
+
+instance TowerBackend Wrapper where
+  newtype TowerBackendCallback Wrapper a = WrapCallback { unWrapCallback :: TowerBackendCallback CompatBackend a }
+  newtype TowerBackendEmitter Wrapper = WrapEmitter { unWrapEmitter :: TowerBackendEmitter CompatBackend }
+  newtype TowerBackendHandler Wrapper a = WrapHandler { unWrapHandler :: TowerBackendHandler CompatBackend a }
+  newtype TowerBackendMonitor Wrapper = WrapMonitor { unWrapMonitor :: TowerBackendMonitor CompatBackend }
+  data TowerBackendOutput Wrapper = WrapOutput (TowerBackendOutput CompatBackend) AST.Tower
+
+  callbackImpl (Wrapper b) ast cb = WrapCallback $ callbackImpl b ast cb
+  emitterImpl (Wrapper b) ast sinks = second WrapEmitter $ emitterImpl b ast $ map unWrapHandler sinks
+  handlerImpl (Wrapper b) ast ems cbs = WrapHandler $ handlerImpl b ast (map unWrapEmitter ems) (map unWrapCallback cbs)
+  monitorImpl (Wrapper b) ast hs moddef = WrapMonitor $ monitorImpl b ast (map unWrapSomeHandler hs) moddef
+  towerImpl (Wrapper b) ast mons = WrapOutput (towerImpl b ast $ map unWrapMonitor mons) ast
+
+stm32FreeRTOS :: (e -> STM32Config) -> e -> T.TowerPlatform Wrapper e
 stm32FreeRTOS fromEnv e = T.TowerPlatform
-  { T.threadModules    = threadModules
-  , T.monitorModules   = monitorModules
-  , T.systemModules    = stm32Modules (fromEnv e)
-  , T.systemArtifacts  = stm32Artifacts (fromEnv e)
-  , T.platformEnv      = e
+  { T.platformBackend = Wrapper CompatBackend
+  , T.platformEnv     = e
+  , T.addModules      = withGC (threadModules <> monitorModules <> const (stm32Modules (fromEnv e)))
+  , T.addArtifacts    = withGC (const (stm32Artifacts (fromEnv e)))
   }
+
+withGC :: (GeneratedCode -> AST.Tower -> a) -> TowerBackendOutput Wrapper -> Dependencies -> SignalCode -> a
+withGC f (WrapOutput output ast) deps sigs = f gc ast
+  where
+  gc = GeneratedCode
+    { generatedcode_modules = dependencies_modules deps
+    , generatedcode_depends = dependencies_depends deps
+    , generatedcode_threads = Map.insertWith mappend initThread mempty $ compatoutput_threads output
+    , generatedcode_monitors = Map.map MonitorCode $ compatoutput_monitors output
+    , generatedcode_signals = signalcode_signals sigs
+    , generatedcode_init = signalcode_init sigs
+    , generatedcode_artifacts = dependencies_artifacts deps
+    }
+  initThread = AST.InitThread AST.Init
 
 stm32Modules :: STM32Config -> AST.Tower -> [Module]
 stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]
