@@ -29,6 +29,45 @@ struct can_reschedule_request
   }
 |]
 
+shiftUp :: Def ('[ Ref s0 ('Stored Uint8)
+                 , Ref s1 ('Stored Uint32), Ref s2 ('Stored Uint8)
+                 , Ref s3 ('Stored Uint32), Ref s4 ('Stored Uint8)
+                 ] :-> IBool)
+shiftUp = proc "shift_task_up" $ \ insert_position new_prio new_task current_prio current_task -> body $ do
+  new <- deref new_prio
+  when (new ==? maxBound) $ ret true
+  current <- deref current_prio
+  assert (new /=? current)
+  ifte_ (new >? current) (insert_position %= (+ 1)) $ do
+    temp_task <- deref current_task
+    refCopy current_prio new_prio
+    refCopy current_task new_task
+    store new_prio current
+    store new_task temp_task
+  ret false
+
+shiftDown :: Def ('[ Ref s0 ('Stored Uint8)
+                   , Ref s1 ('Stored Uint32), Ref s2 ('Stored Uint8)
+                   , ConstRef s3 ('Stored Uint32), ConstRef s4 ('Stored Uint8)
+                   ] :-> IBool)
+shiftDown = proc "shift_task_down" $ \ target_ref current_prio current_task next_prio next_task -> body $ do
+  target <- deref target_ref
+  when (target ==? maxBound) $ ret true
+  current <- deref current_task
+  when (current ==? target) $ do
+    refCopy current_prio next_prio
+    refCopy current_task next_task
+    comment "We just duplicated the next task, so arrange to delete that next."
+    refCopy target_ref next_task
+  ret false
+
+schedulerHelperModule :: Module
+schedulerHelperModule = package "can_scheduler_helper" $ do
+  defStruct (Proxy :: Proxy "can_transmit_result")
+  defStruct (Proxy :: Proxy "can_reschedule_request")
+  incl shiftUp
+  incl shiftDown
+
 data CANTask = CANTask
   { canTaskReq :: ChanOutput (Struct "can_transmit_request")
   , canTaskRes :: ChanInput (Stored IBool)
@@ -49,6 +88,9 @@ canScheduler mailboxes tasks = do
   (doResched, reschedChan) <- channel
   (doTaskComplete, taskCompleteChan) <- channel
   (doTaskAbort, taskAbortChan) <- channel
+
+  towerModule schedulerHelperModule
+  towerDepends schedulerHelperModule
 
   monitor "can_scheduler" $ do
     -- Maintain a priority queue of tasks. The priority is stored in
@@ -108,23 +150,6 @@ canScheduler mailboxes tasks = do
             is_current <- call isTaskCurrent target_task
             unless is_current $ ret target_task
           ret maxBound
-
-    let shiftUp :: Def ('[Ref s0 ('Stored Uint8),
-                          Ref s1 ('Stored Uint32), Ref s2 ('Stored Uint8),
-                          Ref s3 ('Stored Uint32), Ref s4 ('Stored Uint8)
-                         ] :-> IBool)
-        shiftUp = proc "shift_task_up" $ \ insert_position new_prio new_task current_prio current_task -> body $ do
-          new <- deref new_prio
-          when (new ==? maxBound) $ ret true
-          current <- deref current_prio
-          assert (new /=? current)
-          ifte_ (new >? current) (insert_position %= (+ 1)) $ do
-            temp_task <- deref current_task
-            refCopy current_prio new_prio
-            refCopy current_task new_task
-            store new_prio current
-            store new_task temp_task
-          ret false
 
     let insertTask :: Def ('[ Uint8
                             , Ref s1 ('Struct "can_reschedule_request")
@@ -202,17 +227,6 @@ canScheduler mailboxes tasks = do
 
           ret false
 
-    let shiftDown = proc "shift_task_down" $ \ target_ref current_prio current_task next_prio next_task -> body $ do
-          target <- deref target_ref
-          when (target ==? maxBound) $ ret true
-          current <- deref current_task
-          when (current ==? target) $ do
-            refCopy current_prio next_prio
-            refCopy current_task next_task
-            comment "We just duplicated the next task, so arrange to delete that next."
-            refCopy target_ref next_task
-          ret false
-
     let removeTask = proc "remove_task" $ \ initial_task -> body $ do
           target <- local $ ival initial_task
 
@@ -234,16 +248,12 @@ canScheduler mailboxes tasks = do
           ret true
 
     monitorModuleDef $ do
-      defStruct (Proxy :: Proxy "can_transmit_result")
-      defStruct (Proxy :: Proxy "can_reschedule_request")
       incl isTaskQueued
       incl nextTask
       incl insertTask
       incl removeTask
       private $ do
         incl isTaskCurrent
-        incl shiftUp
-        incl shiftDown
 
     -- Channel handlers:
 
