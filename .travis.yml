@@ -12,6 +12,7 @@ before_install:
   - git clone https://github.com/galoisinc/tower
   - export TOWER_REPO=$PWD/tower
 install:
+  - cabal install cabal-install
   - cabal install alex
   - cabal install happy
 script:
