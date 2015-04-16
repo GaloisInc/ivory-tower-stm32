@@ -76,8 +76,6 @@ uartTowerDebuggable tocc uart pins baud sizeproxy dbg = do
     (Interrupt (uartInterrupt uart))
     (Microseconds 50) -- XXX calculate from baud rate.
     (do debug_isr dbg
-        --setTXEIE uart false
-        --setRXNEIE uart false
         interrupt_disable (uartInterrupt uart))
 
   monitor (uartName uart ++ "_driver") $ do
