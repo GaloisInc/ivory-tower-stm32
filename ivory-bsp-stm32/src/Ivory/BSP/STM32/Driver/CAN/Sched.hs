@@ -24,6 +24,10 @@ struct can_transmit_result
   }
 |]
 
+-- | One step in inserting a new task into a priority-sorted array. If
+-- the new task should go before the existing task, then exchange the
+-- two; afterward, the existing task becomes a "new" task to insert
+-- before the next element in the array.
 shiftUp :: Def ('[ Ref s0 ('Stored Uint8)
                  , Ref s1 ('Stored Uint32), Ref s2 ('Stored Uint8)
                  , Ref s3 ('Stored Uint32), Ref s4 ('Stored Uint8)
@@ -41,6 +45,10 @@ shiftUp = proc "shift_task_up" $ \ insert_position new_prio new_task current_pri
     store new_task temp_task
   ret false
 
+-- | One step in removing an old task from a sorted array. When we reach
+-- the target element of the array, pull the next element down to this
+-- one, overwriting it; afterward, the new deletion target is the
+-- now-duplicated task that we just pulled forward.
 shiftDown :: Def ('[ Ref s0 ('Stored Uint8)
                    , Ref s1 ('Stored Uint32), Ref s2 ('Stored Uint8)
                    , ConstRef s3 ('Stored Uint32), ConstRef s4 ('Stored Uint8)
@@ -56,18 +64,28 @@ shiftDown = proc "shift_task_down" $ \ target_ref current_prio current_task next
     refCopy target_ref next_task
   ret false
 
+-- | These definitions do not depend on the number of mailboxes or
+-- tasks, so factor them into a separate module to reduce code
+-- duplication.
 schedulerHelperModule :: Module
 schedulerHelperModule = package "can_scheduler_helper" $ do
   defStruct (Proxy :: Proxy "can_transmit_result")
   incl shiftUp
   incl shiftDown
 
+-- | Pass this data to 'canScheduler' to tie the corresponding client to
+-- a given collection of multiplexed hardware mailboxes.
 data CANTask = CANTask
   { canTaskReq :: ChanOutput (Struct "can_transmit_request")
   , canTaskRes :: ChanInput (Stored IBool)
   , canTaskAbortReq :: ChanOutput (Stored IBool)
   }
 
+-- | Construct a virtual CAN transmit mailbox that a client can use as
+-- if it had sole ownership of the bus. The returned 'CANTask' must be
+-- passed to an instance of 'canScheduler'; otherwise, the virtual
+-- mailbox will discard requests sent to it and will never complete
+-- them.
 canTask :: Tower e (CANTask, CANTransmitAPI)
 canTask = do
   (canTXReq, canTaskReq) <- channel
@@ -75,6 +93,9 @@ canTask = do
   (canTXAbortReq, canTaskAbortReq) <- channel
   return (CANTask { .. }, CANTransmitAPI { .. })
 
+-- | Multiplex a collection of CAN transmit tasks onto a collection of
+-- hardware transmit mailboxes. The transmit mailboxes must ensure that
+-- the highest-priority message queued on any of them is sent first.
 canScheduler :: [CANTransmitAPI]
              -> [CANTask]
              -> Tower e ()
@@ -100,6 +121,11 @@ canScheduler mailboxes tasks = do
     -- completion notifications after hardware aborts, the current
     -- contents of each mailbox can lag behind the current set of
     -- highest priority tasks.
+    --
+    -- The sentinels are global only because we place references to them
+    -- in a list that also contains references to the queues themselves,
+    -- and Ivory's embedding in Haskell's type system requires the list
+    -- elements to all have the same scope.
 
     prio_queue <- forM (zipWith const [(0 :: Int) ..] tasks) $ \ idx -> do
       stateInit ("prio_" ++ show idx) $ ival maxBound
@@ -129,8 +155,37 @@ canScheduler mailboxes tasks = do
         [ tx_id .= ival maxBound ]
       return (idx, task, last_request)
 
+    -- Global properties
+
+    -- * If a task ID is in some 'current' variable in 'mbox_states',
+    --   then we're waiting for it to complete in some hardware mailbox.
+    --
+    --   * If it's in the high-priority elements of task_queue, then the
+    --     task is in the "on-hardware" state.
+    --   * If it's in the low-priority elements of task_queue, then the
+    --     task is in the "reschedule" state, waiting to be moved out of
+    --     the mailbox to make room for an incoming higher-priority task.
+    --   * If it's missing from task_queue, then the task is in the
+    --     "abort" state, waiting for the hardware to notify us of its
+    --     final disposition.
+    --
+    -- * If a task ID is not in a mailbox:
+    --
+    --   * If it's in task_queue somewhere, then it's in the "schedule"
+    --     state, waiting for the current mailbox contents to get sent
+    --     so that there's an empty mailbox to put this task into.
+    --   * Otherwise the task is idle. Its "last_request" variable must
+    --     have a tx_id of 'maxBound'.
+    --
+    -- See sched.dot in this directory for a state machine graph
+    -- describing the legal transitions between the above five states.
+
     -- Procedures for manipulating the priority queue:
 
+    -- Return whether the given task is currently in the task queue.
+    -- Used to determine whether a task which completed unsuccessfully
+    -- (which can only happen if we abort its mailbox) is in
+    -- "reschedule" or "abort" state.
     let isTaskQueued = proc "is_task_queued" $ \ task -> body $ do
           forM_ task_queue $ \ current_task -> do
             current <- deref current_task
@@ -138,6 +193,9 @@ canScheduler mailboxes tasks = do
             when (current ==? task) $ ret true
           ret false
 
+    -- Return whether the given task is currently in a hardware mailbox.
+    -- Used in nextTask to determine whether a high-priority task is in
+    -- "on-hardware" or "schedule" state.
     let isTaskCurrent = proc "is_task_current" $ \ task -> body $ do
           forM_ mbox_states $ \ (_, _, current) -> do
             current_task <- deref current
@@ -153,6 +211,16 @@ canScheduler mailboxes tasks = do
           assert (task ==? fromInteger last_idx)
           ret (constRef last_task)
 
+    -- Select the highest-priority task which is not already in a
+    -- hardware mailbox, or return 'maxBound' if there is no such task.
+    -- Used when a mailbox reports completion so we're ready to place a
+    -- new request in it.
+    --
+    -- It doesn't make sense to choose a task which would be in the
+    -- "reschedule" state immediately, so we only look at the tasks
+    -- which are in the high-priority portion of the queue. Taking one
+    -- of those tasks from not-current to current implies a transition
+    -- from "schedule" to "on-hardware" state.
     let nextTask = proc "next_task" $ body $ do
           forM_ (zipWith const task_queue mbox_states) $ \ task -> do
             target_task <- deref task
@@ -163,6 +231,10 @@ canScheduler mailboxes tasks = do
             unless is_current $ ret target_task
           ret maxBound
 
+    -- Add a task to the task_queue, possibly returning a reschedule
+    -- request for some lower-priority task which should be bounced out
+    -- of a hardware mailbox, or a schedule request to place this task
+    -- into a currently-empty mailbox.
     let insertTask :: Def ('[ Uint8
                             , Ref s0 (Stored Uint8)
                             , Ref s1 (Stored Uint8)
@@ -240,6 +312,8 @@ canScheduler mailboxes tasks = do
 
           ret false
 
+    -- Remove a task from task_queue, either because it has completed,
+    -- or because its client has requested to abort it.
     let removeTask = proc "remove_task" $ \ initial_task -> body $ do
           target <- local $ ival initial_task
 
@@ -272,6 +346,18 @@ canScheduler mailboxes tasks = do
     -- Channel handlers:
 
     forM_ mbox_states $ \ (idx, mbox, current) -> do
+      -- Handle a transmit-complete event. On entry, the task must be in
+      -- "on-hardware", "reschedule", or "abort" states. On exit, the
+      -- task will be "idle" if it completed successfully, or either
+      -- "schedule" or "idle" if unsuccessful. In addition, if any other
+      -- task was in "schedule" state, on exit the highest-priority of
+      -- those will be in "on-hardware" state.
+      --
+      -- We can't check the state precondition at runtime because the
+      -- response from the driver doesn't indicate which message
+      -- completed, only the status of the given mailbox. Instead we
+      -- assume that we've maintained the invariants on our "current"
+      -- state variables.
       handler (canTXRes mbox) ("mailbox_" ++ show idx ++ "_complete") $ do
         taskComplete <- emitter doTaskComplete 1
         sendReq <- emitter (canTXReq mbox) 1
@@ -306,6 +392,9 @@ canScheduler mailboxes tasks = do
             store current next
             emit sendReq req
 
+    -- Handle a taskAbort event. On entry, the task may be in any state,
+    -- including abort or idle. On exit, if the task was current, then
+    -- its new state is "abort"; otherwise, it is "idle".
     handler taskAbortChan "task_abort" $ do
       emitters <- forM mbox_states $ \ (_, mbox, current) -> do
         e <- emitter (canTXAbortReq mbox) 1
@@ -332,6 +421,10 @@ canScheduler mailboxes tasks = do
             ]
 
     forM_ task_states $ \ (idx, task, last_request) -> do
+      -- Handle a taskRequest event. On entry, the task must be in
+      -- "idle" state. On exit, it will either be in "schedule" or
+      -- "on-hardware" states, according to whether there's a free
+      -- mailbox available.
       handler (canTaskReq task) ("task_" ++ show idx ++ "_request") $ do
         emitters <- forM mbox_states $ \ (mbox_idx, mbox, current) -> do
           sendReq <- emitter (canTXReq mbox) 1
@@ -362,10 +455,31 @@ canScheduler mailboxes tasks = do
                   ]
               )
 
+      -- Delegate taskAbort events to the common task abort handler,
+      -- above. This only adds the internal task ID to the request.
+      -- Note: aborts can race with completion, and this handler
+      -- delegates to another handler, which ends this critical section.
+      -- So this handler should not modify any monitor state; the common
+      -- abort handler is atomic with respect to other task aborts and
+      -- any completions.
       handler (canTaskAbortReq task) ("task_" ++ show idx ++ "_abort") $ do
         taskAbort <- emitter doTaskAbort 1
         callback $ const $ emitV taskAbort $ fromInteger idx
 
+    -- Deliver a task-complete notification to its client, and record
+    -- that this task is now allowed to submit another request. This
+    -- must be triggered when and only when the task has just
+    -- transitioned to the "idle" state from any other state.
+    --
+    -- However, it doesn't need to run immediately in the same critical
+    -- section as that state transition, because: (1) further task abort
+    -- requests will no-op in the "idle" state; (2) a well-behaved
+    -- client won't send another request until this handler emits its
+    -- completion notice; (3) a poorly-behaved client will trigger an
+    -- assert in its canTaskReq handler.
+    --
+    -- So this code is factored out to a separate handler because it's
+    -- safe to do so and this reduces code duplication elsewhere.
     handler taskCompleteChan "task_complete" $ do
       emitters <- forM task_states $ \ (idx, task, last_request) -> do
         e <- emitter (canTaskRes task) 1
