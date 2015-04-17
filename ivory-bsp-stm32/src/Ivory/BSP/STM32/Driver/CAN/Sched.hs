@@ -300,22 +300,24 @@ canScheduler mailboxes tasks = do
         return (current, e)
       taskComplete <- emitter doTaskComplete 1
       callbackV $ \ task -> do
-        -- If this task is current in some mailbox, abort that mailbox.
-        abort_msg <- fmap constRef $ local $ ival true
-        current_conds <- forM emitters $ \ (current, e) -> do
-          current_task <- deref current
-          return (task ==? current_task ==> emit e abort_msg)
+        removed <- call removeTask task
+        when removed $ do
+          -- If this task is current in some mailbox, abort that mailbox.
+          abort_msg <- fmap constRef $ local $ ival true
+          current_conds <- forM emitters $ \ (current, e) -> do
+            current_task <- deref current
+            return (task ==? current_task ==> emit e abort_msg)
 
-        -- Otherwise, we hadn't handed the task off to the hardware yet,
-        -- so we can immediately report that it wasn't sent, without
-        -- waiting for a hardware abort.
-        cond_ $ current_conds ++ [ true ==> do
-            res <- fmap constRef $ local $ istruct
-              [ task_idx .= ival task
-              , task_success .= ival false
-              ]
-            emit taskComplete res
-          ]
+          -- Otherwise, we hadn't handed the task off to the hardware yet,
+          -- so we can immediately report that it wasn't sent, without
+          -- waiting for a hardware abort.
+          cond_ $ current_conds ++ [ true ==> do
+              res <- fmap constRef $ local $ istruct
+                [ task_idx .= ival task
+                , task_success .= ival false
+                ]
+              emit taskComplete res
+            ]
 
     task_states <- forM (zip [0..] tasks) $ \ (idx, task) -> do
       -- We buffer one request from each task. They aren't allowed to
@@ -338,9 +340,7 @@ canScheduler mailboxes tasks = do
 
       handler (canTaskAbortReq task) ("task_" ++ show idx ++ "_abort") $ do
         taskAbort <- emitter doTaskAbort 1
-        callback $ const $ do
-          removed <- call removeTask $ fromInteger idx
-          when removed $ emitV taskAbort $ fromInteger idx
+        callback $ const $ emitV taskAbort $ fromInteger idx
 
       return (idx, task, last_request)
 
