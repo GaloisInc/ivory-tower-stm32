@@ -12,6 +12,7 @@ module Ivory.BSP.STM32.Driver.CAN.Sched
   ) where
 
 import Control.Monad (forM, forM_)
+import Data.Bits (shiftL)
 import Ivory.BSP.STM32.Driver.CAN
 import Ivory.Language
 import Ivory.Stdlib
@@ -144,6 +145,16 @@ canScheduler mailboxes tasks = do
     mbox_states <- forM (zip [0..] mailboxes) $ \ (idx, mbox) -> do
       current <- stateInit ("current_task_in_" ++ show idx) $ ival maxBound
       return (idx, mbox, current)
+
+    -- If we queue up two aborts to the same mailbox, then there could
+    -- be an interleaving of threads with this sequence:
+    -- 1. Mailbox processes abort #1.
+    -- 2. Hardware reports completion.
+    -- 3. We queue the next request on this mailbox.
+    -- 4. Mailbox processes abort #2, aborting the wrong request.
+    -- We don't want to spuriously abort requests, so keep a flag per
+    -- mailbox to record whether we already have a pending abort there.
+    mbox_aborting <- stateInit "mbox_aborting" (izero :: Init (Stored Uint8))
 
     task_states <- forM (zip [0..] tasks) $ \ (idx, task) -> do
       -- We buffer one request from each task. They aren't allowed to
@@ -385,6 +396,9 @@ canScheduler mailboxes tasks = do
             )
 
           store current maxBound
+          let bit = fromInteger (1 `shiftL` fromInteger idx)
+          already_aborting <- deref mbox_aborting
+          store mbox_aborting (already_aborting .& iComplement bit)
 
           next <- call nextTask
           when (next /=? maxBound) $ do
@@ -396,18 +410,23 @@ canScheduler mailboxes tasks = do
     -- including abort or idle. On exit, if the task was current, then
     -- its new state is "abort"; otherwise, it is "idle".
     handler taskAbortChan "task_abort" $ do
-      emitters <- forM mbox_states $ \ (_, mbox, current) -> do
+      emitters <- forM mbox_states $ \ (idx, mbox, current) -> do
         e <- emitter (canTXAbortReq mbox) 1
-        return (current, e)
+        return (idx, current, e)
       taskComplete <- emitter doTaskComplete 1
       callbackV $ \ task -> do
         removed <- call removeTask task
         when removed $ do
           -- If this task is current in some mailbox, abort that mailbox.
           abort_msg <- fmap constRef $ local $ ival true
-          current_conds <- forM emitters $ \ (current, e) -> do
+          already_aborting <- deref mbox_aborting
+          current_conds <- forM emitters $ \ (idx, current, e) -> do
             current_task <- deref current
-            return (task ==? current_task ==> emit e abort_msg)
+            return $ (task ==? current_task ==>) $ do
+              let bit = fromInteger (1 `shiftL` fromInteger idx)
+              when ((already_aborting .& bit) ==? 0) $ do
+                store mbox_aborting (already_aborting .| bit)
+                emit e abort_msg
 
           -- Otherwise, we hadn't handed the task off to the hardware yet,
           -- so we can immediately report that it wasn't sent, without
@@ -441,8 +460,13 @@ canScheduler mailboxes tasks = do
             ifte_ (target_task ==? maxBound)
               (do
                 abortReq <- fmap constRef $ local $ ival true
+                already_aborting <- deref mbox_aborting
                 cond_
-                  [ mailbox ==? fromInteger mbox_idx ==> emit abort abortReq
+                  [ mailbox ==? fromInteger mbox_idx ==> do
+                      let bit = fromInteger (1 `shiftL` fromInteger mbox_idx)
+                      when ((already_aborting .& bit) ==? 0) $ do
+                        store mbox_aborting (already_aborting .| bit)
+                        emit abort abortReq
                   | (mbox_idx, _, _, abort) <- emitters
                   ]
               ) (do
