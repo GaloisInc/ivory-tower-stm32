@@ -22,11 +22,6 @@ struct can_transmit_result
   { task_idx :: Stored Uint8
   ; task_success :: Stored IBool
   }
-
-struct can_reschedule_request
-  { reschedule_mailbox :: Stored Uint8
-  ; reschedule_task :: Stored Uint8
-  }
 |]
 
 shiftUp :: Def ('[ Ref s0 ('Stored Uint8)
@@ -64,7 +59,6 @@ shiftDown = proc "shift_task_down" $ \ target_ref current_prio current_task next
 schedulerHelperModule :: Module
 schedulerHelperModule = package "can_scheduler_helper" $ do
   defStruct (Proxy :: Proxy "can_transmit_result")
-  defStruct (Proxy :: Proxy "can_reschedule_request")
   incl shiftUp
   incl shiftDown
 
@@ -85,7 +79,6 @@ canScheduler :: [CANTransmitAPI]
              -> [CANTask]
              -> Tower e ()
 canScheduler mailboxes tasks = do
-  (doResched, reschedChan) <- channel
   (doTaskComplete, taskCompleteChan) <- channel
   (doTaskAbort, taskAbortChan) <- channel
 
@@ -126,6 +119,16 @@ canScheduler mailboxes tasks = do
       current <- stateInit ("current_task_in_" ++ show idx) $ ival maxBound
       return (idx, mbox, current)
 
+    task_states <- forM (zip [0..] tasks) $ \ (idx, task) -> do
+      -- We buffer one request from each task. They aren't allowed to
+      -- send another until we send them a completion notification,
+      -- although they can trigger that early by sending us an abort
+      -- request. A sentinel message ID (maxBound) indicates that there
+      -- is no pending request from this task.
+      last_request <- stateInit ("last_request_for_" ++ show idx) $ istruct
+        [ tx_id .= ival maxBound ]
+      return (idx, task, last_request)
+
     -- Procedures for manipulating the priority queue:
 
     let isTaskQueued = proc "is_task_queued" $ \ task -> body $ do
@@ -141,6 +144,15 @@ canScheduler mailboxes tasks = do
             when (task ==? current_task) $ ret true
           ret false
 
+    -- Return a reference to the given task's current request. The task
+    -- ID must be a valid index in task_states.
+    let getTaskRequest = proc "get_task_request" $ \ task -> body $ do
+          let ((last_idx, _, last_task) : ts) = reverse task_states
+          forM_ (reverse ts) $ \ (idx, _, last_request) -> do
+            when (task ==? fromInteger idx) $ ret (constRef last_request)
+          assert (task ==? fromInteger last_idx)
+          ret (constRef last_task)
+
     let nextTask = proc "next_task" $ body $ do
           forM_ (zipWith const task_queue mbox_states) $ \ task -> do
             target_task <- deref task
@@ -152,11 +164,12 @@ canScheduler mailboxes tasks = do
           ret maxBound
 
     let insertTask :: Def ('[ Uint8
-                            , Ref s1 ('Struct "can_reschedule_request")
-                            , Ref s ('Struct "can_transmit_request")
-                            , ConstRef sFrom0 ('Struct "can_transmit_request")
+                            , Ref s0 (Stored Uint8)
+                            , Ref s1 (Stored Uint8)
+                            , Ref s2 ('Struct "can_transmit_request")
+                            , ConstRef s3 ('Struct "can_transmit_request")
                             ] :-> IBool)
-        insertTask = proc "insert_task" $ \ task resched_req last_request req -> body $ do
+        insertTask = proc "insert_task" $ \ task resched_task resched_mbox last_request req -> body $ do
           comment "Task must not have an outstanding request already."
           last_id <- deref $ last_request ~> tx_id
           assert (last_id ==? maxBound)
@@ -215,12 +228,12 @@ canScheduler mailboxes tasks = do
 
             when (bounce_task ==? maxBound) $ do
               comment "Put this new task in a free mailbox."
-              store (resched_req ~> reschedule_task) task
+              store resched_task task
             conds <- forM mbox_states $ \ (mbox_idx, _, current) -> do
               pending_task <- deref current
               return
                 (pending_task ==? bounce_task ==> do
-                  store (resched_req ~> reschedule_mailbox) (fromInteger mbox_idx)
+                  store resched_mbox (fromInteger mbox_idx)
                   ret true
                 )
             cond_ conds
@@ -248,6 +261,7 @@ canScheduler mailboxes tasks = do
           ret true
 
     monitorModuleDef $ do
+      incl getTaskRequest
       incl isTaskQueued
       incl nextTask
       incl insertTask
@@ -260,7 +274,7 @@ canScheduler mailboxes tasks = do
     forM_ mbox_states $ \ (idx, mbox, current) -> do
       handler (canTXRes mbox) ("mailbox_" ++ show idx ++ "_complete") $ do
         taskComplete <- emitter doTaskComplete 1
-        resched <- emitter doResched 1
+        sendReq <- emitter (canTXReq mbox) 1
 
         callbackV $ \ success -> do
           current_task <- deref current
@@ -288,11 +302,9 @@ canScheduler mailboxes tasks = do
 
           next <- call nextTask
           when (next /=? maxBound) $ do
-            resched_req <- fmap constRef $ local $ istruct
-              [ reschedule_mailbox .= ival (fromInteger idx)
-              , reschedule_task .= ival next
-              ]
-            emit resched resched_req
+            req <- call getTaskRequest next
+            store current next
+            emit sendReq req
 
     handler taskAbortChan "task_abort" $ do
       emitters <- forM mbox_states $ \ (_, mbox, current) -> do
@@ -319,59 +331,40 @@ canScheduler mailboxes tasks = do
               emit taskComplete res
             ]
 
-    task_states <- forM (zip [0..] tasks) $ \ (idx, task) -> do
-      -- We buffer one request from each task. They aren't allowed to
-      -- send another until we send them a completion notification,
-      -- although they can trigger that early by sending us an abort
-      -- request. A sentinel message ID (maxBound) indicates that there
-      -- is no pending request from this task.
-      last_request <- stateInit ("last_request_for_" ++ show idx) $ istruct
-        [ tx_id .= ival maxBound ]
-
+    forM_ task_states $ \ (idx, task, last_request) -> do
       handler (canTaskReq task) ("task_" ++ show idx ++ "_request") $ do
-        resched <- emitter doResched 1
+        emitters <- forM mbox_states $ \ (mbox_idx, mbox, current) -> do
+          sendReq <- emitter (canTXReq mbox) 1
+          abort <- emitter (canTXAbortReq mbox) 1
+          return (mbox_idx, current, sendReq, abort)
+
         callback $ \ req -> do
-          resched_req <- local $ istruct
-            [ reschedule_mailbox .= ival maxBound
-            , reschedule_task .= ival maxBound
-            ]
-          needs_resched <- call insertTask (fromInteger idx) resched_req last_request req
-          when needs_resched $ emit resched $ constRef resched_req
+          resched_task <- local $ ival maxBound
+          resched_mbox <- local $ ival maxBound
+          needs_resched <- call insertTask (fromInteger idx) resched_task resched_mbox last_request req
+          when needs_resched $ do
+            target_task <- deref resched_task
+            mailbox <- deref resched_mbox
+            ifte_ (target_task ==? maxBound)
+              (do
+                abortReq <- fmap constRef $ local $ ival true
+                cond_
+                  [ mailbox ==? fromInteger mbox_idx ==> emit abort abortReq
+                  | (mbox_idx, _, _, abort) <- emitters
+                  ]
+              ) (do
+                taskReq <- call getTaskRequest target_task
+                cond_
+                  [ mailbox ==? fromInteger mbox_idx ==> do
+                      store current target_task
+                      emit sendReq taskReq
+                  | (mbox_idx, current, sendReq, _) <- emitters
+                  ]
+              )
 
       handler (canTaskAbortReq task) ("task_" ++ show idx ++ "_abort") $ do
         taskAbort <- emitter doTaskAbort 1
         callback $ const $ emitV taskAbort $ fromInteger idx
-
-      return (idx, task, last_request)
-
-    handler reschedChan "task_resched" $ do
-      emitters <- forM mbox_states $ \ (idx, mbox, current) -> do
-        sendReq <- emitter (canTXReq mbox) 1
-        abort <- emitter (canTXAbortReq mbox) 1
-        return (idx, current, sendReq, abort)
-
-      callback $ \ resched_req -> do
-        task <- deref $ resched_req ~> reschedule_task
-        task_req <- cond $
-          [ task ==? fromInteger idx ==> return (refToPtr last_request)
-          | (idx, _, last_request) <- task_states
-          ] ++
-          [ true ==> do
-              assert (task ==? maxBound)
-              return nullPtr
-          ]
-
-        abortReq <- fmap constRef $ local $ ival true
-        mailbox <- deref $ resched_req ~> reschedule_mailbox
-        cond_
-          [ mailbox ==? fromInteger idx ==> do
-              withRef task_req
-                (\ ref -> do
-                  store current task
-                  emit sendReq $ constRef ref
-                ) (emit abort abortReq)
-          | (idx, current, sendReq, abort) <- emitters
-          ]
 
     handler taskCompleteChan "task_complete" $ do
       emitters <- forM task_states $ \ (idx, task, last_request) -> do
