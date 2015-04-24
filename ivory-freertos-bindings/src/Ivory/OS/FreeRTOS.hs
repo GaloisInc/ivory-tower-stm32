@@ -53,6 +53,7 @@ kernelfiles =
   , "freertos-sources/portable/GCC/ARM_CM4F/port.c"
   , "freertos-sources/portable/GCC/ARM_CM4F/portmacro.h"
   , "freertos-sources/portable/MemMang/heap_1.c"
+  , "syscalls/assert.h"
   , "syscalls/syscalls.c"
   ]
 
