@@ -129,8 +129,7 @@ import Ivory.Language
 
  -- used for all three CAN_TIxR
  bitdata CAN_TIR :: Bits 32 = can_tir
-   { can_tir_stid       :: Bits 11
-   , can_tir_exid       :: Bits 18
+   { can_tir_id         :: Bits 29
    , can_tir_ide        :: Bit
    , can_tir_rtr        :: Bit
    , can_tir_txrq       :: Bit
@@ -163,8 +162,7 @@ import Ivory.Language
 
  -- used for both CAN_RIxR
  bitdata CAN_RIR :: Bits 32 = can_rir
-   { can_rir_stid       :: Bits 11
-   , can_rir_exid       :: Bits 18
+   { can_rir_id         :: Bits 29
    , can_rir_ide        :: Bit
    , can_rir_rtr        :: Bit
    , _                  :: Bit

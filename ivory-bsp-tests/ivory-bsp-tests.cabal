@@ -31,6 +31,7 @@ library
                        ivory-hw,
                        tower              >= 0.9,
                        tower-config,
+                       tower-hal,
                        tower-freertos-stm32 >= 0.9,
                        ivory-bsp-stm32
 

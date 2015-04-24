@@ -7,13 +7,16 @@
 
 module Ivory.BSP.STM32.Driver.I2C
   ( i2cTower
-  , module Ivory.BSP.STM32.Driver.I2C.Types
-  , module Ivory.BSP.STM32.Driver.I2C.I2CDeviceAddr
+  , module Ivory.Tower.HAL.Bus.I2C
+  , module Ivory.Tower.HAL.Bus.I2C.DeviceAddr
   ) where
 
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
+import Ivory.Tower.HAL.Bus.I2C
+import Ivory.Tower.HAL.Bus.I2C.DeviceAddr
+import Ivory.Tower.HAL.Bus.Interface
 import Ivory.HW
 
 import Ivory.BSP.STM32.Interrupt
@@ -23,8 +26,6 @@ import Ivory.BSP.STM32.Peripheral.GPIOF4
 import Ivory.BSP.STM32.Peripheral.I2C.Regs
 import Ivory.BSP.STM32.Peripheral.I2C.Peripheral
 
-import Ivory.BSP.STM32.Driver.I2C.Types
-import Ivory.BSP.STM32.Driver.I2C.I2CDeviceAddr
 import Ivory.BSP.STM32.Driver.I2C.I2CDriverState
 
 
@@ -32,8 +33,7 @@ i2cTower :: (e -> ClockConfig)
          -> I2CPeriph
          -> GPIOPin
          -> GPIOPin
-         -> Tower e ( ChanInput  (Struct "i2c_transaction_request")
-                    , ChanOutput (Struct "i2c_transaction_result")
+         -> Tower e ( BackpressureTransmit (Struct "i2c_transaction_request") (Struct "i2c_transaction_result")
                     , ChanOutput (Stored ITime))
 i2cTower tocc periph sda scl = do
   towerDepends i2cTowerTypes
@@ -60,7 +60,7 @@ i2cTower tocc periph sda scl = do
   monitor ((i2cName periph) ++ "PeripheralDriver") $
     i2cPeripheralDriver tocc periph sda scl evt_irq err_irq
       (snd reqchan) (fst reschan) ready_per (fst readychan)
-  return (fst reqchan, snd reschan, snd readychan)
+  return (BackpressureTransmit (fst reqchan) (snd reschan), snd readychan)
 
 i2cTowerTypes :: Module
 i2cTowerTypes = package "i2cTowerTypes" $ do

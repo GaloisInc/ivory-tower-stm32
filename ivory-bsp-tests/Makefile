@@ -68,10 +68,12 @@ create-sandbox:
 	cabal sandbox add-source $(IVORY_REPO)/ivory-artifact
 	cabal sandbox add-source $(IVORY_REPO)/ivory-hw
 	cabal sandbox add-source $(IVORY_REPO)/ivory-opts
+	cabal sandbox add-source $(IVORY_REPO)/ivory-serialize
 	cabal sandbox add-source $(IVORY_REPO)/ivory-stdlib
 	cabal sandbox add-source $(IVORY_REPO)/ivory-backend-c
 	cabal sandbox add-source $(TOWER_REPO)/tower
 	cabal sandbox add-source $(TOWER_REPO)/tower-config
+	cabal sandbox add-source $(TOWER_REPO)/tower-hal
 	cabal sandbox add-source ../ivory-freertos-bindings
 	cabal sandbox add-source ../ivory-bsp-stm32
 	cabal sandbox add-source ../tower-freertos-stm32

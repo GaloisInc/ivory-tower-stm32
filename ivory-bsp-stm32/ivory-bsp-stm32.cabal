@@ -77,20 +77,12 @@ library
                        Ivory.BSP.STM32.Peripheral.RNG.Regs,
                        Ivory.BSP.STM32.Peripheral.RNG.Peripheral,
 
-                       Ivory.BSP.STM32.Driver.RingBuffer,
-
                        Ivory.BSP.STM32.Driver.CAN,
-                       Ivory.BSP.STM32.Driver.CAN.Sched,
-                       Ivory.BSP.STM32.Driver.CAN.Types,
 
                        Ivory.BSP.STM32.Driver.I2C,
-                       Ivory.BSP.STM32.Driver.I2C.Types,
-                       Ivory.BSP.STM32.Driver.I2C.I2CDeviceAddr,
                        Ivory.BSP.STM32.Driver.I2C.I2CDriverState,
 
                        Ivory.BSP.STM32.Driver.SPI,
-                       Ivory.BSP.STM32.Driver.SPI.Types,
-                       Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle,
 
                        Ivory.BSP.STM32.Driver.UART,
 
@@ -136,9 +128,11 @@ library
                        HStringTemplate,
                        ivory,
                        ivory-artifact,
-                       ivory-stdlib,
                        ivory-hw,
+                       ivory-serialize,
+                       ivory-stdlib,
                        tower-config,
+                       tower-hal,
                        tower >= 0.9
 
   ghc-options:         -Wall

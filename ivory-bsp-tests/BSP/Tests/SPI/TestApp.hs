@@ -8,6 +8,7 @@ module BSP.Tests.SPI.TestApp where
 
 import Ivory.Language
 import Ivory.Tower
+import Ivory.Tower.HAL.Bus.Interface
 
 import           Ivory.BSP.STM32.Peripheral.SPI
 import           Ivory.BSP.STM32.Driver.SPI
@@ -22,7 +23,7 @@ app :: (e -> ClockConfig)
     -> Tower e ()
 app tocc tospi = do
   testspi <- fmap tospi getEnv
-  (req, res, _ready) <- spiTower tocc
+  (BackpressureTransmit req res, _ready) <- spiTower tocc
                           [ testdevice1 testspi, testdevice2 testspi ]
                           (testSPIPins testspi)
   per <- period (Milliseconds 250)

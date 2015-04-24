@@ -6,37 +6,30 @@
 
 module Ivory.BSP.STM32.Driver.CAN
   ( canTower
-  , CANTransmitAPI(..)
-  , module Ivory.BSP.STM32.Driver.CAN.Types
   ) where
 
 import Control.Monad (forM, forM_)
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
+import Ivory.Tower.HAL.Bus.CAN
+import Ivory.Tower.HAL.Bus.Interface
 import Ivory.HW
 
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.ClockConfig
-import Ivory.BSP.STM32.Driver.CAN.Types
 import Ivory.BSP.STM32.Peripheral.CAN
 import Ivory.BSP.STM32.Peripheral.GPIOF4
-
-data CANTransmitAPI = CANTransmitAPI
-  { canTXReq :: ChanInput (Struct "can_transmit_request")
-  , canTXRes :: ChanOutput (Stored IBool)
-  , canTXAbortReq :: ChanInput (Stored IBool)
-  }
 
 canTower :: (e -> ClockConfig)
          -> CANPeriph
          -> Integer
          -> GPIOPin
          -> GPIOPin
-         -> Tower e ( ChanOutput (Struct "can_receive_result")
-                    , CANTransmitAPI
-                    , CANTransmitAPI
-                    , CANTransmitAPI
+         -> Tower e ( ChanOutput (Struct "can_message")
+                    , AbortableTransmit (Struct "can_message") (Stored IBool)
+                    , AbortableTransmit (Struct "can_message") (Stored IBool)
+                    , AbortableTransmit (Struct "can_message") (Stored IBool)
                     )
 canTower tocc periph bitrate rxpin txpin = do
   towerDepends canDriverTypes
@@ -52,11 +45,11 @@ canTower tocc periph bitrate rxpin txpin = do
                 (interrupt_disable $ canIntTX periph)
 
   ([api0, api1, api2], transmitters) <- fmap unzip $ forM (canRegTX periph) $ \ txmailbox -> do
-    (canTXReq, reqChan) <- channel
-    (resChan, canTXRes) <- channel
-    (canTXAbortReq, abortChan) <- channel
+    (abortableTransmit, reqChan) <- channel
+    (resChan, abortableComplete) <- channel
+    (abortableAbort, abortChan) <- channel
 
-    return $ (,) (CANTransmitAPI { .. }) $ do
+    return $ (,) (AbortableTransmit { .. }) $ do
       handler reqChan "request" $ do
         callback $ \ req -> do
           tsr <- getReg (canRegTSR periph)
@@ -65,16 +58,12 @@ canTower tocc periph bitrate rxpin txpin = do
           comment "any completed request must have already been reported"
           assert $ iNot $ bitToBool $ tsr #. canTXRQCP txmailbox
 
-          can_id <- deref (req ~> tx_id)
-          ide <- deref (req ~> tx_ide)
-          let stid = lbits $ ide ? (can_id `iShiftR` 18, can_id)
-          let exid = ide ? (can_id, 0)
-          rtr <- deref (req ~> tx_rtr)
-          len <- deref (req ~> tx_len)
+          arb <- deref $ req ~> can_message_id
+          len <- deref $ req ~> can_message_len
 
           let get_bytes :: (BitData reg, SafeCast Uint8 (BitDataRep reg)) => [(Ix 8, BitDataField reg (Bits 8))] -> Ivory eff [BitDataM reg ()]
               get_bytes = mapM $ \ (idx, field) -> do
-                v <- deref $ (req ~> tx_buf) ! idx
+                v <- deref $ (req ~> can_message_buf) ! idx
                 return $ setField field $ fromRep v
 
           low_bytes <- get_bytes [(0, can_tdlr_data0), (1, can_tdlr_data1), (2, can_tdlr_data2), (3, can_tdlr_data3)]
@@ -86,10 +75,9 @@ canTower tocc periph bitrate rxpin txpin = do
           setReg (canRegTDLR txmailbox) $ sequence_ low_bytes
           setReg (canRegTDHR txmailbox) $ sequence_ hi_bytes
           setReg (canRegTIR txmailbox) $ do
-            setField can_tir_stid $ fromRep stid
-            setField can_tir_exid $ fromRep exid
-            setField can_tir_ide $ boolToBit ide
-            setField can_tir_rtr $ boolToBit rtr
+            setField can_tir_id $ arb #. can_arbitration_id
+            setField can_tir_ide $ arb #. can_arbitration_ide
+            setField can_tir_rtr $ arb #. can_arbitration_rtr
             setBit can_tir_txrq
 
       handler abortChan "abort" $ do
@@ -126,20 +114,17 @@ canTower tocc periph bitrate rxpin txpin = do
               setBit can_rfr_fovr
               setBit can_rfr_full
 
-            ide <- assign $ bitToBool $ rir #. can_rir_ide
-            stid <- assign $ safeCast $ toRep $ rir #. can_rir_stid
-            ident <- assign $ ide ? (stid `iShiftL` 18 .| (toRep $ rir #. can_rir_exid), stid)
+            let arb = fromRep $ withBits 0 $ do
+                  setField can_arbitration_id $ rir #. can_rir_id
+                  setField can_arbitration_ide $ rir #. can_rir_ide
+                  setField can_arbitration_rtr $ rir #. can_rir_rtr
 
             msg <- local $ istruct
-              [ rx_id .= ival ident
-              , rx_ide .= ival ide
-              , rx_rtr .= ival (bitToBool $ rir #. can_rir_rtr)
-              , rx_buf .= iarray (map ival $ map toRep $
+              [ can_message_id .= ival arb
+              , can_message_buf .= iarray (map ival $ map toRep $
                   map (rdlr #.) [can_rdlr_data0, can_rdlr_data1, can_rdlr_data2, can_rdlr_data3] ++
                   map (rdhr #.) [can_rdhr_data4, can_rdhr_data5, can_rdhr_data6, can_rdhr_data7])
-              , rx_len .= ival (toIx $ toRep $ rdtr #. can_rdtr_dlc)
-              , rx_fmi .= ival (toRep $ rdtr #. can_rdtr_fmi)
-              , rx_time .= ival (toRep $ rdtr #. can_rdtr_time)
+              , can_message_len .= ival (toIx $ toRep $ rdtr #. can_rdtr_dlc)
               ]
             emit resultEmitter $ constRef msg
 

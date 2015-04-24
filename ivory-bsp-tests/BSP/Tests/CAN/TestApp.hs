@@ -7,6 +7,8 @@ module BSP.Tests.CAN.TestApp where
 
 import Ivory.Language
 import Ivory.Tower
+import Ivory.Tower.HAL.Bus.CAN
+import Ivory.Tower.HAL.Bus.Interface
 
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Driver.CAN
@@ -39,17 +41,19 @@ app tocc totestcan toleds = do
     last_sent <- state "last_sent"
 
     handler periodic "periodic" $ do
-      abort_emitter <- emitter (canTXAbortReq req) 1
-      req_emitter <- emitter (canTXReq req) 1
+      abort_emitter <- emitter (abortableAbort req) 1
+      req_emitter <- emitter (abortableTransmit req) 1
       callbackV $ \ p -> do
         let time :: Uint64
             time = signCast $ toIMicroseconds p
+        let msgid = standardCANID (fromRep 0x7FF) (boolToBit false)
         r <- local $ istruct
-          [ tx_id  .= ival 0x7FF
-          , tx_ide .= ival false
-          , tx_rtr .= ival false
-          , tx_buf .= iarray [ ival $ bitCast $ time `iShiftR` fromInteger (8 * i) | i <- [7,6..0] ]
-          , tx_len .= ival 8
+          [ can_message_id  .= ival msgid
+          , can_message_buf .= iarray
+              [ ival $ bitCast $ time `iShiftR` fromInteger (8 * i)
+              | i <- [7,6..0]
+              ]
+          , can_message_len .= ival 8
           ]
         refCopy last_sent r
 
@@ -58,8 +62,8 @@ app tocc totestcan toleds = do
           emit req_emitter $ constRef last_sent
           store tx_pending true
 
-    handler (canTXRes req) "tx_complete" $ do
-      req_emitter <- emitter (canTXReq req) 1
+    handler (abortableComplete req) "tx_complete" $ do
+      req_emitter <- emitter (abortableTransmit req) 1
       callbackV $ \ ok -> do
         ifte_ ok (store tx_pending false) $ do
           emit req_emitter $ constRef last_sent

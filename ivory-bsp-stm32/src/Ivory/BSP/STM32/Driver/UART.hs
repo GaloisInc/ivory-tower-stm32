@@ -16,6 +16,7 @@ import GHC.TypeLits
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
+import Ivory.Tower.HAL.RingBuffer
 import Ivory.HW
 
 import Ivory.BSP.STM32.Interrupt
@@ -23,7 +24,6 @@ import Ivory.BSP.STM32.ClockConfig
 
 import Ivory.BSP.STM32.Peripheral.UART.Regs
 import Ivory.BSP.STM32.Peripheral.UART.Peripheral
-import Ivory.BSP.STM32.Driver.RingBuffer
 
 data UARTTowerDebugger =
   UARTTowerDebugger

@@ -7,13 +7,16 @@
 
 module Ivory.BSP.STM32.Driver.SPI
   ( spiTower
-  , module Ivory.BSP.STM32.Driver.SPI.Types
-  , module Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle
+  , module Ivory.Tower.HAL.Bus.SPI
+  , module Ivory.Tower.HAL.Bus.SPI.DeviceHandle
   ) where
 
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
+import Ivory.Tower.HAL.Bus.Interface
+import Ivory.Tower.HAL.Bus.SPI
+import Ivory.Tower.HAL.Bus.SPI.DeviceHandle
 import Ivory.HW
 
 import Ivory.BSP.STM32.Interrupt
@@ -23,15 +26,11 @@ import Ivory.BSP.STM32.Peripheral.GPIOF4
 import Ivory.BSP.STM32.Peripheral.SPI.Regs
 import Ivory.BSP.STM32.Peripheral.SPI.Peripheral
 
-import Ivory.BSP.STM32.Driver.SPI.Types
-import Ivory.BSP.STM32.Driver.SPI.SPIDeviceHandle
-
 spiTower :: forall e
           . (e -> ClockConfig)
          -> [SPIDevice]
          -> SPIPins
-         -> Tower e ( ChanInput (Struct "spi_transaction_request")
-                    , ChanOutput (Struct "spi_transaction_result")
+         -> Tower e ( BackpressureTransmit (Struct "spi_transaction_request") (Struct "spi_transaction_result")
                     , ChanOutput (Stored ITime))
 spiTower tocc devices pins = do
   towerDepends spiDriverTypes
@@ -45,7 +44,7 @@ spiTower tocc devices pins = do
                     interrupt_disable interrupt)
   monitor (periphname ++ "PeripheralDriver") $
     spiPeripheralDriver tocc periph pins devices (snd reqchan) (fst reschan) (fst readychan) irq
-  return (fst reqchan, snd reschan, snd readychan)
+  return (BackpressureTransmit (fst reqchan) (snd reschan), snd readychan)
   where
   interrupt = spiInterrupt periph
   periphname = spiName periph
