@@ -1,11 +1,9 @@
-
 IVORY_REPO ?= ../../ivory
 TOWER_REPO ?= ../../tower
+BSP_REPO ?= ..
+include ../Makefile.sandbox
 
 IVORYFLAGS = --const-fold
-
-default:
-	cabal build
 
 test: bsp-led-test
 test: bsp-spi-test
@@ -62,33 +60,9 @@ bsp-rng-test:
 bsp-rng-test-clean:
 	rm -rf bsp-rng-test
 
-create-sandbox:
-	cabal sandbox init
-	cabal sandbox add-source $(IVORY_REPO)/ivory
-	cabal sandbox add-source $(IVORY_REPO)/ivory-artifact
-	cabal sandbox add-source $(IVORY_REPO)/ivory-hw
-	cabal sandbox add-source $(IVORY_REPO)/ivory-opts
-	cabal sandbox add-source $(IVORY_REPO)/ivory-serialize
-	cabal sandbox add-source $(IVORY_REPO)/ivory-stdlib
-	cabal sandbox add-source $(IVORY_REPO)/ivory-backend-c
-	cabal sandbox add-source $(TOWER_REPO)/tower
-	cabal sandbox add-source $(TOWER_REPO)/tower-config
-	cabal sandbox add-source $(TOWER_REPO)/tower-hal
-	cabal sandbox add-source ../ivory-freertos-bindings
-	cabal sandbox add-source ../ivory-bsp-stm32
-	cabal sandbox add-source ../tower-freertos-stm32
-	cabal install --dependencies-only
-
-distclean:
-	-rm -rf dist
-
 clean: bsp-led-test-clean
 clean: bsp-spi-test-clean
 clean: bsp-i2c-test-clean
 clean: bsp-uart-test-clean
 clean: bsp-can-test-clean
 clean: bsp-rng-test-clean
-
-clean-sandbox: clean
-	-rm -rf .cabal-sandbox
-	-rm cabal.sandbox.config
