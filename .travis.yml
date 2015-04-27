@@ -13,8 +13,7 @@ before_install:
   - export TOWER_REPO=$PWD/tower
 install:
   - cabal install cabal-install
-  - cabal install alex
-  - cabal install happy
+  - cabal install alex happy
 script:
   - echo $PATH
   - which arm-none-eabi-gcc
