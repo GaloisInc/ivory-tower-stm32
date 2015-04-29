@@ -1,7 +1,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 
@@ -11,12 +10,11 @@ module Ivory.BSP.STM32.Driver.UART
   , UARTTowerDebugger(..)
   ) where
 
-import GHC.TypeLits
-
 import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
-import Ivory.Tower.HAL.RingBuffer
+import Ivory.Tower.HAL.Bus.Interface
+import Ivory.Tower.HAL.Bus.UART
 import Ivory.HW
 
 import Ivory.BSP.STM32.Interrupt
@@ -48,29 +46,28 @@ emptyDbg =
     , debug_txeie = const (return ())
     }
 
-uartTower :: (ANat n)
-          => (e -> ClockConfig)
+uartTower :: (e -> ClockConfig)
           -> UART
           -> UARTPins
           -> Integer
-          -> Proxy (n :: Nat)
-          -> Tower e ( ChanOutput (Stored Uint8)
-                     , ChanInput  (Stored Uint8))
-uartTower tocc u p b s = uartTowerDebuggable tocc u p b s emptyDbg
+          -> Tower e ( BackpressureTransmit (Struct "uart_transaction_request") (Stored IBool)
+                     , ChanOutput (Stored Uint8))
+uartTower tocc u p b = uartTowerDebuggable tocc u p b emptyDbg
 
-uartTowerDebuggable :: (ANat n)
-                    => (e -> ClockConfig)
+uartTowerDebuggable :: (e -> ClockConfig)
                     -> UART
                     -> UARTPins
                     -> Integer
-                    -> Proxy (n :: Nat)
                     -> UARTTowerDebugger
-                    -> Tower e ( ChanOutput (Stored Uint8)
-                               , ChanInput  (Stored Uint8))
-uartTowerDebuggable tocc uart pins baud sizeproxy dbg = do
+                    -> Tower e ( BackpressureTransmit (Struct "uart_transaction_request") (Stored IBool)
+                               , ChanOutput (Stored Uint8))
+uartTowerDebuggable tocc uart pins baud dbg = do
+  towerDepends uartTowerTypes
+  towerModule  uartTowerTypes
 
-  (src_ostream, snk_ostream) <- channel
-  (src_istream, snk_istream) <- channel
+  req_chan  <- channel
+  resp_chan <- channel
+  rx_chan   <- channel
 
   interrupt <- signalUnsafe
     (Interrupt (uartInterrupt uart))
@@ -79,23 +76,21 @@ uartTowerDebuggable tocc uart pins baud sizeproxy dbg = do
         interrupt_disable (uartInterrupt uart))
 
   monitor (uartName uart ++ "_driver") $ do
-    uartTowerMonitor tocc uart pins baud sizeproxy interrupt snk_ostream src_istream dbg
+    uartTowerMonitor tocc uart pins baud interrupt (fst rx_chan) (snd req_chan) (fst resp_chan) dbg
 
-  return (snk_istream, src_ostream)
+  return (BackpressureTransmit (fst req_chan) (snd resp_chan), (snd rx_chan))
 
-uartTowerMonitor :: forall e n
-                  . (ANat n)
-                 => (e -> ClockConfig)
+uartTowerMonitor :: (e -> ClockConfig)
                  -> UART
                  -> UARTPins
                  -> Integer
-                 -> Proxy (n :: Nat)
                  -> ChanOutput (Stored ITime)
-                 -> ChanOutput (Stored Uint8)
-                 -> ChanInput (Stored Uint8)
+                 -> ChanInput (Stored Uint8)   -- byte at a time rx
+                 -> ChanOutput (Struct "uart_transaction_request")
+                 -> ChanInput (Stored IBool)
                  -> UARTTowerDebugger
                  -> Monitor e ()
-uartTowerMonitor tocc uart pins baud _ interrupt ostream istream dbg = do
+uartTowerMonitor tocc uart pins baud interrupt rx_chan req_chan resp_chan dbg = do
   clockConfig <- fmap tocc getEnv
 
   monitorModuleDef $ hw_moduledef
@@ -103,22 +98,36 @@ uartTowerMonitor tocc uart pins baud _ interrupt ostream istream dbg = do
   rxoverruns    <- stateInit (named "rx_overruns") (ival (0 :: Uint32))
   rxsuccess     <- stateInit (named "rx_success") (ival (0 :: Uint32))
 
+  req_buf <- state "req_buf"
+  req_pos <- state "req_pos"
 
   handler systemInit "init" $ callback $ const $ do
     debug_init dbg
     uartInit uart pins clockConfig (fromIntegral baud)
 
-  (outbuf :: RingBuffer n (Stored Uint8)) <- monitorRingBuffer "outbuf"
+  let req_pop_byte :: (GetAlloc eff ~ Scope cs)
+                   => Ref s' (Stored Uint8) -> Ivory eff IBool
+      req_pop_byte b = do
+        result <- local (ival false)
+        pos <- deref req_pos
+        len <- deref (req_buf ~> tx_len)
 
-  let pop :: Ref s' (Stored Uint8) -> Ivory eff IBool
-      pop b = ringbuffer_pop outbuf b
+        when (pos <? len) $ do
+          byte <- deref (req_buf ~> tx_buf ! toIx pos)
+          store b byte
+          store req_pos (pos + 1)
+          store result true
 
-  handler ostream "ostream" $ callback $ \b -> do
-    _ <- ringbuffer_push outbuf b
+        deref result
+
+  handler req_chan "req_chan" $ callback $ \req -> do
+    refCopy req_buf req
+    store req_pos (0 :: Sint32)
     setTXEIE uart true
 
   handler interrupt "interrupt" $ do
-    i <- emitter istream 1
+    i <- emitter rx_chan 1
+    resp_emitter <- emitter resp_chan 1
     callback $ const $ do
       debug_evthandler_start dbg
       sr <- getReg (uartRegSR uart)
@@ -135,14 +144,18 @@ uartTowerMonitor tocc uart pins baud _ interrupt ostream istream dbg = do
         rxsuccess %= (+1) -- For debugging
       when (bitToBool (sr #. uart_sr_txe)) $ do
         byte <- local (ival 0)
-        rv   <- pop byte
-        when rv $ do
-          tosend <- deref byte
-          setDR uart tosend
+        rv   <- req_pop_byte byte
+        ifte_ rv
+          (do tosend <- deref byte
+              setDR uart tosend)
+          (do emitV resp_emitter true
+              setTXEIE uart false)
       debug_evthandler_end dbg
-      txdone <- ringbuffer_empty outbuf
-      setTXEIE uart (iNot txdone)
-      interrupt_enable (uartInterrupt uart)
+      interrupt_enable (uartInterrupt uart)   -- XXX needed?
 
   where named n = uartName uart ++ "_" ++ n
+
+uartTowerTypes :: Module
+uartTowerTypes = package "uartTowerTypes" $ do
+  defStruct (Proxy :: Proxy "uart_transaction_request")
 
