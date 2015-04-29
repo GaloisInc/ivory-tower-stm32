@@ -14,7 +14,6 @@ import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
 import Ivory.Tower.HAL.Bus.Interface
-import Ivory.Tower.HAL.Bus.UART
 import Ivory.HW
 
 import Ivory.BSP.STM32.Interrupt
@@ -46,25 +45,24 @@ emptyDbg =
     , debug_txeie = const (return ())
     }
 
-uartTower :: (e -> ClockConfig)
+uartTower :: IvoryString s
+          => (e -> ClockConfig)
           -> UART
           -> UARTPins
           -> Integer
-          -> Tower e ( BackpressureTransmit (Struct "uart_transaction_request") (Stored IBool)
+          -> Tower e ( BackpressureTransmit s (Stored IBool)
                      , ChanOutput (Stored Uint8))
 uartTower tocc u p b = uartTowerDebuggable tocc u p b emptyDbg
 
-uartTowerDebuggable :: (e -> ClockConfig)
+uartTowerDebuggable :: IvoryString s
+                    => (e -> ClockConfig)
                     -> UART
                     -> UARTPins
                     -> Integer
                     -> UARTTowerDebugger
-                    -> Tower e ( BackpressureTransmit (Struct "uart_transaction_request") (Stored IBool)
+                    -> Tower e ( BackpressureTransmit s (Stored IBool)
                                , ChanOutput (Stored Uint8))
 uartTowerDebuggable tocc uart pins baud dbg = do
-  towerDepends uartTowerTypes
-  towerModule  uartTowerTypes
-
   req_chan  <- channel
   resp_chan <- channel
   rx_chan   <- channel
@@ -80,13 +78,14 @@ uartTowerDebuggable tocc uart pins baud dbg = do
 
   return (BackpressureTransmit (fst req_chan) (snd resp_chan), (snd rx_chan))
 
-uartTowerMonitor :: (e -> ClockConfig)
+uartTowerMonitor :: IvoryString s
+                 => (e -> ClockConfig)
                  -> UART
                  -> UARTPins
                  -> Integer
                  -> ChanOutput (Stored ITime)
                  -> ChanInput (Stored Uint8)   -- byte at a time rx
-                 -> ChanOutput (Struct "uart_transaction_request")
+                 -> ChanOutput s
                  -> ChanInput (Stored IBool)
                  -> UARTTowerDebugger
                  -> Monitor e ()
@@ -110,10 +109,11 @@ uartTowerMonitor tocc uart pins baud interrupt rx_chan req_chan resp_chan dbg = 
       req_pop_byte b = do
         result <- local (ival false)
         pos <- deref req_pos
-        len <- deref (req_buf ~> tx_len)
+        len <- istr_len (constRef req_buf)
+        buf <- assign (req_buf ~> stringDataL)
 
         when (pos <? len) $ do
-          byte <- deref (req_buf ~> tx_buf ! toIx pos)
+          byte <- deref (buf ! toIx pos)
           store b byte
           store req_pos (pos + 1)
           store result true
@@ -154,8 +154,4 @@ uartTowerMonitor tocc uart pins baud interrupt rx_chan req_chan resp_chan dbg = 
       interrupt_enable (uartInterrupt uart)   -- XXX needed?
 
   where named n = uartName uart ++ "_" ++ n
-
-uartTowerTypes :: Module
-uartTowerTypes = package "uartTowerTypes" $ do
-  defStruct (Proxy :: Proxy "uart_transaction_request")
 

@@ -22,6 +22,7 @@ library
 
                        BSP.Tests.SPI.TestApp
                        --BSP.Tests.UART.DebugApp,
+                       BSP.Tests.UART.Types,
                        BSP.Tests.UART.TestApp
 
   build-depends:       base >= 4.6,

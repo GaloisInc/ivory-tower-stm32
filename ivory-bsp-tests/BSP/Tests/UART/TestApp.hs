@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module BSP.Tests.UART.TestApp (app) where
 
@@ -11,21 +12,28 @@ import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
 import Ivory.Tower.HAL.Bus.Interface
-import Ivory.Tower.HAL.Bus.UART
 
 import BSP.Tests.Platforms
 import BSP.Tests.LED.Blink
+import BSP.Tests.UART.Types
 
 import Ivory.BSP.STM32.Driver.UART
 import Ivory.BSP.STM32.ClockConfig
 
 --------------------------------------------------------------------------------
 
+uartTestTypes :: Module
+uartTestTypes = package "uartTestTypes" $ do
+  defStringType (Proxy :: Proxy UARTBuffer)
+
 app :: (e -> ColoredLEDs)
     -> (e -> ClockConfig)
     -> (e -> TestUART)
     -> Tower e ()
 app toleds tocc touart = do
+  towerDepends uartTestTypes
+  towerModule  uartTestTypes
+
   e <- getEnv
   -- Starts two tasks: a blink task and a controller task.  Periodically blink
   -- the blue LED.
@@ -47,7 +55,7 @@ app toleds tocc touart = do
 --------------------------------------------------------------------------------
 
 echoPrompt :: String
-           -> ChanInput  (Struct "uart_transaction_request")
+           -> ChanInput  UARTBuffer
            -> ChanOutput (Stored IBool)
            -> ChanOutput (Stored Uint8)
            -> ChanInput  (Stored IBool)
@@ -56,23 +64,23 @@ echoPrompt greeting req res ostream ledctl = do
   p <- period (Milliseconds 1)
 
   monitor "echoprompt" $ do
-    out_req <- state "out_req"
+    (out_req :: Ref Global UARTBuffer) <- state "out_req"
 
     let puts :: String -> Ivory eff ()
         puts str = mapM_ (\c -> putc (fromIntegral (ord c))) str
 
         putc :: Uint8 -> Ivory eff ()
         putc byte = do
-          pos <- deref (out_req ~> tx_len)
-          when (pos <? arrayLen (out_req ~> tx_buf)) $ do
-            store (out_req ~> tx_buf ! toIx pos) byte
-            store (out_req ~> tx_len) (pos + 1)
+          pos <- deref (out_req ~> stringLengthL)
+          when (pos <? arrayLen (out_req ~> stringDataL)) $ do
+            store (out_req ~> stringDataL ! toIx pos) byte
+            store (out_req ~> stringLengthL) (pos + 1)
 
         flush :: (GetAlloc eff ~ Scope cs)
-              => Emitter (Struct "uart_transaction_request") -> Ivory eff ()
+              => Emitter UARTBuffer -> Ivory eff ()
         flush e = do
           emit e (constRef out_req)
-          store (out_req ~> tx_len) 0
+          store (out_req ~> stringLengthL) 0
 
     initialized <- stateInit "initialized" (ival false)
 
