@@ -40,6 +40,12 @@ data I2CPeriph = I2CPeriph
   , i2cName        :: String
   }
 
+data I2CPins =
+  I2CPins
+    { i2cpins_sda :: GPIOPin
+    , i2cpins_scl :: GPIOPin
+    }
+
 mkI2CPeriph :: (STM32Interrupt i)
             => Integer -- Base
             -> (forall eff . Ivory eff ()) -- RCC Enable

@@ -1,3 +1,4 @@
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -28,14 +29,12 @@ import Ivory.BSP.STM32.Peripheral.I2C.Peripheral
 
 import Ivory.BSP.STM32.Driver.I2C.I2CDriverState
 
-
 i2cTower :: (e -> ClockConfig)
          -> I2CPeriph
-         -> GPIOPin
-         -> GPIOPin
+         -> I2CPins
          -> Tower e ( BackpressureTransmit (Struct "i2c_transaction_request") (Struct "i2c_transaction_result")
                     , ChanOutput (Stored ITime))
-i2cTower tocc periph sda scl = do
+i2cTower tocc periph I2CPins{..} = do
   towerDepends i2cTowerTypes
   towerModule  i2cTowerTypes
   reqchan <- channel
@@ -58,7 +57,7 @@ i2cTower tocc periph sda scl = do
                       (clearBit i2c_cr2_iterren)
                     interrupt_disable (i2cIntError periph))
   monitor ((i2cName periph) ++ "PeripheralDriver") $
-    i2cPeripheralDriver tocc periph sda scl evt_irq err_irq
+    i2cPeripheralDriver tocc periph i2cpins_sda i2cpins_scl evt_irq err_irq
       (snd reqchan) (fst reschan) ready_per (fst readychan)
   return (BackpressureTransmit (fst reqchan) (snd reschan), snd readychan)
 
