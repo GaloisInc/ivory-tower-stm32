@@ -88,9 +88,8 @@ data TestSPI =
 
 data TestI2C =
   TestI2C
-    { testI2C :: I2CPeriph
-    , testSDA :: GPIOPin
-    , testSCL :: GPIOPin
+    { testI2C     :: I2CPeriph
+    , testI2CPins :: I2CPins
     }
 
 data TestCAN =
@@ -138,8 +137,10 @@ px4fmuv17 = TestPlatform
       }
   , testplatform_i2c = TestI2C
       { testI2C = F405.i2c1
-      , testSDA = F405.pinB6
-      , testSCL = F405.pinB7
+      , testI2CPins = I2CPins
+        { i2cpins_sda = F405.pinB6
+        , i2cpins_scl = F405.pinB7
+        }
       }
   , testplatform_can = TestCAN
       { testCAN = F405.can1
@@ -186,8 +187,10 @@ f4discovery = TestPlatform
       }
   , testplatform_i2c = TestI2C
       { testI2C = F405.i2c1
-      , testSDA = F405.pinB6
-      , testSCL = F405.pinB7
+      , testI2CPins = I2CPins
+        { i2cpins_sda = F405.pinB6
+        , i2cpins_scl = F405.pinB7
+        }
       }
   , testplatform_can = TestCAN
       { testCAN = F405.can1
@@ -221,8 +224,10 @@ open407vc = TestPlatform
       }
   , testplatform_i2c = TestI2C
       { testI2C = F405.i2c1
-      , testSDA = F405.pinB6
-      , testSCL = F405.pinB7
+      , testI2CPins = I2CPins
+        { i2cpins_sda = F405.pinB6
+        , i2cpins_scl = F405.pinB7
+        }
       }
   , testplatform_can = TestCAN
       { testCAN = F405.can1
@@ -257,8 +262,10 @@ port407z = TestPlatform
       }
   , testplatform_i2c = TestI2C
       { testI2C = F405.i2c1
-      , testSDA = F405.pinB6
-      , testSCL = F405.pinB7
+      , testI2CPins = I2CPins
+        { i2cpins_sda = F405.pinB6
+        , i2cpins_scl = F405.pinB7
+        }
       }
   , testplatform_can = TestCAN
       { testCAN = F405.can1
@@ -306,8 +313,10 @@ px4fmuv24 = TestPlatform
       }
   , testplatform_i2c = TestI2C -- I2C port
       { testI2C = F427.i2c1
-      , testSDA = F427.pinB9
-      , testSCL = F427.pinB8
+      , testI2CPins = I2CPins
+        { i2cpins_sda = F427.pinB9
+        , i2cpins_scl = F427.pinB8
+        }
       }
   , testplatform_can = TestCAN -- CAN port
       { testCAN = F427.can1

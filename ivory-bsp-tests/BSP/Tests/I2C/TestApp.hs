@@ -20,7 +20,7 @@ app :: (e -> ClockConfig)
     -> Tower e ()
 app tocc totesti2c = do
   i2c <- fmap totesti2c getEnv
-  (BackpressureTransmit req res, _ready) <- i2cTower tocc (testI2C i2c) (testSDA i2c) (testSCL i2c)
+  (BackpressureTransmit req res, _ready) <- i2cTower tocc (testI2C i2c) (testI2CPins i2c)
 
   periodic <- period (Milliseconds 250)
   monitor "simplecontroller" $ do
