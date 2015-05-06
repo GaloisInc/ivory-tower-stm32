@@ -142,13 +142,20 @@ uartTowerMonitor tocc uart pins baud interrupt rx_chan req_chan resp_chan dbg = 
         bref <- local (ival byte)
         emit i (constRef bref)
         rxsuccess %= (+1) -- For debugging
+
+
       when (bitToBool (sr #. uart_sr_txe)) $ do
         byte <- local (ival 0)
         rv   <- req_pop_byte byte
         ifte_ rv
           (do tosend <- deref byte
               setDR uart tosend)
-          (do emitV resp_emitter true
+          (do -- Ensure we only send the response message
+              -- when we have completed sending a valid buffer
+              tx_len <- deref (req_buf ~> stringLengthL)
+              valid_tx_buf <- assign (tx_len >? 0)
+              when valid_tx_buf $ emitV resp_emitter true
+              store (req_buf ~> stringLengthL) 0
               setTXEIE uart false)
       debug_evthandler_end dbg
       interrupt_enable (uartInterrupt uart)   -- XXX needed?
