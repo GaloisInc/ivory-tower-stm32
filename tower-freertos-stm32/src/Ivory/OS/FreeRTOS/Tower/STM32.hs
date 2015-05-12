@@ -57,7 +57,7 @@ instance TowerBackend Wrapper where
 
 compileTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO ()
 compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
-  (topts, compile) <- towerCompile'
+  (topts, compile) <- towerCompile
   env <- getEnv topts
 
   let cfg = fromEnv env
