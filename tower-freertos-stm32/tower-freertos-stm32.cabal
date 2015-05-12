@@ -15,8 +15,7 @@ data-files: support/stm32_freertos_init.c,
             support/px4fmu-v2.prototype
 
 library
-  exposed-modules:      Ivory.OS.FreeRTOS.Tower,
-                        Ivory.OS.FreeRTOS.Tower.STM32,
+  exposed-modules:      Ivory.OS.FreeRTOS.Tower.STM32,
                         Ivory.OS.FreeRTOS.Tower.STM32.Build,
                         Ivory.OS.FreeRTOS.Tower.STM32.Config,
                         Ivory.OS.FreeRTOS.Tower.Monitor,

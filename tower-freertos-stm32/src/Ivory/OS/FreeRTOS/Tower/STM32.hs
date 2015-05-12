@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeOperators #-}
 
 module Ivory.OS.FreeRTOS.Tower.STM32
-  ( stm32FreeRTOS
+  ( compileTowerSTM32FreeRTOS
   , module Ivory.OS.FreeRTOS.Tower.STM32.Config
   ) where
 
@@ -20,11 +20,13 @@ import Ivory.Tower.Backend
 import Ivory.Tower.Backend.Compat
 
 import qualified Ivory.OS.FreeRTOS as FreeRTOS
-import qualified Ivory.Tower.Types.TowerPlatform as T
 import Ivory.Tower.Types.Dependencies
 import Ivory.Tower.Types.GeneratedCode
 import Ivory.Tower.Types.MonitorCode
 import Ivory.Tower.Types.SignalCode
+import Ivory.Tower (Tower)
+import Ivory.Tower.Monad.Tower (runTower)
+import Ivory.Tower.Compile
 
 import           Ivory.OS.FreeRTOS.Tower.System
 import           Ivory.OS.FreeRTOS.Tower.Time (time_module)
@@ -52,15 +54,33 @@ instance TowerBackend Wrapper where
   monitorImpl (Wrapper b) ast hs moddef = WrapMonitor $ monitorImpl b ast (map unWrapSomeHandler hs) moddef
   towerImpl (Wrapper b) ast mons = WrapOutput (towerImpl b ast $ map unWrapMonitor mons) ast
 
-stm32FreeRTOS :: (e -> STM32Config) -> e -> T.TowerPlatform Wrapper e
-stm32FreeRTOS fromEnv e = T.TowerPlatform
-  { T.platformBackend = Wrapper CompatBackend
-  , T.platformEnv     = e
-  , T.addModules      = withGC (threadModules <> monitorModules <> const (stm32Modules (fromEnv e)))
-  , T.addArtifacts    = withGC (const (stm32Artifacts (fromEnv e)))
-  }
 
-withGC :: (GeneratedCode -> AST.Tower -> a) -> TowerBackendOutput Wrapper -> Dependencies -> SignalCode -> a
+compileTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO ()
+compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
+  (topts, compile) <- towerCompile'
+  env <- getEnv topts
+
+  let cfg = fromEnv env
+      (ast, output, deps, sigs) = runTower compatBackend twr env
+
+      addModules :: GeneratedCode -> AST.Tower -> [Module]
+      addModules = threadModules <> monitorModules
+
+      mods = dependencies_modules deps
+          ++ withGC addModules output deps sigs
+          ++ stm32Modules cfg ast
+
+      givenArtifacts = dependencies_artifacts deps
+      as = stm32Artifacts cfg ast mods givenArtifacts
+  compile mods (as ++ givenArtifacts)
+  where
+  compatBackend = Wrapper CompatBackend
+
+withGC :: (GeneratedCode -> AST.Tower -> a) -- f
+       -> TowerBackendOutput Wrapper        -- Wrapoutput
+       -> Dependencies                      -- deps
+       -> SignalCode                        -- sigs
+       -> a
 withGC f (WrapOutput output ast) deps sigs = f gc ast
   where
   gc = GeneratedCode
