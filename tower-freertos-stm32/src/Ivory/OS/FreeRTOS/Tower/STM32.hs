@@ -16,6 +16,7 @@ import Ivory.Language
 import Ivory.Artifact
 import Ivory.HW
 import qualified Ivory.Tower.AST as AST
+import Ivory.Compile.C.CmdlineFrontend (runCompiler)
 import Ivory.Tower.Backend
 import Ivory.Tower.Backend.Compat
 
@@ -26,7 +27,7 @@ import Ivory.Tower.Types.MonitorCode
 import Ivory.Tower.Types.SignalCode
 import Ivory.Tower (Tower)
 import Ivory.Tower.Monad.Tower (runTower)
-import Ivory.Tower.Compile
+import Ivory.Tower.Options
 
 import           Ivory.OS.FreeRTOS.Tower.System
 import           Ivory.OS.FreeRTOS.Tower.Time (time_module)
@@ -57,7 +58,7 @@ instance TowerBackend Wrapper where
 
 compileTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO ()
 compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
-  (topts, compile) <- towerCompile
+  (copts, topts) <- towerGetOpts
   env <- getEnv topts
 
   let cfg = fromEnv env
@@ -72,7 +73,7 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
 
       givenArtifacts = dependencies_artifacts deps
       as = stm32Artifacts cfg ast mods givenArtifacts
-  compile mods (as ++ givenArtifacts)
+  runCompiler mods (as ++ givenArtifacts) copts
   where
   compatBackend = Wrapper CompatBackend
 
