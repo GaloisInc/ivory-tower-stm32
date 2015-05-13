@@ -9,13 +9,14 @@ import qualified Data.List as L
 
 import qualified Paths_tower_freertos_stm32 as P
 import Ivory.Artifact
+import Ivory.Artifact.Location
 import Ivory.BSP.STM32.VectorTable
 import Ivory.BSP.STM32.LinkerScript
 
 import Ivory.OS.FreeRTOS.Tower.STM32.Config
 
-makefile :: STM32Config -> [FilePath] -> Artifact
-makefile STM32Config{..} userobjs = artifactString "Makefile" $ unlines
+makefile :: STM32Config -> [FilePath] -> Located Artifact
+makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines
   [ "CC := arm-none-eabi-gcc"
   , "OBJCOPY := arm-none-eabi-objcopy"
   , "CFLAGS := -Os"
@@ -83,24 +84,25 @@ makefile STM32Config{..} userobjs = artifactString "Makefile" $ unlines
       , ""
       ]
 
-artifacts :: STM32Config -> [Artifact]
+artifacts :: STM32Config -> [Located Artifact]
 artifacts STM32Config{..} =
   [ vector_table stm32config_processor
   , lds
   ] ++ init_artifacts ++ bl_artifacts
   where
-  init_artifacts = map (artifactCabalFile P.getDataDir)
-    ["support/stm32_freertos_init.c", "support/stm32_freertos_init.h"]
+  init_artifacts =
+    [ Src $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.c"
+    , Incl $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.h"
+    ]
 
   -- Above makefile assumes this will be called "linker_script.lds"
-  lds :: Artifact
-  lds = linker_script stm32config_processor bl_offset reset_handler
+  lds = Root $ linker_script stm32config_processor bl_offset reset_handler
     where
     bl_offset = case stm32config_bootloader of
       PX4ProjectBootloader _ -> 0x4000
       NoBootloader           -> 0
 
-  bl_artifacts = case stm32config_bootloader of
+  bl_artifacts = map Root $ case stm32config_bootloader of
     NoBootloader -> []
     PX4ProjectBootloader px4vers ->
       map (artifactCabalFile P.getDataDir)

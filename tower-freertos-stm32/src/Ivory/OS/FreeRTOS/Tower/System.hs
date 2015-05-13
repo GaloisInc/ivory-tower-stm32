@@ -24,6 +24,7 @@ import qualified Ivory.Tower.AST as AST
 
 import Ivory.Language
 import Ivory.Artifact
+import Ivory.Artifact.Location
 
 import Ivory.OS.FreeRTOS.Tower.Signal
 import Ivory.OS.FreeRTOS.Tower.Monitor
@@ -31,8 +32,8 @@ import Ivory.OS.FreeRTOS.Tower.Monitor
 import qualified Ivory.OS.FreeRTOS.Task as Task
 import qualified Ivory.OS.FreeRTOS.Time as Time
 
-systemArtifacts :: AST.Tower -> [Module] -> [Artifact]
-systemArtifacts twr mods =
+systemArtifacts :: AST.Tower -> [Module] -> [Located Artifact]
+systemArtifacts twr mods = map Root
   [ artifactString "debug_mods.txt" dbg
   , artifactString "debug_ast.txt" (ppShow twr)
   , artifactString "out.dot" (G.graphviz (G.messageGraph twr))

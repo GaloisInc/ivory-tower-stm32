@@ -14,6 +14,7 @@ import Data.Monoid
 import System.FilePath
 import Ivory.Language
 import Ivory.Artifact
+import Ivory.Artifact.Location
 import Ivory.HW
 import qualified Ivory.Tower.AST as AST
 import Ivory.Compile.C.CmdlineFrontend (runCompiler)
@@ -124,7 +125,7 @@ stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]
   main_proc = importProc "main" "stm32_freertos_init.h"
 
 
-stm32Artifacts :: STM32Config -> AST.Tower -> [Module] -> [Artifact] -> [Artifact]
+stm32Artifacts :: STM32Config -> AST.Tower -> [Module] -> [Located Artifact] -> [Located Artifact]
 stm32Artifacts conf ast ms gcas = (systemArtifacts ast ms) ++ as
   where
   as = [ STM32.makefile conf makeobjs ] ++ STM32.artifacts conf
@@ -134,7 +135,7 @@ stm32Artifacts conf ast ms gcas = (systemArtifacts ast ms) ++ as
   makeobjs = nub $ FreeRTOS.objects
           ++ [ moduleName m ++ ".o" | m <- ms ]
           ++ [ replaceExtension f ".o"
-             | a <- gcas
+             | Src a <- gcas
              , let f = artifactFileName a
              , takeExtension f == ".c"
              ]

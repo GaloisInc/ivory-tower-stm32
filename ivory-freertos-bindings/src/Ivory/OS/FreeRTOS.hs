@@ -9,15 +9,24 @@ module Ivory.OS.FreeRTOS
 import System.FilePath
 import qualified Paths_ivory_freertos_bindings as P
 import Ivory.Artifact
+import Ivory.Artifact.Location
 import Ivory.OS.FreeRTOS.Config
 
-kernel :: Config -> [Artifact]
+kernel :: Config -> [Located Artifact]
 kernel conf = configHeader conf : kas
   where
-  kas = map (artifactCabalFile P.getDataDir) kernelfiles
+  kas = map loc kernelfiles
 
-wrapper :: [Artifact]
-wrapper = map (artifactCabalFile P.getDataDir) wrapperfiles
+wrapper :: [Located Artifact]
+wrapper = map loc wrapperfiles
+
+loc :: FilePath -> Located Artifact
+loc f = l $ artifactCabalFile P.getDataDir f
+  where
+  l = case takeExtension f of
+    ".h" -> Incl
+    ".c" -> Src
+    _ -> Root
 
 wrapperfiles :: [FilePath]
 wrapperfiles =

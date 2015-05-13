@@ -8,6 +8,7 @@ module Ivory.BSP.STM32.VectorTable
 
 import qualified Paths_ivory_bsp_stm32 as P
 import Ivory.Artifact
+import Ivory.Artifact.Location
 import Ivory.Artifact.Template
 import Ivory.BSP.ARMv7M.Exception
 import Ivory.BSP.STM32.Interrupt
@@ -19,9 +20,9 @@ import qualified Ivory.BSP.STM32F427.Interrupt as F427
 reset_handler :: String
 reset_handler = exceptionHandlerName Reset
 
-vector_table :: Processor -> Artifact
+vector_table :: Processor -> Located Artifact
 vector_table processor =
-  artifactCabalFileTemplate P.getDataDir fname as
+  Src $ artifactCabalFileTemplate P.getDataDir fname as
   where
   fname = "support/vector_table.s.template"
   as = case processor of
