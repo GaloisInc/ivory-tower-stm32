@@ -11,7 +11,7 @@ main :: IO ()
 main = compile [] as
   where
   as = kernel config ++ wrapper
-     ++ [ artifactString "Makefile" makefile ]
+     ++ [ Root $ artifactString "Makefile" makefile ]
   config = Config
     { cpu_clock_hz = 168 * 1000 * 1000
     , tick_rate_hz = 1000
