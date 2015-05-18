@@ -9,7 +9,6 @@ import qualified Data.List as L
 
 import qualified Paths_tower_freertos_stm32 as P
 import Ivory.Artifact
-import Ivory.Artifact.Location
 import Ivory.BSP.STM32.VectorTable
 import Ivory.BSP.STM32.LinkerScript
 

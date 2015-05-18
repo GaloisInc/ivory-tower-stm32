@@ -14,7 +14,6 @@ import Data.Monoid
 import System.FilePath
 import Ivory.Language
 import Ivory.Artifact
-import Ivory.Artifact.Location
 import Ivory.HW
 import qualified Ivory.Tower.AST as AST
 import Ivory.Compile.C.CmdlineFrontend (runCompiler)

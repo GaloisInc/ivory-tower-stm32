@@ -24,7 +24,6 @@ import qualified Ivory.Tower.AST as AST
 
 import Ivory.Language
 import Ivory.Artifact
-import Ivory.Artifact.Location
 
 import Ivory.OS.FreeRTOS.Tower.Signal
 import Ivory.OS.FreeRTOS.Tower.Monitor
