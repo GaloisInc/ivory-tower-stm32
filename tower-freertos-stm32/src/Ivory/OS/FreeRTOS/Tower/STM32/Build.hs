@@ -30,6 +30,7 @@ makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines
   , "  -mthumb -mcpu=cortex-m4 \\"
   , "  -mfloat-abi=hard -mfpu=fpv4-sp-d16 \\"
   , "  -DIVORY_TEST \\"
+  , "  -DIVORY_USER_ASSERT_HOOK \\"
   , "  -I."
   , ""
   , "LDFLAGS := \\"
@@ -64,7 +65,7 @@ makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines
   , ""
   ]
   where
-  objects = userobjs ++  ["stm32_freertos_init.o", "vector_table.o"]
+  objects = userobjs ++  ["stm32_freertos_init.o", "vector_table.o", "stm32_freertos_user_assert.o"]
   bootloader_default_targets = case stm32config_bootloader of
     NoBootloader -> ""
     PX4ProjectBootloader _ -> " image.px4"
@@ -93,6 +94,7 @@ artifacts STM32Config{..} =
   init_artifacts =
     [ Src $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.c"
     , Incl $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.h"
+    , Src $ artifactCabalFile P.getDataDir "support/stm32_freertos_user_assert.c"
     ]
 
   -- Above makefile assumes this will be called "linker_script.lds"

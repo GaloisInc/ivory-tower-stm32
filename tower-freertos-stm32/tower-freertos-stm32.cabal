@@ -9,6 +9,7 @@ license:             BSD3
 
 data-files: support/stm32_freertos_init.c,
             support/stm32_freertos_init.h,
+            support/stm32_freertos_user_assert.c,
             support/px_mkfw.py,
             support/px_uploader.py,
             support/px4fmu-v1.prototype,
