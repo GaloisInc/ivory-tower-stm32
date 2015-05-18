@@ -82,7 +82,6 @@ stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]
   where
   main_module :: Module
   main_module = package "stm32_main" $ do
-    inclHeader "stm32_freertos_init.h"
     incl reset_handler_proc
     hw_moduledef
     private $ do
