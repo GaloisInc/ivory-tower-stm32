@@ -15,6 +15,7 @@ import Data.List (partition, sort, elemIndex)
 
 import Text.Show.Pretty
 
+import Ivory.Tower.Types.Dependencies
 import Ivory.Tower.Types.GeneratedCode
 import Ivory.Tower.Types.ThreadCode
 import Ivory.Tower.Types.Time
@@ -40,11 +41,8 @@ systemArtifacts twr mods = map Root
   where
   dbg = show (map moduleName mods)
 
-monitorModules :: GeneratedCode -> AST.Tower -> [Module]
-monitorModules gc _twr = concatMap permon mods
-  where
-  mods = Map.toList (generatedcode_monitors gc)
-  permon (ast, code) = generateMonitorCode gc code ast
+monitorModules :: Dependencies -> [(AST.Monitor, ModuleDef)]-> [Module]
+monitorModules d mods = concatMap (generateMonitorCode d) mods
 
 threadModules :: GeneratedCode -> AST.Tower-> [Module]
 threadModules gc twr = concatMap pertask (Map.toList (generatedcode_threads gc))

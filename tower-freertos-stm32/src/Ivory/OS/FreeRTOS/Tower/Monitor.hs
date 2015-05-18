@@ -10,8 +10,7 @@ module Ivory.OS.FreeRTOS.Tower.Monitor
   , monitorGenModName
   ) where
 
-import Ivory.Tower.Types.GeneratedCode
-import Ivory.Tower.Types.MonitorCode
+import Ivory.Tower.Types.Dependencies
 import Ivory.Tower.Codegen.Monitor
 
 import qualified Ivory.Tower.AST as AST
@@ -25,20 +24,19 @@ monitorStateModName mon = "tower_state_monitor_" ++ AST.monitorName mon
 monitorGenModName :: AST.Monitor -> String
 monitorGenModName mon = "tower_gen_monitor_" ++ AST.monitorName mon
 
-generateMonitorCode :: GeneratedCode
-                    -> MonitorCode
-                    -> AST.Monitor
+generateMonitorCode :: Dependencies
+                    -> (AST.Monitor, ModuleDef)
                     -> [Module]
-generateMonitorCode gc mc mon =
+generateMonitorCode d (mon, moddef)  =
   [ package (monitorStateModName mon) $ do
       dependencies
-      monitorcode_moddef mc
+      moddef
   , package (monitorGenModName mon) $ do
       dependencies
       gen_pkg
   ]
   where
-  dependencies = mapM_ depend (generatedcode_depends gc)
+  dependencies = mapM_ depend (dependencies_depends d)
   gen_pkg = do
     Mutex.moddef
     defMemArea (monitorLockArea mon)

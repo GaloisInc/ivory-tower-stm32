@@ -23,7 +23,6 @@ import Ivory.Tower.Backend.Compat
 import qualified Ivory.OS.FreeRTOS as FreeRTOS
 import Ivory.Tower.Types.Dependencies
 import Ivory.Tower.Types.GeneratedCode
-import Ivory.Tower.Types.MonitorCode
 import Ivory.Tower.Types.SignalCode
 import Ivory.Tower (Tower)
 import Ivory.Tower.Monad.Tower (runTower)
@@ -62,13 +61,11 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
   env <- getEnv topts
 
   let cfg = fromEnv env
-      (ast, output, deps, sigs) = runTower compatBackend twr env
-
-      addModules :: GeneratedCode -> AST.Tower -> [Module]
-      addModules = threadModules <> monitorModules
+      (ast, output@(WrapOutput o' _), deps, sigs) = runTower compatBackend twr env
 
       mods = dependencies_modules deps
-          ++ withGC addModules output deps sigs
+          ++ withGC threadModules output deps sigs
+          ++ monitorModules deps (Map.toList (compatoutput_monitors o'))
           ++ stm32Modules cfg ast
 
       givenArtifacts = dependencies_artifacts deps
@@ -88,7 +85,7 @@ withGC f (WrapOutput output ast) deps sigs = f gc ast
     { generatedcode_modules = dependencies_modules deps
     , generatedcode_depends = dependencies_depends deps
     , generatedcode_threads = Map.insertWith mappend initThread mempty $ compatoutput_threads output
-    , generatedcode_monitors = Map.map MonitorCode $ compatoutput_monitors output
+    , generatedcode_monitors = compatoutput_monitors output
     , generatedcode_signals = signalcode_signals sigs
     , generatedcode_init = signalcode_init sigs
     , generatedcode_artifacts = dependencies_artifacts deps
