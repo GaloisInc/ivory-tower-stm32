@@ -22,8 +22,6 @@ import Ivory.Tower.Backend.Compat
 
 import qualified Ivory.OS.FreeRTOS as FreeRTOS
 import Ivory.Tower.Types.Dependencies
-import Ivory.Tower.Types.GeneratedCode
-import Ivory.Tower.Types.SignalCode
 import Ivory.Tower (Tower)
 import Ivory.Tower.Monad.Tower (runTower)
 import Ivory.Tower.Options
@@ -61,11 +59,11 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
   env <- getEnv topts
 
   let cfg = fromEnv env
-      (ast, output@(WrapOutput o' _), deps, sigs) = runTower compatBackend twr env
+      (ast, (WrapOutput o _), deps, sigs) = runTower compatBackend twr env
 
       mods = dependencies_modules deps
-          ++ withGC threadModules output deps sigs
-          ++ monitorModules deps (Map.toList (compatoutput_monitors o'))
+          ++ threadModules deps sigs (thread_codes o) ast
+          ++ monitorModules deps (Map.toList (compatoutput_monitors o))
           ++ stm32Modules cfg ast
 
       givenArtifacts = dependencies_artifacts deps
@@ -74,23 +72,10 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
   where
   compatBackend = Wrapper CompatBackend
 
-withGC :: (GeneratedCode -> AST.Tower -> a) -- f
-       -> TowerBackendOutput Wrapper        -- Wrapoutput
-       -> Dependencies                      -- deps
-       -> SignalCode                        -- sigs
-       -> a
-withGC f (WrapOutput output ast) deps sigs = f gc ast
-  where
-  gc = GeneratedCode
-    { generatedcode_modules = dependencies_modules deps
-    , generatedcode_depends = dependencies_depends deps
-    , generatedcode_threads = Map.insertWith mappend initThread mempty $ compatoutput_threads output
-    , generatedcode_monitors = compatoutput_monitors output
-    , generatedcode_signals = signalcode_signals sigs
-    , generatedcode_init = signalcode_init sigs
-    , generatedcode_artifacts = dependencies_artifacts deps
-    }
-  initThread = AST.InitThread AST.Init
+  thread_codes o = Map.toList
+                 $ Map.insertWith mappend (AST.InitThread AST.Init) mempty
+                 $ compatoutput_threads o
+
 
 stm32Modules :: STM32Config -> AST.Tower -> [Module]
 stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]

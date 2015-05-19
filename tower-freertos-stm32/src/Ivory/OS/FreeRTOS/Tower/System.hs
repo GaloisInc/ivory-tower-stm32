@@ -9,14 +9,14 @@ module Ivory.OS.FreeRTOS.Tower.System
   ) where
 
 import Control.Monad (forM_)
-import qualified Data.Map as Map
 import Data.String (fromString)
 import Data.List (partition, sort, elemIndex)
+import qualified Data.Map as Map
 
 import Text.Show.Pretty
 
 import Ivory.Tower.Types.Dependencies
-import Ivory.Tower.Types.GeneratedCode
+import Ivory.Tower.Types.SignalCode
 import Ivory.Tower.Types.ThreadCode
 import Ivory.Tower.Types.Time
 import Ivory.Tower.Codegen.Handler
@@ -44,8 +44,8 @@ systemArtifacts twr mods = map Root
 monitorModules :: Dependencies -> [(AST.Monitor, ModuleDef)]-> [Module]
 monitorModules d mods = concatMap (generateMonitorCode d) mods
 
-threadModules :: GeneratedCode -> AST.Tower-> [Module]
-threadModules gc twr = concatMap pertask (Map.toList (generatedcode_threads gc))
+threadModules :: Dependencies -> SignalCode -> [(AST.Thread, ThreadCode)] -> AST.Tower-> [Module]
+threadModules d sigcode tcodes twr = concatMap pertask tcodes
   where
   pertask tc = [threadUserModule tc, threadGenModule tc]
   threadUserModule (t, tc) =
@@ -61,10 +61,10 @@ threadModules gc twr = concatMap pertask (Map.toList (generatedcode_threads gc))
       dependencies
       depend (threadUserModule (t, tc))
       threadMonitorDeps t monitorGenModName
-      threadLoopModdef gc twr t
+      threadLoopModdef twr t sigcode
       threadcode_gen tc
 
-  dependencies = mapM_ depend (generatedcode_depends gc)
+  dependencies = mapM_ depend (dependencies_depends d)
 
   threadMonitorDeps :: AST.Thread -> (AST.Monitor -> String) -> ModuleDef
   threadMonitorDeps t mname = sequence_
@@ -80,8 +80,8 @@ threadLoopRunHandlers twr thr t = sequence_
   hproc :: AST.Handler -> Def('[ConstRef s (Stored ITime)]:->())
   hproc h = proc (handlerProcName h thr) (const (body (return ())))
 
-threadLoopModdef :: GeneratedCode -> AST.Tower -> AST.Thread -> ModuleDef
-threadLoopModdef _gc twr thr@(AST.PeriodThread p) = do
+threadLoopModdef :: AST.Tower -> AST.Thread -> SignalCode -> ModuleDef
+threadLoopModdef twr thr@(AST.PeriodThread p) _ = do
   Task.moddef
   Time.moddef
   incl tloopProc
@@ -110,14 +110,17 @@ threadLoopModdef _gc twr thr@(AST.PeriodThread p) = do
       t <- local (ival (tickITime now))
       threadLoopRunHandlers twr thr t
 
-threadLoopModdef gc twr thr@(AST.SignalThread s) = do
+threadLoopModdef twr thr@(AST.SignalThread s) sigcode = do
   Task.moddef
   Time.moddef
   incl tloopProc
   codegensignal_moddef cgs
 
-  unGeneratedSignal (generatedCodeForSignal s gc) $ codegensignal_ready cgs
+  maybe err app_ready $ Map.lookup (AST.signal_name s) (signalcode_signals sigcode)
   where
+  err = error "broken invariant in Ivory.OS.FreeRTOS.Tower.System.threadLoopModdef"
+  app_ready gensignal = unGeneratedSignal gensignal (codegensignal_ready cgs)
+
   cgs = codegenSignal thr
   tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
   tloopProc = proc (AST.threadLoopProcName thr) $ const $ body $ noReturn $ do
@@ -130,11 +133,11 @@ threadLoopModdef gc twr thr@(AST.SignalThread s) = do
       t <- local (ival (tickITime now))
       threadLoopRunHandlers twr thr t
 
-threadLoopModdef gc twr thr@(AST.InitThread _) = do
+threadLoopModdef twr thr@(AST.InitThread _) sigcode = do
   Time.moddef
   incl $ proc (AST.threadLoopProcName thr) $ body $ do
     t <- local (ival 0)
-    generatedcode_init gc
+    signalcode_init sigcode
     noReturn $ threadLoopRunHandlers twr thr t
     retVoid
 
