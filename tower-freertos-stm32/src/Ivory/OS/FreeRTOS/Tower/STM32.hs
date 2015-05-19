@@ -34,6 +34,7 @@ import Ivory.Tower.Options
 import Ivory.Tower.Types.Emitter
 
 import           Ivory.OS.FreeRTOS.Tower.System
+import           Ivory.OS.FreeRTOS.Tower.Monitor
 import           Ivory.OS.FreeRTOS.Tower.Time (time_module)
 import qualified Ivory.OS.FreeRTOS.Tower.STM32.Build as STM32
 import           Ivory.OS.FreeRTOS.Tower.STM32.Config
@@ -165,18 +166,13 @@ handlerProc callbacks emitters t m h =
     comment "init emitters"
     mapM_ emittercode_init emitters
     comment "take monitor lock"
-    call_ monitorLockProc
+    call_ (monitorLockProc m)
     comment "run callbacks"
     forM_ callbacks $ \ cb -> call_ cb msg
     comment "release monitor lock"
-    call_ monitorUnlockProc
+    call_ (monitorUnlockProc m)
     comment "deliver emitters"
     mapM_ emittercode_deliver emitters
-  where
-  monitorUnlockProc :: Def('[]:->())
-  monitorUnlockProc = proc (monitorUnlockProcName m) (body (return ()))
-  monitorLockProc :: Def('[]:->())
-  monitorLockProc = proc (monitorLockProcName m) (body (return ()))
 
 emitterProcName :: AST.Emitter -> String
 emitterProcName e = showUnique (AST.emitter_name e)
@@ -187,15 +183,6 @@ callbackProcName callbackname _handlername tast
   ++ "_"
   ++ AST.threadName tast
 
-handlerProcName :: AST.Handler -> AST.Thread -> String
-handlerProcName h t = "handler_run_" ++ AST.handlerName h
-                     ++ "_" ++ AST.threadName t
-
-monitorUnlockProcName :: AST.Monitor -> String
-monitorUnlockProcName mon = "monitor_unlock_" ++ AST.monitorName mon
-
-monitorLockProcName :: AST.Monitor -> String
-monitorLockProcName mon = "monitor_lock_" ++ AST.monitorName mon
 
 --------
 

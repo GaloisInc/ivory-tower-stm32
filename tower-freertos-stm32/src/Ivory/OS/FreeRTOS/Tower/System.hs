@@ -6,6 +6,7 @@ module Ivory.OS.FreeRTOS.Tower.System
   , monitorModules
   , systemModules
   , systemArtifacts
+  , handlerProcName
   ) where
 
 import Control.Monad (forM_)
@@ -19,7 +20,6 @@ import Ivory.Tower.Types.Dependencies
 import Ivory.Tower.Types.SignalCode
 import Ivory.Tower.Types.ThreadCode
 import Ivory.Tower.Types.Time
-import Ivory.Tower.Codegen.Handler
 import qualified Ivory.Tower.AST.Graph as G
 import qualified Ivory.Tower.AST as AST
 
@@ -189,3 +189,6 @@ systemModules twr = [initModule]
       Just idx = elemIndex thr priorityordering
       priorityordering = reverse (sort (AST.towerThreads twr))
 
+handlerProcName :: AST.Handler -> AST.Thread -> String
+handlerProcName h t = "handler_run_" ++ AST.handlerName h
+                     ++ "_" ++ AST.threadName t

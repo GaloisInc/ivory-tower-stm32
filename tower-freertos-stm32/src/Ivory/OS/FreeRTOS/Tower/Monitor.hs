@@ -8,10 +8,11 @@ module Ivory.OS.FreeRTOS.Tower.Monitor
   , monitorUnlockProc
   , monitorStateModName
   , monitorGenModName
+  , monitorLockProcName
+  , monitorUnlockProcName
   ) where
 
 import Ivory.Tower.Types.Dependencies
-import Ivory.Tower.Codegen.Monitor
 
 import qualified Ivory.Tower.AST as AST
 
@@ -66,4 +67,10 @@ monitorUnlockProc mon = proc (monitorUnlockProcName mon) $ body $
 monitorLockProc :: AST.Monitor -> Def('[]:->())
 monitorLockProc mon = proc (monitorLockProcName mon) $ body $
   call_ Mutex.take (monitorLock mon)
+
+monitorUnlockProcName :: AST.Monitor -> String
+monitorUnlockProcName mon = "monitor_unlock_" ++ AST.monitorName mon
+
+monitorLockProcName :: AST.Monitor -> String
+monitorLockProcName mon = "monitor_lock_" ++ AST.monitorName mon
 
