@@ -1,30 +1,37 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 
 module Ivory.OS.FreeRTOS.Tower.STM32
   ( compileTowerSTM32FreeRTOS
   , module Ivory.OS.FreeRTOS.Tower.STM32.Config
   ) where
 
-import Control.Arrow (second)
+import Control.Monad
 import Data.List (nub)
 import qualified Data.Map as Map
 import Data.Monoid
 import System.FilePath
+
 import Ivory.Language
 import Ivory.Artifact
 import Ivory.HW
+import qualified Ivory.Stdlib as I
 import qualified Ivory.Tower.AST as AST
 import Ivory.Compile.C.CmdlineFrontend (runCompiler)
 import Ivory.Tower.Backend
-import Ivory.Tower.Backend.Compat
+import Ivory.Tower.Types.ThreadCode
+import Ivory.Tower.Types.Unique
 
 import qualified Ivory.OS.FreeRTOS as FreeRTOS
 import Ivory.Tower.Types.Dependencies
 import Ivory.Tower (Tower)
 import Ivory.Tower.Monad.Tower (runTower)
 import Ivory.Tower.Options
+import Ivory.Tower.Types.Emitter
 
 import           Ivory.OS.FreeRTOS.Tower.System
 import           Ivory.OS.FreeRTOS.Tower.Time (time_module)
@@ -34,24 +41,163 @@ import           Ivory.OS.FreeRTOS.Tower.STM32.Config
 import Ivory.BSP.STM32.VectorTable (reset_handler)
 import Ivory.BSP.STM32.ClockConfig.Init (init_clocks)
 
-newtype Wrapper = Wrapper CompatBackend
 
-unWrapSomeHandler :: SomeHandler Wrapper -> SomeHandler CompatBackend
-unWrapSomeHandler (SomeHandler (WrapHandler h)) = SomeHandler h
+data CompatBackend = CompatBackend
 
-instance TowerBackend Wrapper where
-  newtype TowerBackendCallback Wrapper a = WrapCallback { unWrapCallback :: TowerBackendCallback CompatBackend a }
-  newtype TowerBackendEmitter Wrapper = WrapEmitter { unWrapEmitter :: TowerBackendEmitter CompatBackend }
-  newtype TowerBackendHandler Wrapper a = WrapHandler { unWrapHandler :: TowerBackendHandler CompatBackend a }
-  newtype TowerBackendMonitor Wrapper = WrapMonitor { unWrapMonitor :: TowerBackendMonitor CompatBackend }
-  data TowerBackendOutput Wrapper = WrapOutput (TowerBackendOutput CompatBackend) AST.Tower
+instance TowerBackend CompatBackend where
+  newtype TowerBackendCallback CompatBackend a = CompatCallback (forall s. AST.Handler -> AST.Thread -> (Def ('[ConstRef s a] :-> ()), ModuleDef))
+  newtype TowerBackendEmitter CompatBackend = CompatEmitter (Maybe (AST.Monitor -> AST.Thread -> EmitterCode))
+  data TowerBackendHandler CompatBackend a = CompatHandler AST.Handler (forall s. AST.Monitor -> AST.Thread -> (Def ('[ConstRef s a] :-> ()), ThreadCode))
+  newtype TowerBackendMonitor CompatBackend = CompatMonitor (AST.Tower -> TowerBackendOutput CompatBackend)
+    deriving Monoid
+  data TowerBackendOutput CompatBackend = CompatOutput
+    { compatoutput_threads :: Map.Map AST.Thread ThreadCode
+    , compatoutput_monitors :: Map.Map AST.Monitor ModuleDef
+    }
 
-  callbackImpl (Wrapper b) ast cb = WrapCallback $ callbackImpl b ast cb
-  emitterImpl (Wrapper b) ast sinks = second WrapEmitter $ emitterImpl b ast $ map unWrapHandler sinks
-  handlerImpl (Wrapper b) ast ems cbs = WrapHandler $ handlerImpl b ast (map unWrapEmitter ems) (map unWrapCallback cbs)
-  monitorImpl (Wrapper b) ast hs moddef = WrapMonitor $ monitorImpl b ast (map unWrapSomeHandler hs) moddef
-  towerImpl (Wrapper b) ast mons = WrapOutput (towerImpl b ast $ map unWrapMonitor mons) ast
+  callbackImpl _ ast f = CompatCallback $ \ h t ->
+    let p = proc (callbackProcName ast (AST.handler_name h) t) $ \ r -> body $ noReturn $ f r
+    in (p, incl p)
 
+  emitterImpl _ _ [] = (Emitter $ const $ return (), CompatEmitter Nothing)
+  emitterImpl _ ast handlers =
+    ( Emitter $ call_ $ trampolineProc ast $ const $ return ()
+    , CompatEmitter $ Just $ \ mon thd -> emitterCode ast thd [ fst $ h mon thd | CompatHandler _ h <- handlers ]
+    )
+
+  handlerImpl _ ast emitters callbacks = CompatHandler ast $ \ mon thd ->
+    let ems = [ e mon thd | CompatEmitter (Just e) <- emitters ]
+        (cbs, cbdefs) = unzip [ c ast thd | CompatCallback c <- callbacks ]
+        runner = handlerProc cbs ems thd mon ast
+    in (runner, ThreadCode
+      { threadcode_user = sequence_ cbdefs
+      , threadcode_emitter = mapM_ emittercode_user ems
+      , threadcode_gen = mapM_ emittercode_gen ems >> private (incl runner)
+      })
+
+  monitorImpl _ ast handlers moddef = CompatMonitor $ \ twr -> CompatOutput
+    { compatoutput_threads = Map.fromListWith mappend
+        [ (thd, snd $ h ast thd)
+        -- handlers are reversed to match old output for convenient diffs
+        | SomeHandler (CompatHandler hast h) <- reverse handlers
+        , thd <- AST.handlerThreads twr hast
+        ]
+    , compatoutput_monitors = Map.singleton ast moddef
+    }
+
+  towerImpl _ ast monitors = case mconcat monitors of CompatMonitor f -> f ast
+
+instance Monoid (TowerBackendOutput CompatBackend) where
+  mempty = CompatOutput mempty mempty
+  mappend a b = CompatOutput
+    { compatoutput_threads = Map.unionWith mappend (compatoutput_threads a) (compatoutput_threads b)
+    , compatoutput_monitors = Map.unionWith (>>) (compatoutput_monitors a) (compatoutput_monitors b)
+    }
+
+data EmitterCode = EmitterCode
+  { emittercode_init :: forall eff. Ivory eff ()
+  , emittercode_deliver :: forall eff. Ivory eff ()
+  , emittercode_user :: ModuleDef
+  , emittercode_gen :: ModuleDef
+  }
+
+emitterCode :: (IvoryArea a, IvoryZero a)
+            => AST.Emitter
+            -> AST.Thread
+            -> (forall s. [Def ('[ConstRef s a] :-> ())])
+            -> EmitterCode
+emitterCode ast thr sinks = EmitterCode
+  { emittercode_init = store (addrOf messageCount) 0
+  , emittercode_deliver = do
+      mc <- deref (addrOf messageCount)
+      forM_ (zip messages [0..]) $ \ (m, index) ->
+        I.when (fromInteger index <? mc) $
+          forM_ sinks $ \ p ->
+            call_ p (constRef (addrOf m))
+
+  , emittercode_user = do
+      private $ incl trampoline
+  , emittercode_gen = do
+      incl eproc
+      private $ do
+        mapM_ defMemArea messages
+        defMemArea messageCount
+  }
+  where
+  max_messages = AST.emitter_bound ast - 1
+  messageCount :: MemArea (Stored Uint32)
+  messageCount = area (e_per_thread "message_count") Nothing
+
+  messages = [ area (e_per_thread ("message_" ++ show d)) Nothing
+             | d <- [0..max_messages] ]
+
+  messageAt idx = foldl aux dflt (zip messages [0..])
+    where
+    dflt = addrOf (messages !! 0) -- Should be impossible.
+    aux basecase (msg, midx) =
+      (fromInteger midx ==? idx) ? (addrOf msg, basecase)
+
+  trampoline = trampolineProc ast $ call_ eproc
+
+  eproc = voidProc (e_per_thread "emit")  $ \ msg -> body $ do
+               mc <- deref (addrOf messageCount)
+               I.when (mc <=? fromInteger max_messages) $ do
+                 store (addrOf messageCount) (mc + 1)
+                 storedmsg <- assign (messageAt mc)
+                 refCopy storedmsg msg
+
+  e_per_thread suffix =
+    emitterProcName ast ++ "_" ++ AST.threadName thr ++ "_" ++ suffix
+
+trampolineProc :: IvoryArea a
+               => AST.Emitter
+               -> (forall eff. ConstRef s a -> Ivory eff ())
+               -> Def ('[ConstRef s a] :-> ())
+trampolineProc ast f = proc (emitterProcName ast) $ \ r -> body $ f r
+
+handlerProc :: (IvoryArea a, IvoryZero a)
+            => [Def ('[ConstRef s a] :-> ())]
+            -> [EmitterCode]
+            -> AST.Thread -> AST.Monitor -> AST.Handler
+            -> Def ('[ConstRef s a] :-> ())
+handlerProc callbacks emitters t m h =
+  proc (handlerProcName h t) $ \ msg -> body $ do
+    comment "init emitters"
+    mapM_ emittercode_init emitters
+    comment "take monitor lock"
+    call_ monitorLockProc
+    comment "run callbacks"
+    forM_ callbacks $ \ cb -> call_ cb msg
+    comment "release monitor lock"
+    call_ monitorUnlockProc
+    comment "deliver emitters"
+    mapM_ emittercode_deliver emitters
+  where
+  monitorUnlockProc :: Def('[]:->())
+  monitorUnlockProc = proc (monitorUnlockProcName m) (body (return ()))
+  monitorLockProc :: Def('[]:->())
+  monitorLockProc = proc (monitorLockProcName m) (body (return ()))
+
+emitterProcName :: AST.Emitter -> String
+emitterProcName e = showUnique (AST.emitter_name e)
+
+callbackProcName :: Unique -> Unique -> AST.Thread -> String
+callbackProcName callbackname _handlername tast
+  =  showUnique callbackname
+  ++ "_"
+  ++ AST.threadName tast
+
+handlerProcName :: AST.Handler -> AST.Thread -> String
+handlerProcName h t = "handler_run_" ++ AST.handlerName h
+                     ++ "_" ++ AST.threadName t
+
+monitorUnlockProcName :: AST.Monitor -> String
+monitorUnlockProcName mon = "monitor_unlock_" ++ AST.monitorName mon
+
+monitorLockProcName :: AST.Monitor -> String
+monitorLockProcName mon = "monitor_lock_" ++ AST.monitorName mon
+
+--------
 
 compileTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO ()
 compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
@@ -59,7 +205,7 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
   env <- getEnv topts
 
   let cfg = fromEnv env
-      (ast, (WrapOutput o _), deps, sigs) = runTower compatBackend twr env
+      (ast, o, deps, sigs) = runTower compatBackend twr env
 
       mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
@@ -70,7 +216,7 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
       as = stm32Artifacts cfg ast mods givenArtifacts
   runCompiler mods (as ++ givenArtifacts) copts
   where
-  compatBackend = Wrapper CompatBackend
+  compatBackend = CompatBackend
 
   thread_codes o = Map.toList
                  $ Map.insertWith mappend (AST.InitThread AST.Init) mempty
