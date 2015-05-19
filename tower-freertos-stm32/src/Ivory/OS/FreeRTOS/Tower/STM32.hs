@@ -43,32 +43,32 @@ import Ivory.BSP.STM32.VectorTable (reset_handler)
 import Ivory.BSP.STM32.ClockConfig.Init (init_clocks)
 
 
-data CompatBackend = CompatBackend
+data STM32FreeRTOSBackend = STM32FreeRTOSBackend
 
-instance TowerBackend CompatBackend where
-  newtype TowerBackendCallback CompatBackend a = CompatCallback (forall s. AST.Handler -> AST.Thread -> (Def ('[ConstRef s a] :-> ()), ModuleDef))
-  newtype TowerBackendEmitter CompatBackend = CompatEmitter (Maybe (AST.Monitor -> AST.Thread -> EmitterCode))
-  data TowerBackendHandler CompatBackend a = CompatHandler AST.Handler (forall s. AST.Monitor -> AST.Thread -> (Def ('[ConstRef s a] :-> ()), ThreadCode))
-  newtype TowerBackendMonitor CompatBackend = CompatMonitor (AST.Tower -> TowerBackendOutput CompatBackend)
+instance TowerBackend STM32FreeRTOSBackend where
+  newtype TowerBackendCallback STM32FreeRTOSBackend a = STM32FreeRTOSCallback (forall s. AST.Handler -> AST.Thread -> (Def ('[ConstRef s a] :-> ()), ModuleDef))
+  newtype TowerBackendEmitter STM32FreeRTOSBackend = STM32FreeRTOSEmitter (Maybe (AST.Monitor -> AST.Thread -> EmitterCode))
+  data TowerBackendHandler STM32FreeRTOSBackend a = STM32FreeRTOSHandler AST.Handler (forall s. AST.Monitor -> AST.Thread -> (Def ('[ConstRef s a] :-> ()), ThreadCode))
+  newtype TowerBackendMonitor STM32FreeRTOSBackend = STM32FreeRTOSMonitor (AST.Tower -> TowerBackendOutput STM32FreeRTOSBackend)
     deriving Monoid
-  data TowerBackendOutput CompatBackend = CompatOutput
+  data TowerBackendOutput STM32FreeRTOSBackend = STM32FreeRTOSOutput
     { compatoutput_threads :: Map.Map AST.Thread ThreadCode
     , compatoutput_monitors :: Map.Map AST.Monitor ModuleDef
     }
 
-  callbackImpl _ ast f = CompatCallback $ \ h t ->
+  callbackImpl _ ast f = STM32FreeRTOSCallback $ \ h t ->
     let p = proc (callbackProcName ast (AST.handler_name h) t) $ \ r -> body $ noReturn $ f r
     in (p, incl p)
 
-  emitterImpl _ _ [] = (Emitter $ const $ return (), CompatEmitter Nothing)
+  emitterImpl _ _ [] = (Emitter $ const $ return (), STM32FreeRTOSEmitter Nothing)
   emitterImpl _ ast handlers =
     ( Emitter $ call_ $ trampolineProc ast $ const $ return ()
-    , CompatEmitter $ Just $ \ mon thd -> emitterCode ast thd [ fst $ h mon thd | CompatHandler _ h <- handlers ]
+    , STM32FreeRTOSEmitter $ Just $ \ mon thd -> emitterCode ast thd [ fst $ h mon thd | STM32FreeRTOSHandler _ h <- handlers ]
     )
 
-  handlerImpl _ ast emitters callbacks = CompatHandler ast $ \ mon thd ->
-    let ems = [ e mon thd | CompatEmitter (Just e) <- emitters ]
-        (cbs, cbdefs) = unzip [ c ast thd | CompatCallback c <- callbacks ]
+  handlerImpl _ ast emitters callbacks = STM32FreeRTOSHandler ast $ \ mon thd ->
+    let ems = [ e mon thd | STM32FreeRTOSEmitter (Just e) <- emitters ]
+        (cbs, cbdefs) = unzip [ c ast thd | STM32FreeRTOSCallback c <- callbacks ]
         runner = handlerProc cbs ems thd mon ast
     in (runner, ThreadCode
       { threadcode_user = sequence_ cbdefs
@@ -76,21 +76,21 @@ instance TowerBackend CompatBackend where
       , threadcode_gen = mapM_ emittercode_gen ems >> private (incl runner)
       })
 
-  monitorImpl _ ast handlers moddef = CompatMonitor $ \ twr -> CompatOutput
+  monitorImpl _ ast handlers moddef = STM32FreeRTOSMonitor $ \ twr -> STM32FreeRTOSOutput
     { compatoutput_threads = Map.fromListWith mappend
         [ (thd, snd $ h ast thd)
         -- handlers are reversed to match old output for convenient diffs
-        | SomeHandler (CompatHandler hast h) <- reverse handlers
+        | SomeHandler (STM32FreeRTOSHandler hast h) <- reverse handlers
         , thd <- AST.handlerThreads twr hast
         ]
     , compatoutput_monitors = Map.singleton ast moddef
     }
 
-  towerImpl _ ast monitors = case mconcat monitors of CompatMonitor f -> f ast
+  towerImpl _ ast monitors = case mconcat monitors of STM32FreeRTOSMonitor f -> f ast
 
-instance Monoid (TowerBackendOutput CompatBackend) where
-  mempty = CompatOutput mempty mempty
-  mappend a b = CompatOutput
+instance Monoid (TowerBackendOutput STM32FreeRTOSBackend) where
+  mempty = STM32FreeRTOSOutput mempty mempty
+  mappend a b = STM32FreeRTOSOutput
     { compatoutput_threads = Map.unionWith mappend (compatoutput_threads a) (compatoutput_threads b)
     , compatoutput_monitors = Map.unionWith (>>) (compatoutput_monitors a) (compatoutput_monitors b)
     }
@@ -203,7 +203,7 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
       as = stm32Artifacts cfg ast mods givenArtifacts
   runCompiler mods (as ++ givenArtifacts) copts
   where
-  compatBackend = CompatBackend
+  compatBackend = STM32FreeRTOSBackend
 
   thread_codes o = Map.toList
                  $ Map.insertWith mappend (AST.InitThread AST.Init) mempty
