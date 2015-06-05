@@ -71,17 +71,21 @@ mkSPIPeriph base rccen rccdis inter pclk n =
 
 initInPin :: GPIOPin -> GPIO_AF -> Ivory eff ()
 initInPin pin af = do
+  comment ("init spi input pin " ++ pinName pin)
   pinEnable  pin
   pinSetAF   pin af
   pinSetMode pin gpio_mode_af
   pinSetPUPD pin gpio_pupd_none
+  pinSetSpeed pin gpio_speed_50mhz
 
 initOutPin :: GPIOPin -> GPIO_AF -> Ivory eff ()
 initOutPin pin af = do
+  comment ("init spi output pin " ++ pinName pin)
   pinEnable        pin
   pinSetAF         pin af
   pinSetMode       pin gpio_mode_af
   pinSetOutputType pin gpio_outputtype_pushpull
+  pinSetSpeed      pin gpio_speed_50mhz
 
 -- | Enable peripheral and setup GPIOs. Must be performed
 --   before any other SPI peripheral actions.
