@@ -84,6 +84,9 @@ data GPIOPin = GPIOPin
   , gpioPinAFR_F        :: GPIOPinAFR
   }
 
+pinName :: GPIOPin -> String
+pinName p = gpioPortName (gpioPinPort p) ++ show (gpioPinNumber p)
+
 -- | Enable the GPIO port for a pin in the RCC.
 pinEnable :: GPIOPin -> Ivory eff ()
 pinEnable = gpioPortRCCEnable . gpioPinPort
