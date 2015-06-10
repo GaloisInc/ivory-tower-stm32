@@ -25,6 +25,7 @@ import Ivory.BSP.STM32.Peripheral.GPIOF4
 import Ivory.BSP.STM32.Peripheral.UART.Types
 import Ivory.BSP.STM32.Peripheral.UART.Regs
 
+import Ivory.BSP.STM32.Peripheral.DMA
 
 data UART = UART
   { uartRegSR      :: BitDataReg UART_SR
@@ -38,6 +39,7 @@ data UART = UART
   , uartRCCDisable :: forall eff . Ivory eff ()
   , uartInterrupt  :: HasSTM32Interrupt
   , uartPClk       :: PClk
+  , uartDMA        :: DMAOpt
   , uartName       :: String
   }
 
@@ -53,9 +55,10 @@ mkUART :: (STM32Interrupt i)
        -> (forall eff . Ivory eff ())
        -> i
        -> PClk
+       -> DMAOpt
        -> String
        -> UART
-mkUART base rccen rccdis interrupt pclk n = UART
+mkUART base rccen rccdis interrupt pclk dma n = UART
   { uartRegSR      = reg 0x00 "sr"
   , uartRegDR      = reg 0x04 "dr"
   , uartRegBRR     = reg 0x08 "brr"
@@ -67,6 +70,7 @@ mkUART base rccen rccdis interrupt pclk n = UART
   , uartRCCDisable = rccdis
   , uartInterrupt  = HasSTM32Interrupt interrupt
   , uartPClk       = pclk
+  , uartDMA        = dma
   , uartName       = n
   }
   where
@@ -122,6 +126,24 @@ setParity uart x =
   modifyReg (uartRegCR1 uart) $
     setField uart_cr1_pce (boolToBit x)
 
+-- | Initialize a UART for RX-only DMA mode.
+uartInitDMA :: UART -> DMAConfig -> Ivory eff ()
+uartInitDMA uart (DMAConfig controller _ _) = do
+  dmaRCCEnable controller
+  modifyReg (uartRegCR1 uart) $ do
+    setBit uart_cr1_txeie
+
+-- | Initialize a UART for interrupt mode.
+uartInitInterrupt :: UART -> Ivory eff ()
+uartInitInterrupt uart = do
+  modifyReg (uartRegCR1 uart) $ do
+    -- XXX: we shouldn't have to set txeie here - but if we don't, txe interrupt
+    -- will never fire until an rxneie interrupt has occured. this wasn't the
+    -- case in the old hwf4 code, and i can't explain the root cause of this
+    -- bug.
+    setBit uart_cr1_txeie
+    setBit uart_cr1_rxneie
+
 -- | Initialize a UART device given a baud rate.
 uartInit :: (GetAlloc eff ~ Scope s)
          => UART -> UARTPins -> ClockConfig -> Uint32 -> Ivory eff ()
@@ -139,14 +161,13 @@ uartInit uart pins clockconfig baud = do
 
   interrupt_enable $ uartInterrupt uart
 
-  -- enable rxne interrupt, transmitter, and receiver.
+  -- Enable DMA or interrupts depending on the requested mode.
+  case uartDMA uart of
+    UseDMA config -> uartInitDMA uart config
+    NoDMA -> uartInitInterrupt uart
+
+  -- enable transmitter and receiver.
   modifyReg (uartRegCR1 uart) $ do
-    -- XXX: we shouldn't have to set txeie here - but if we don't, txe interrupt
-    -- will never fire until an rxneie interrupt has occured. this wasn't the
-    -- case in the old hwf4 code, and i can't explain the root cause of this
-    -- bug.
-    setBit uart_cr1_txeie
-    setBit uart_cr1_rxneie
     setBit uart_cr1_te
     setBit uart_cr1_re
 

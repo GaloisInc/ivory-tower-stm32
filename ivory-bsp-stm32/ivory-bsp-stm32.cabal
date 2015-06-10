@@ -37,6 +37,11 @@ library
                        Ivory.BSP.STM32.Peripheral.CAN.Peripheral,
                        Ivory.BSP.STM32.Peripheral.CAN.Regs,
 
+                       Ivory.BSP.STM32.Peripheral.DMA,
+                       Ivory.BSP.STM32.Peripheral.DMA.Types,
+                       Ivory.BSP.STM32.Peripheral.DMA.Regs,
+                       Ivory.BSP.STM32.Peripheral.DMA.Peripheral,
+
                        Ivory.BSP.STM32.Peripheral.Flash,
                        Ivory.BSP.STM32.Peripheral.Flash.Regs,
 
@@ -116,6 +121,7 @@ library
                        Ivory.BSP.STM32F427.GTIM2345,
                        Ivory.BSP.STM32F427.ATIM18,
                        Ivory.BSP.STM32F427.UART,
+                       Ivory.BSP.STM32F427.DMA,
                        Ivory.BSP.STM32F427.RNG
 
   other-modules:       Paths_ivory_bsp_stm32
