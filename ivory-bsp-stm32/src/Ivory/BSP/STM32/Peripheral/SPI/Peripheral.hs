@@ -92,6 +92,8 @@ initOutPin pin af = do
 spiInit :: (GetAlloc eff ~ Scope s) => SPIPeriph -> SPIPins -> Ivory eff ()
 spiInit spi pins = do
   spiRCCEnable spi
+  spiClearCr1 spi
+  spiClearCr2 spi
   initInPin  (spiPinMiso pins) (spiPinAF pins)
   initOutPin (spiPinMosi pins) (spiPinAF pins)
   initOutPin (spiPinSck  pins) (spiPinAF pins)
@@ -130,17 +132,14 @@ spiDeviceInit dev = do
 spiBusBegin :: (GetAlloc eff ~ Scope cs)
             => ClockConfig -> SPIDevice -> Ivory eff ()
 spiBusBegin clockconfig dev = do
-  -- XXX can i eliminate this on/off cycle?
-  spiModifyCr1        periph [ spi_cr1_spe ] true
-  spiClearCr1         periph
-  spiClearCr2         periph
+  modifyReg (spiRegCR1 periph) $ clearBit spi_cr1_spe
+
   let baud = spiDevBaud clockconfig periph (spiDevClockHz dev)
   modifyReg (spiRegCR1 periph) $ do
     setBit   spi_cr1_mstr
     setBit   spi_cr1_ssm
     setBit   spi_cr1_ssi
     setField spi_cr1_br baud
-    setBit   spi_cr1_spe
     case spiDevClockPolarity dev of
       ClockPolarityLow  -> clearBit spi_cr1_cpol
       ClockPolarityHigh -> setBit  spi_cr1_cpol
@@ -150,6 +149,8 @@ spiBusBegin clockconfig dev = do
     case spiDevBitOrder dev of
       LSBFirst -> setBit   spi_cr1_lsbfirst
       MSBFirst -> clearBit spi_cr1_lsbfirst
+
+  modifyReg (spiRegCR1 periph) $ setBit   spi_cr1_spe
   where
   periph = spiDevPeripheral dev
 
