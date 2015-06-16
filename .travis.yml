@@ -30,3 +30,4 @@ env:
 notifications:
   slack:
     secure: HV4BpAHw/LibvN0LRLJIZkhAtFWr77FnG9z2+u4TWXIwdkcTzFw+zB7S3AvzY0PpF9Y77/9/tQlipm+frV2fYk+2+zNYZnBYiPvgfu10JJql8B1jifiymBFXPOqYahJk9irApf0CAzdDj6eFUH/YX480eV4Xpnw+WcPiig5WBpg=
+    secure: A2JXPOP11K/4praaswuJ17zcXLo1SsF/WBZ5sO+c18scjAKCLeQuci1xUDUCZXspeDGfnJq0hlz95qbISu7LtoK55zQPt0l/4P0es7x34paSrEs5Ca8lXK5qim2ozfvb6TIeuYLnS/Asj3fFQmuUlbWwkxlt3pcJFi0wxaJjt8o=
