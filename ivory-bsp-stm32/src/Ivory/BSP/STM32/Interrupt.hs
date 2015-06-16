@@ -31,7 +31,7 @@ data IRQ i = Exception Exception
 
 instance (STM32Interrupt i) => Signalable (IRQ i) where
   signalName = irqHandlerName
-  signalHandler i b = incl $ proc (irqHandlerName i) $ body $ b >> retVoid
+  signalHandler i b = incl $ voidProc (irqHandlerName i) $ body $ noReturn b
   signalInit (Exception _) = return ()
   signalInit (Interrupt i) =
     interrupt_set_priority i max_syscall_priority
