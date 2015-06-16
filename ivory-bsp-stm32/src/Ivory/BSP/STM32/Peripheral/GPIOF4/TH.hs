@@ -20,9 +20,9 @@ mkVar name n = do
     Nothing -> error "bad pin number or name"
 
 mkGPIOPin :: Name -> Name -> Integer -> [DecQ]
-mkGPIOPin portName pinName n =
-  [ sigD pinName [t| GPIOPin |]
-  , valD (varP pinName) (normalB (appsE ((conE 'GPIOPin) : fs))) []
+mkGPIOPin portName pin n =
+  [ sigD pin [t| GPIOPin |]
+  , valD (varP pin) (normalB (appsE ((conE 'GPIOPin) : fs))) []
   ]
   where fs = [ varE portName
              , litE (integerL n)
