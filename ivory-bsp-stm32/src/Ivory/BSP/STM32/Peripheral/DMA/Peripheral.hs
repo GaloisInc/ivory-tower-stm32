@@ -173,36 +173,96 @@ clearISRFlags dma n =
 --    register (DMA_LISR and DMA_HISR) from the previous data block DMA
 --    transfer should be cleared before the stream can be re-enabled.
 --
+--      * Ivory macro `disableStream` resets EN bit, and delays until it is cleared
+--      * Ivory macro `clearISRFlags` takes care of clearing ISR Flags
+--
 -- 2. Set the peripheral port register address in the DMA_SxPAR register.
 --    The data will be moved from/to this address to/from the peripheral
 --    port after the peripheral event.
+--
+--      * Ivory macro `setDMAPeripheralAddress` sets this register given
+--        the perhipheral port address as a Uint32
+--      * TODO: add accessor to UART peripheral datastructure giving
+--        peripheral address as Uint32
 --
 -- 3. Set the memory address in the DMA_SxMA0R register (and in the
 --    DMA_SxMA1R register in the case of a Double-buffer mode).
 --    The data will be written to or read from this memory after the
 --    peripheral event.
 --
+--      * TODO: add a function that takes a (Ref Global area) and gives a Uint32
+--        base address
+--      * UART Transmit stream just uses MA0R
+--      * UART Receive stream will use both
+--
 -- 4. Configure the total number of data items to be transferred in
 --    the DMA_SxNDTR register. After each peripheral event or each beat
 --    of the burst, this value is decremented.
 --
+--      * TODO: write Ivory macro that gives the size of a given memory area Uint16
+--
 -- 5. Select the DMA channel (request) using CHSEL[2:0] in the DMA_SxCR
 --    register.
 --
+--      * User must provide the channel for the given stream that maps to the
+--        intended peripheral. Lookup table can be found in AN4031 (p 9 and 10)
+--        and chip family reference manual.
+--
 -- 6. If the peripheral is intended to be the flow controller and if it
 --    supports this feature, set the PFCTRL bit in the DMA_SxCR register.
+--    XXX collapse into 9
+--       * only applies to SD/MMC controller peripheral. For all others, use
+--         DMA_SxNTDR register, as in step 4.
 --
 -- 7. Configure the stream priority using the PL[1:0] bits in the DMA_SxCR
 --    register.
+--    XXX collapse into 9
+--       * set recieve stream priotity to 0
+--       * set transmit stream priority to 1
 --
 -- 8. Configure the FIFO usage (enable or disable, threshold in transmission
 --    and reception).
+--
+--       * according to examples of UART DMA I've found,
+--         in SxFCR reg: set DMDIS to 1 (disable direct mode), set FTH to 0b11
 --
 -- 9. Configure the data transfer direction, peripheral and memory
 --    incremented/fixed mode, single or burst transactions, peripheral
 --    and memory data widths, Circular mode, Double-buffer mode and
 --    interrupts after half and/or full transfer, and/or errors in the
 --    DMA_SxCR register.
+--       * UART transmit stream:
+--           * MBURST: 0b00 (single)
+--           * PBURST: 0b00 (single)
+--           * DBM: 0
+--           * MSIZE: 0 (byte)
+--           * PSIZE: 0 (byte)
+--           * MINC: 1 (increment according to MSIZE)
+--           * PINC: 0 (fixed)
+--           * CIRC: 0 (circular mode disabled)
+--           * DIR: 1 (memory to peripheral)
+--           * PFCTL: 0 (dma is flow controller)
+--           * TCIE: 1 (transfer complete interrupt enable)
+--           * HTIE: 0 (half transfer interrupt not enabled)
+--           * TEIE: 1 (transfer error interrupt enable)
+--           * DMEIE: 1 (direct mode error interrupt enable)
+--
+--       * UART recieve stream:
+--           * MBURST: 0b00 (single)
+--           * PBURST: 0b00 (single)
+--           * CT: 0 (current buffer target)
+--           * DBM: 1 (double bufer mode enabled)
+--           * MSIZE: 0 (byte)
+--           * PSIZE: 0 (byte)
+--           * MINC: 1 (increment according to MSIZE)
+--           * PINC: 0 (fixed)
+--           * CIRC: 0 (circular mode disabled)
+--           * DIR: 0 (peripheral to memory)
+--           * PFCTL: 0 (dma is flow controller)
+--           * TCIE: 1 (transfer complete interrupt enable)
+--           * HTIE: 0 (half transfer interrupt not enabled)
+--           * TEIE: 1 (transfer error interrupt enable)
+--           * DMEIE: 1 (direct mode error interrupt enable)
 --
 -- 10. Activate the stream by setting the EN bit in the DMA_SxCR register.
 
@@ -212,11 +272,13 @@ data DMARequest = DMARequest
   , dmaRequestMAR       :: Uint32     -- memory address
   , dmaRequestNDTR      :: Uint16     -- number of data items
   -- SxCR flags
+  -- XXX need direction flags.
   }
 
 startDMATransfer :: GetBreaks (AllowBreak eff) ~ Break
                  => DMARequest -> Ivory eff ()
-startDMATransfer req = return ()
+startDMATransfer req = return () -- XXX need to implement:
+  -- take the DMARequest and put everything into registers, per comment above.
 
 -- | Configure a DMA controller given a controller, stream, and channel.
 configureDMA :: GetBreaks (AllowBreak eff) ~ Break

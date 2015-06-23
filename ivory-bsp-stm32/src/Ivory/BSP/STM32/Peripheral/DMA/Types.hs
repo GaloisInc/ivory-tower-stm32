@@ -16,21 +16,21 @@ import Ivory.Language
 [ivory|
   -- | Per-stream ISR flags in DMA_LISR and DMA_HISR.
   bitdata DMA_ISRFlags :: Bits 6 = dma_isrflags
-    { dma_isrflag_TCIF  :: Bit
-    , dma_isrflag_HTIF  :: Bit
-    , dma_isrflag_TEIF  :: Bit
-    , dma_isrflag_DMEIF :: Bit
+    { dma_isrflag_TCIF  :: Bit -- Transfer Complete Event occured
+    , dma_isrflag_HTIF  :: Bit -- Half Transfer Event occured
+    , dma_isrflag_TEIF  :: Bit -- Transfer Error occured
+    , dma_isrflag_DMEIF :: Bit -- Direct Mode Error occured
     , _                 :: Bit
-    , dma_isrflag_FEIF  :: Bit
+    , dma_isrflag_FEIF  :: Bit -- FIFO Error occured
     }
 
   -- | Per-stream flag clear bits in DMA_LIFCR and DMA_HIFCR.
   bitdata DMA_ClearISRFlags :: Bits 6 = dma_clearisrflags
-    { dma_clearisrflag_CTCIF  :: Bit
-    , dma_clearisrflag_CHTIF  :: Bit
-    , dma_clearisrflag_CTEIF  :: Bit
-    , dma_clearisrflag_CDMEIF :: Bit
+    { dma_clearisrflag_CTCIF  :: Bit -- clear Transfer Complete Event
+    , dma_clearisrflag_CHTIF  :: Bit -- clear Half Transfer Event
+    , dma_clearisrflag_CTEIF  :: Bit -- clear Transfer Error
+    , dma_clearisrflag_CDMEIF :: Bit -- clear Direct Mode Error
     , _                       :: Bit
-    , dma_clearisrflag_CFEIF  :: Bit
+    , dma_clearisrflag_CFEIF  :: Bit -- clear FIFO Error
     }
 |]
