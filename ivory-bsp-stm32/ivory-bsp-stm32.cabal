@@ -125,6 +125,7 @@ library
                        Ivory.BSP.STM32F427.GTIM2345,
                        Ivory.BSP.STM32F427.ATIM18,
                        Ivory.BSP.STM32F427.UART,
+                       Ivory.BSP.STM32F427.UART.DMA,
                        Ivory.BSP.STM32F427.DMA,
                        Ivory.BSP.STM32F427.RNG
 
