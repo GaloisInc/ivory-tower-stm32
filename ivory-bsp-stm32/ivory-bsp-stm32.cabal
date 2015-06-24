@@ -77,6 +77,7 @@ library
                        Ivory.BSP.STM32.Peripheral.UART.Types,
                        Ivory.BSP.STM32.Peripheral.UART.Regs,
                        Ivory.BSP.STM32.Peripheral.UART.Peripheral,
+                       Ivory.BSP.STM32.Peripheral.UART.DMA,
 
                        Ivory.BSP.STM32.Peripheral.RNG,
                        Ivory.BSP.STM32.Peripheral.RNG.Regs,
@@ -90,6 +91,7 @@ library
                        Ivory.BSP.STM32.Driver.SPI,
 
                        Ivory.BSP.STM32.Driver.UART,
+                       Ivory.BSP.STM32.Driver.UART.DMA,
 
                        Ivory.BSP.STM32.Driver.RNG,
 
