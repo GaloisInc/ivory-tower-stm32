@@ -21,7 +21,6 @@ import Ivory.BSP.STM32.ClockConfig
 
 import Ivory.BSP.STM32.Peripheral.UART.Regs
 import Ivory.BSP.STM32.Peripheral.UART.Peripheral
-import Ivory.BSP.STM32.Peripheral.DMA
 
 data UARTTowerDebugger =
   UARTTowerDebugger
@@ -124,12 +123,8 @@ uartTowerMonitor tocc uart pins baud interrupt rx_chan req_chan resp_chan dbg = 
   handler req_chan "req_chan" $ callback $ \req -> do
     refCopy req_buf req
     store req_pos (0 :: Sint32)
+    setTXEIE uart true
 
-    case uartDMA uart of
-      UseDMA config -> configureDMA config
-      NoDMA -> setTXEIE uart true
-
-  -- TODO DMA: we're going to need another interrupt to handle DMA completion
   handler interrupt "interrupt" $ do
     i <- emitter rx_chan 1
     resp_emitter <- emitter resp_chan 1
@@ -148,7 +143,6 @@ uartTowerMonitor tocc uart pins baud interrupt rx_chan req_chan resp_chan dbg = 
         emit i (constRef bref)
         rxsuccess %= (+1) -- For debugging
 
-      -- TODO DMA: don't do this if we're using DMA tx
       when (bitToBool (sr #. uart_sr_txe)) $ do
         byte <- local (ival 0)
         rv   <- req_pop_byte byte
