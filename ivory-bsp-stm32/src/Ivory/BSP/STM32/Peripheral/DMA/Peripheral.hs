@@ -21,6 +21,7 @@ import Ivory.HW
 import Ivory.HW.BitData
 import Ivory.HW.Reg
 
+import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.Peripheral.DMA.Types
 import Ivory.BSP.STM32.Peripheral.DMA.Regs
 
@@ -43,6 +44,7 @@ showReg r = printf "%-20s  %08X\n" name addr
     addr = case bdr_reg r of Reg a -> a
 
 -- | Per-DMA-stream registers for a DMA controller.
+--
 data DMAStreamRegs = DMAStreamRegs
   { dmaStreamCR   :: BitDataReg DMA_SxCR
   , dmaStreamNDTR :: BitDataReg DMA_SxNDTR
@@ -71,7 +73,20 @@ data DMA = DMA
   , dmaStreamRegs :: [DMAStreamRegs]  -- streams 0-7
   , dmaRCCEnable  :: (forall eff. Ivory eff ())
   , dmaRCCDisable :: (forall eff. Ivory eff ())
+  , dmaInterrupt  :: DMAInterrupt
   , dmaName       :: String
+  }
+
+
+data DMAInterrupt = DMAInterrupt
+  { dmaInterruptStream0 :: HasSTM32Interrupt
+  , dmaInterruptStream1 :: HasSTM32Interrupt
+  , dmaInterruptStream2 :: HasSTM32Interrupt
+  , dmaInterruptStream3 :: HasSTM32Interrupt
+  , dmaInterruptStream4 :: HasSTM32Interrupt
+  , dmaInterruptStream5 :: HasSTM32Interrupt
+  , dmaInterruptStream6 :: HasSTM32Interrupt
+  , dmaInterruptStream7 :: HasSTM32Interrupt
   }
 
 ----------------------------------------------------------------------
@@ -101,9 +116,9 @@ getStreamM0AR dma n = dmaStreamM0AR (getStreamRegs dma n)
 -- | Disable a DMA stream. We must read the bit in a loop to make
 -- sure that it is disabled because a previous request may still
 -- be in progress.
-disableStream :: GetBreaks (AllowBreak eff) ~ Break => DMA -> DMAStream -> Ivory eff ()
-disableStream dma stream = do
-  let reg_SxCR = getStreamCR dma stream
+disableStream :: GetBreaks (AllowBreak eff) ~ Break => DMAStreamRegs -> Ivory eff ()
+disableStream regs = do
+  let reg_SxCR = dmaStreamCR regs
   forever $ do
     modifyReg reg_SxCR $ do
       clearBit dma_sxcr_en
@@ -277,15 +292,8 @@ data DMARequest = DMARequest
 
 startDMATransfer :: GetBreaks (AllowBreak eff) ~ Break
                  => DMARequest -> Ivory eff ()
-startDMATransfer req = return () -- XXX need to implement:
+startDMATransfer _req = return () -- XXX need to implement:
   -- take the DMARequest and put everything into registers, per comment above.
-
--- | Configure a DMA controller given a controller, stream, and channel.
-configureDMA :: GetBreaks (AllowBreak eff) ~ Break
-             => DMAConfig -> Ivory eff ()
-configureDMA (DMAConfig dma stream _) = do
-  disableStream dma stream
-  clearISRFlags dma stream
 
 -- | Set the DMA peripheral port register address.
 setDMAPeripheralAddress :: DMAConfig -> Uint32 -> Ivory eff ()
@@ -323,9 +331,10 @@ showDMA dma =
 mkDMA :: Integer
       -> (forall eff. Ivory eff ())
       -> (forall eff. Ivory eff ())
+      -> DMAInterrupt
       -> String
       -> DMA
-mkDMA base rccEn rccDis name = DMA
+mkDMA base rccEn rccDis ints name = DMA
   { dmaRegLISR      = reg 0x00 "lisr"
   , dmaRegHISR      = reg 0x04 "hisr"
   , dmaRegLIFCR     = reg 0x08 "lifcr"
@@ -333,6 +342,7 @@ mkDMA base rccEn rccDis name = DMA
   , dmaStreamRegs   = mkDMAStreamRegs 0x10
   , dmaRCCEnable    = rccEn
   , dmaRCCDisable   = rccDis
+  , dmaInterrupt    = ints
   , dmaName         = name
   }
   where
@@ -361,3 +371,18 @@ mkDMA base rccEn rccDis name = DMA
         , dmaStreamFCR  = sreg offset 0x14 i "fcr"
         }
       | i <- [0..7]]
+
+-- | Get DMA Interrupt corresponding to given stream
+streamInterrupt :: DMA -> DMAStream -> HasSTM32Interrupt
+streamInterrupt dma n =
+  case n of
+    0 -> dmaInterruptStream0 ints
+    1 -> dmaInterruptStream1 ints
+    2 -> dmaInterruptStream2 ints
+    3 -> dmaInterruptStream3 ints
+    4 -> dmaInterruptStream4 ints
+    5 -> dmaInterruptStream5 ints
+    6 -> dmaInterruptStream6 ints
+    7 -> dmaInterruptStream7 ints
+    _ -> error $ "Invalid DMA stream: " ++ show n
+  where ints = dmaInterrupt dma

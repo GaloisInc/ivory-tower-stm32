@@ -93,6 +93,8 @@ library
 
                        Ivory.BSP.STM32.Driver.RNG,
 
+                       Ivory.BSP.STM32.Driver.DMA,
+
                        Ivory.BSP.STM32F405.MemoryMap,
                        Ivory.BSP.STM32F405.Interrupt,
                        Ivory.BSP.STM32F405.CAN,
