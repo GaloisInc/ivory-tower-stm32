@@ -4,6 +4,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Ivory.BSP.STM32.Driver.DMA
   ( DMATowerStreams(..)
@@ -19,7 +20,8 @@ import Ivory.BSP.STM32.Peripheral.DMA
 
 data DMATowerStreams =
   DMATowerStreams
-    { dma_stream_0 :: DMATowerStream
+    { dma_stream_periph :: String
+    , dma_stream_0 :: DMATowerStream
     , dma_stream_1 :: DMATowerStream
     , dma_stream_2 :: DMATowerStream
     , dma_stream_3 :: DMATowerStream
@@ -59,6 +61,7 @@ dmaTower periph = do
         dmaRCCEnable periph
         emit init_e t
 
+  let dma_stream_periph = dmaName periph
   return DMATowerStreams{..}
 
   where
@@ -82,4 +85,5 @@ dmaTower periph = do
       , dma_stream_get_isrflags   = getISRFlags   periph s
       , dma_stream_clear_isrflags = clearISRFlags periph s
       }
+
 

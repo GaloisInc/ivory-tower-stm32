@@ -29,12 +29,6 @@ import Ivory.BSP.STM32.Peripheral.DMA.Regs
 type DMAChannel = Int
 type DMAStream = Int
 
--- | A combination of DMA controller, stream, and channel.
-data DMAConfig = DMAConfig DMA DMAStream DMAChannel
-
--- | Configuration for a peripheral that optionally uses DMA.
-data DMAOpt = NoDMA | UseDMA DMAConfig
-
 showReg :: BitDataReg d -> String
 showReg r = printf "%-20s  %08X\n" name addr
   where
@@ -100,10 +94,6 @@ checkStream n = error $ "Invalid DMA stream: " ++ show n
 getStreamRegs :: DMA -> DMAStream -> DMAStreamRegs
 getStreamRegs dma n = dmaStreamRegs dma !! stream
   where stream = checkStream n
-
--- | Get the control register for stream 'n'.
-getStreamCR :: DMA -> DMAStream -> BitDataReg DMA_SxCR
-getStreamCR dma n = dmaStreamCR (getStreamRegs dma n)
 
 -- | Get the peripheral address register for stream 'n'.
 getStreamPAR :: DMA -> DMAStream -> BitDataReg DMA_SxPAR
@@ -281,35 +271,7 @@ clearISRFlags dma n =
 --
 -- 10. Activate the stream by setting the EN bit in the DMA_SxCR register.
 
-data DMARequest = DMARequest
-  { dmaRequestConfig    :: DMAConfig
-  , dmaRequestPAR       :: Uint32     -- peripheral address
-  , dmaRequestMAR       :: Uint32     -- memory address
-  , dmaRequestNDTR      :: Uint16     -- number of data items
-  -- SxCR flags
-  -- XXX need direction flags.
-  }
 
-startDMATransfer :: GetBreaks (AllowBreak eff) ~ Break
-                 => DMARequest -> Ivory eff ()
-startDMATransfer _req = return () -- XXX need to implement:
-  -- take the DMARequest and put everything into registers, per comment above.
-
--- | Set the DMA peripheral port register address.
-setDMAPeripheralAddress :: DMAConfig -> Uint32 -> Ivory eff ()
-setDMAPeripheralAddress (DMAConfig dma stream _) addr = do
-  setReg (getStreamPAR dma stream) $ do
-    setField dma_sxpar_par (fromRep addr)
-
--- | Set the DMA peripheral memory address (no support for memory-memory
--- transfers at this time).
---
--- TODO: Need a primitive to accept a static byte buffer and do an
--- unsafe pointer-to-integer conversion.
-setDMAMemoryAddress :: DMAConfig -> Uint32 -> Ivory eff ()
-setDMAMemoryAddress (DMAConfig dma stream _) addr = do
-  setReg (getStreamM0AR dma stream) $ do
-    setField dma_sxm0ar_m0a (fromRep addr)
 
 ----------------------------------------------------------------------
 -- Debugging
