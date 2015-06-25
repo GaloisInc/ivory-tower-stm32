@@ -75,6 +75,7 @@ import Ivory.BSP.STM32.Peripheral.DMA.Types
     , dma_sxcr_pfctrl :: Bit
     , dma_sxcr_tcie   :: Bit
     , dma_sxcr_htie   :: Bit
+    , dma_sxcr_teie   :: Bit
     , dma_sxcr_dmeie  :: Bit
     , dma_sxcr_en     :: Bit
     }
