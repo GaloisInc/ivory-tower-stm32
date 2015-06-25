@@ -139,10 +139,39 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
 
     -- Set control register:
     setReg (dmaStreamCR tx_regs) $ do
-      setField dma_sxcr_chsel (fromRep (fromIntegral tx_chan))
-      -- XXX FILL IN THE REST OF THIS STUFF
+      setField dma_sxcr_chsel  (fromRep (fromIntegral tx_chan))
+      setField dma_sxcr_mburst (fromRep 0) -- Single (no burst)
+      setField dma_sxcr_pburst (fromRep 0) -- Single (no burst)
+      setField dma_sxcr_dbm    (fromRep 0) -- Single Buffering
+      setField dma_sxcr_msize  (fromRep 0) -- Byte memory size
+      setField dma_sxcr_psize  (fromRep 0) -- Byte peripheral size
+      setField dma_sxcr_minc   (fromRep 1) -- Increment according to msize
+      setField dma_sxcr_pinc   (fromRep 0) -- Fixed (no increment)
+      setField dma_sxcr_circ   (fromRep 0) -- No circular mode
+      setField dma_sxcr_dir    (fromRep 1) -- Memory to Peripheral
+      setField dma_sxcr_pfctrl (fromRep 0) -- DMA is flow controller
+      setField dma_sxcr_tcie   (fromRep 1) -- Enable transfer complete interrupt
+      setField dma_sxcr_htie   (fromRep 0) -- Disable half transfer interrupt
+      setField dma_sxcr_teie   (fromRep 1) -- Enable transfer error interrupt
+      setField dma_sxcr_dmeie  (fromRep 1) -- Enable direct mode error interrupt
 
-    return ()
+  tx_complete     <- state "tx_complete"
+  tx_transfer_err <- state "tx_transfer_err"
+  tx_direct_err   <- state "tx_direct_err"
+  handler (dma_stream_signal txstream) "tx_stream_interrupt" $ do
+    e <- emitter resp_chan 1
+    callback $ const $ do
+      flags <- dma_stream_get_isrflags txstream
+
+      let incr r = r %= (+ (1 :: Uint32))
+      when (bitToBool (flags #. dma_isrflag_TCIF)) $ do
+        incr tx_complete
+        emitV e true
+      when (bitToBool (flags #. dma_isrflag_TEIF)) $ do
+        incr tx_transfer_err
+      when (bitToBool (flags #. dma_isrflag_DMEIF)) $ do
+        incr tx_direct_err
+
 
   where
   rxstream = dmaUARTRxStream  dmauart streams
