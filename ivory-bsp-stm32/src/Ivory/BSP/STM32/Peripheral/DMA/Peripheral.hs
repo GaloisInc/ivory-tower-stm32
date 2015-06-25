@@ -195,8 +195,6 @@ clearISRFlags dma n =
 --    The data will be written to or read from this memory after the
 --    peripheral event.
 --
---      * TODO: add a function that takes a (Ref Global area) and gives a Uint32
---        base address
 --      * UART Transmit stream just uses MA0R
 --      * UART Receive stream will use both
 --
@@ -204,11 +202,9 @@ clearISRFlags dma n =
 --    the DMA_SxNDTR register. After each peripheral event or each beat
 --    of the burst, this value is decremented.
 --
---      * TODO: write Ivory macro that gives the size of a given memory area Uint16
---
 -- 5. Select the DMA channel (request) using CHSEL[2:0] in the DMA_SxCR
 --    register.
---
+--    XXX collapse into 9
 --      * User must provide the channel for the given stream that maps to the
 --        intended peripheral. Lookup table can be found in AN4031 (p 9 and 10)
 --        and chip family reference manual.
@@ -227,7 +223,7 @@ clearISRFlags dma n =
 --
 -- 8. Configure the FIFO usage (enable or disable, threshold in transmission
 --    and reception).
---
+--    
 --       * according to examples of UART DMA I've found,
 --         in SxFCR reg: set DMDIS to 1 (disable direct mode), set FTH to 0b11
 --

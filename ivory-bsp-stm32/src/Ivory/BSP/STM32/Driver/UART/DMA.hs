@@ -15,6 +15,8 @@ import Ivory.Stdlib
 import Ivory.Tower
 import Ivory.Tower.HAL.Bus.Interface
 import Ivory.HW
+import Ivory.HW.Reg
+import Ivory.HW.BitData
 
 import Ivory.BSP.STM32.ClockConfig
 
@@ -72,6 +74,8 @@ dmaUARTTowerDebuggable tocc dmauart pins streams baud dbg = do
   resp_chan <- channel
   rx_chan   <- channel
 
+  mapM_ towerArtifact dmaArtifacts
+
   monitor (uartName uart ++ "_dma_driver") $ do
     dmaUARTTowerMonitor tocc dmauart pins streams baud
                         (fst rx_chan) (snd req_chan) (fst resp_chan) dbg
@@ -93,7 +97,9 @@ dmaUARTTowerMonitor :: (IvoryString tx, IvoryString rx)
 dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan dbg = do
   clockConfig <- fmap tocc getEnv
 
-  monitorModuleDef $ hw_moduledef
+  monitorModuleDef $ do
+    hw_moduledef
+    incl ref_to_uint32_proc
 
   req_buf <- state "req_buf"
 
@@ -103,14 +109,59 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
 
   handler req_chan "req_chan" $ callback $ \req -> do
     refCopy req_buf req
+    -- Disable transmit stream:
+    disableStream tx_regs
+    -- Clear transmit stream flags:
+    dma_stream_clear_isrflags txstream
 
+    -- Set peripheral address:
+    setReg (dmaStreamPAR tx_regs) $
+      setField dma_sxpar_par (fromRep (bdr_reg_addr (uartRegDR uart)))
+
+    -- Set memory address:
+    buf_start_addr <- call ref_to_uint32_proc ((req_buf ~> stringDataL) ! 0)
+    setReg (dmaStreamM0AR  tx_regs) $
+      setField dma_sxm0ar_m0a (fromRep buf_start_addr)
+
+    -- Set number of data items to be transfered:
+    let safe_items :: Sint32 -> Uint16
+        safe_items n =
+          (n <? arrayLen (req_buf ~> stringDataL) .&& n >=? 0 .&& n <? 65535)
+          ? (castWith 0 n, 0)
+    req_items <- fmap safe_items (deref (req_buf ~> stringLengthL))
+    setReg (dmaStreamNDTR tx_regs) $
+      setField dma_sxndtr_ndt (fromRep req_items)
+
+    -- Set FIFO control register:
+    setReg (dmaStreamFCR tx_regs) $ do
+      setBit   dma_sxfcr_dmdis
+      setField dma_sxfcr_fth (fromRep 3)
+
+    -- Set control register:
+    setReg (dmaStreamCR tx_regs) $ do
+      setField dma_sxcr_chsel (fromRep (fromIntegral tx_chan))
+      -- XXX FILL IN THE REST OF THIS STUFF
+
+    return ()
 
   where
   rxstream = dmaUARTRxStream  dmauart streams
-  rxchan   = dmaUARTRxChannel dmauart
+  rx_chan  = dmaUARTRxChannel dmauart
+  rx_regs  = dma_stream_regs  rxstream
   txstream = dmaUARTTxStream  dmauart streams
-  txchan   = dmaUARTTxChannel dmauart
+  tx_chan  = dmaUARTTxChannel dmauart
+  tx_regs  = dma_stream_regs  txstream
 
 
   uart = dmaUARTPeriph dmauart
   named n = uartName uart ++ "_dma_" ++ n
+
+  ref_to_uint32_proc :: Def('[Ref s (Stored Uint8)] :-> Uint32)
+  ref_to_uint32_proc = importProc "ref_to_uint32" dmaRefToUint32Header
+
+
+  bdr_reg_addr :: BitDataReg a -> Uint32
+  bdr_reg_addr = fromInteger . unReg . bdr_reg
+    where unReg (Reg a) = a
+
+
