@@ -11,7 +11,9 @@ build-type:          Simple
 cabal-version:       >=1.8
 
 data-files: support/vector_table.s.template,
-            support/linker_script.lds.template
+            support/linker_script.lds.template,
+            support/ref_to_uint32.h,
+            support/ref_to_uint32.c
 
 library
   exposed-modules:     Ivory.BSP.ARMv7M.Exception,
@@ -41,6 +43,7 @@ library
                        Ivory.BSP.STM32.Peripheral.DMA.Types,
                        Ivory.BSP.STM32.Peripheral.DMA.Regs,
                        Ivory.BSP.STM32.Peripheral.DMA.Peripheral,
+                       Ivory.BSP.STM32.Peripheral.DMA.Artifacts,
 
                        Ivory.BSP.STM32.Peripheral.Flash,
                        Ivory.BSP.STM32.Peripheral.Flash.Regs,
