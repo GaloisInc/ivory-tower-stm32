@@ -142,25 +142,28 @@ getISRFlags dma n =
 clearISRFlags :: DMA -> DMAStream -> Ivory eff ()
 clearISRFlags dma n =
   case n of
-    0 -> go dmaRegLISR dma_lisr_stream0
-    1 -> go dmaRegLISR dma_lisr_stream1
-    2 -> go dmaRegLISR dma_lisr_stream2
-    3 -> go dmaRegLISR dma_lisr_stream3
-    4 -> go dmaRegHISR dma_hisr_stream4
-    5 -> go dmaRegHISR dma_hisr_stream5
-    6 -> go dmaRegHISR dma_hisr_stream6
-    7 -> go dmaRegHISR dma_hisr_stream7
+    0 -> go dmaRegLIFCR dma_lifcr_stream0
+    1 -> go dmaRegLIFCR dma_lifcr_stream1
+    2 -> go dmaRegLIFCR dma_lifcr_stream2
+    3 -> go dmaRegLIFCR dma_lifcr_stream3
+    4 -> go dmaRegHIFCR dma_hifcr_stream4
+    5 -> go dmaRegHIFCR dma_hifcr_stream5
+    6 -> go dmaRegHIFCR dma_hifcr_stream6
+    7 -> go dmaRegHIFCR dma_hifcr_stream7
     _ -> error $ "Invalid DMA stream: " ++ show n
   where
     go :: (BitData d, IvoryIOReg (BitDataRep d),
-           BitCast (BitDataRep d) (BitDataRep DMA_ISRFlags),
-           SafeCast Uint8 (BitDataRep d))   -- XXX not sure why this is needed?
+           BitCast (BitDataRep d) (BitDataRep DMA_ISRFlags))
        => (DMA -> BitDataReg d)
-       -> (BitDataField d DMA_ISRFlags)
+       -> (BitDataField d DMA_ClearISRFlags)
        -> Ivory eff ()
     go reg field = do
-      modifyReg (reg dma) $ do
-        setField field (fromRep 0)
+      setReg (reg dma) $ do
+        setBit (field #> dma_clearisrflag_CTCIF)
+        setBit (field #> dma_clearisrflag_CHTIF)
+        setBit (field #> dma_clearisrflag_CTEIF)
+        setBit (field #> dma_clearisrflag_CDMEIF)
+        setBit (field #> dma_clearisrflag_CFEIF)
 
 -- From ST application note AN4031:
 --
