@@ -3,6 +3,7 @@ bsp-led-test
 bsp-spi-test
 bsp-i2c-test
 bsp-uart-test
+bsp-dma-uart-test
 bsp-can-test
 bsp-rng-test
 user.conf

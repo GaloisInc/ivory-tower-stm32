@@ -12,6 +12,7 @@ module BSP.Tests.Platforms
   , TestSPI(..)
   , TestI2C(..)
   , TestCAN(..)
+  , TestDMA(..)
   , TestPlatform(..)
   , testplatform_clockconfig
   , px4fmuv17
@@ -38,6 +39,7 @@ import qualified Ivory.BSP.STM32F427.GPIO.AF     as F427
 import qualified Ivory.BSP.STM32F427.SPI         as F427
 import qualified Ivory.BSP.STM32F427.I2C         as F427
 import qualified Ivory.BSP.STM32F427.RNG         as F427
+import qualified Ivory.BSP.STM32F427.UART.DMA    as F427
 
 import Ivory.BSP.STM32.Peripheral.CAN
 import Ivory.BSP.STM32.Peripheral.GPIOF4
@@ -45,6 +47,7 @@ import Ivory.BSP.STM32.Peripheral.UART
 import Ivory.BSP.STM32.Peripheral.SPI hiding (ActiveHigh, ActiveLow)
 import Ivory.BSP.STM32.Peripheral.I2C
 import Ivory.BSP.STM32.Peripheral.RNG
+import Ivory.BSP.STM32.Peripheral.UART.DMA
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.OS.FreeRTOS.Tower.STM32.Config
 
@@ -100,6 +103,11 @@ data TestCAN =
     , testCANFilters :: CANPeriphFilters
     }
 
+data TestDMA =
+  TestDMA
+    { testDMAUARTPeriph :: DMAUART
+    , testDMAUARTPins   :: UARTPins
+    }
 
 data TestPlatform =
   TestPlatform
@@ -108,6 +116,7 @@ data TestPlatform =
     , testplatform_spi   :: TestSPI
     , testplatform_i2c   :: TestI2C
     , testplatform_can   :: TestCAN
+    , testplatform_dma   :: TestDMA
     , testplatform_rng   :: RNG
     , testplatform_stm32 :: STM32Config
     }
@@ -148,6 +157,7 @@ px4fmuv17 = TestPlatform
       , testCANTX = F405.pinD1
       , testCANFilters = F405.canFilters
       }
+  , testplatform_dma = error "DMA tests not supported on this platform"
   , testplatform_rng = F405.rng
   , testplatform_stm32 = stm32f405Defaults 24
   }
@@ -198,6 +208,7 @@ f4discovery = TestPlatform
       , testCANTX = F405.pinD1
       , testCANFilters = F405.canFilters
       }
+  , testplatform_dma = error "DMA tests not supported on this platform"
   , testplatform_rng = F405.rng
   , testplatform_stm32 = stm32f405Defaults 8
   }
@@ -235,6 +246,7 @@ open407vc = TestPlatform
       , testCANTX = F405.pinD1
       , testCANFilters = F405.canFilters
       }
+  , testplatform_dma = error "DMA tests not supported on this platform"
   , testplatform_rng = F405.rng
   , testplatform_stm32 = stm32f405Defaults 8
   }
@@ -273,6 +285,7 @@ port407z = TestPlatform
       , testCANTX = F405.pinD1
       , testCANFilters = F405.canFilters
       }
+  , testplatform_dma = error "DMA tests not supported on this platform"
   , testplatform_rng = F405.rng
   , testplatform_stm32 = stm32f405Defaults 8
   }
@@ -295,11 +308,7 @@ px4fmuv24 = TestPlatform
       }
   , testplatform_uart = TestUART -- Telem 1 Port
       { testUARTPeriph = F427.uart2
-      , testUARTPins = UARTPins
-          { uartPinTx = F427.pinD5
-          , uartPinRx = F427.pinD6
-          , uartPinAF = F427.gpio_af_uart2
-          }
+      , testUARTPins = telem1_pins
       }
   , testplatform_spi = TestSPI -- SPI port
       { testSPIPeriph = F427.spi4
@@ -324,7 +333,18 @@ px4fmuv24 = TestPlatform
       , testCANTX = F427.pinD1
       , testCANFilters = F427.canFilters
       }
+  , testplatform_dma = TestDMA -- Telem 1 Port
+      { testDMAUARTPeriph = F427.dmaUART2
+      , testDMAUARTPins   = telem1_pins
+      }
   , testplatform_rng = F427.rng
   , testplatform_stm32 = stm32f427Defaults 24
   }
+
+  where
+  telem1_pins = UARTPins
+    { uartPinTx = F427.pinD5
+    , uartPinRx = F427.pinD6
+    , uartPinAF = F427.gpio_af_uart2
+    }
 
