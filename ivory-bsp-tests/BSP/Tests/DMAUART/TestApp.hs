@@ -51,7 +51,7 @@ app toleds tocc todma = do
       <- dmaUARTTower tocc u pins streams 115200
   -- Start the task defined below
   byte_ostream <- channel
-  echoPrompt "hello world" req res (snd byte_ostream) (fst redledctl)
+  echoPrompt "hello world!" req res (snd byte_ostream) (fst redledctl)
   -- A task that takes control input (Boolean) from the echo prompt and controls
   -- the red LED based on it.
   monitor "settableLED" $ ledController [redLED (toleds e)] (snd redledctl)
@@ -96,7 +96,7 @@ echoPrompt greeting req res ostream ledctl = do
         i <- deref initialized
         unless i $ do
           store initialized true
-          puts (greeting ++ "\r\n")
+          puts ("\r\n" ++ greeting ++ "\r\n")
         puts prompt
         flush e
 
@@ -116,7 +116,7 @@ echoPrompt greeting req res ostream ledctl = do
         flush e
 
     handler res "result" $ return () -- XXX
-  where prompt = "tower> "
+  where prompt = "\r\ntower> "
 
 isChar :: Uint8 -> Char -> IBool
 isChar b c = b ==? (fromIntegral $ ord c)

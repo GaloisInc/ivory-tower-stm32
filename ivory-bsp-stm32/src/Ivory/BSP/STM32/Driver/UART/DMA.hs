@@ -111,6 +111,10 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
 
   handler req_chan "req_chan" $ callback $ \req -> do
     refCopy req_buf req
+    -- XXX should do something here to assert backpressure
+    -- transmit scheme is being followed, and we're not interrupting
+    -- an ongoing stream request.
+
     -- Disable transmit stream:
     disableStream tx_regs
     -- Clear transmit stream flags:
@@ -130,7 +134,8 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
         safe_items n =
           (n <? arrayLen (req_buf ~> stringDataL) .&& n >=? 0 .&& n <? 65535)
           ? (castWith 0 n, 0)
-    req_items <- fmap safe_items (deref (req_buf ~> stringLengthL))
+    len <- deref (req_buf ~> stringLengthL)
+    req_items <- assign (safe_items len)
     modifyReg (dmaStreamNDTR tx_regs) $
       setField dma_sxndtr_ndt (fromRep req_items)
 
@@ -145,6 +150,7 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
       setField dma_sxcr_mburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_pburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_dbm    (fromRep 0) -- Single Buffering
+      setField dma_sxcr_pl     (fromRep 1) -- Priority 1 (second higest after 0)
       setField dma_sxcr_msize  (fromRep 0) -- Byte memory size
       setField dma_sxcr_psize  (fromRep 0) -- Byte peripheral size
       setField dma_sxcr_minc   (fromRep 1) -- Increment according to msize
@@ -160,6 +166,10 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
     modifyReg (uartRegCR3 uart) $ do
       setField uart_cr3_dmat (fromRep 1)
 
+    -- Clear TC in UART, per STM32 reference RM0090 section 30.3.13
+    modifyReg (uartRegSR uart) $ do
+      setField uart_sr_tc (fromRep 0)
+
     -- Set control register:
     modifyReg (dmaStreamCR tx_regs) $ do
       setField dma_sxcr_en  (fromRep 1) -- Enable Stream
@@ -172,6 +182,15 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
   handler (dma_stream_signal txstream) "tx_stream_interrupt" $ do
     e <- emitter resp_chan 1
     callback $ const $ do
+      -- Disable transmit stream:
+      disableStream tx_regs
+      -- Disable stream interrupts:
+      modifyReg (dmaStreamCR tx_regs) $ do
+        setField dma_sxcr_tcie  (fromRep 0)
+        setField dma_sxcr_teie  (fromRep 0)
+        setField dma_sxcr_dmeie (fromRep 0)
+
+      -- Check stream flags:
       flags <- dma_stream_get_isrflags txstream
 
       let incr r = r %= (+ (1 :: Uint32))
@@ -183,21 +202,8 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
       when (bitToBool (flags #. dma_isrflag_DMEIF)) $ do
         incr tx_direct_err
 
-      -- Disable DMA Transmit in UART:
-      modifyReg (uartRegCR3 uart) $ do
-        setField uart_cr3_dmat (fromRep 0)
-
-      -- Disable transmit interrupts and stream:
-      modifyReg (dmaStreamCR tx_regs) $ do
-        setField dma_sxcr_tcie  (fromRep 0)
-        setField dma_sxcr_teie  (fromRep 0)
-        setField dma_sxcr_dmeie (fromRep 0)
-        setField dma_sxcr_en    (fromRep 0)
-
-      -- Clear flags :
+      -- Clear stream flags:
       dma_stream_clear_isrflags txstream
-      -- Re-enable interrupt:
-      dma_stream_enable_int     txstream
 
   where
   rxstream = dmaUARTRxStream  dmauart streams
