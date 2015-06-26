@@ -124,8 +124,8 @@ setParity uart x =
 
 -- | Initialize a UART device given a baud rate.
 uartInit :: (GetAlloc eff ~ Scope s)
-         => UART -> UARTPins -> ClockConfig -> Uint32 -> Ivory eff ()
-uartInit uart pins clockconfig baud = do
+         => UART -> UARTPins -> ClockConfig -> Uint32 -> Bool -> Ivory eff ()
+uartInit uart pins clockconfig baud useinterrupts = do
   -- Enable the peripheral clock and set up GPIOs.
   uartRCCEnable uart
   initPin (uartPinTx pins) (uartPinAF pins)
@@ -145,8 +145,12 @@ uartInit uart pins clockconfig baud = do
     -- will never fire until an rxneie interrupt has occured. this wasn't the
     -- case in the old hwf4 code, and i can't explain the root cause of this
     -- bug.
-    setBit uart_cr1_txeie
-    setBit uart_cr1_rxneie
+    case useinterrupts of
+      True -> do
+        setBit uart_cr1_txeie
+        setBit uart_cr1_rxneie
+      _ -> return ()
+
     setBit uart_cr1_te
     setBit uart_cr1_re
 

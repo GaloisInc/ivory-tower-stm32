@@ -105,7 +105,9 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
 
   handler (dma_stream_init rxstream) "init" $ callback $ const $ do
     debug_init dbg
-    uartInit uart pins clockConfig (fromIntegral baud)
+    uartInit uart pins clockConfig (fromIntegral baud) False
+    -- Enable TX interrupt:
+    dma_stream_enable_int txstream
 
   handler req_chan "req_chan" $ callback $ \req -> do
     refCopy req_buf req
@@ -129,16 +131,16 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
           (n <? arrayLen (req_buf ~> stringDataL) .&& n >=? 0 .&& n <? 65535)
           ? (castWith 0 n, 0)
     req_items <- fmap safe_items (deref (req_buf ~> stringLengthL))
-    setReg (dmaStreamNDTR tx_regs) $
+    modifyReg (dmaStreamNDTR tx_regs) $
       setField dma_sxndtr_ndt (fromRep req_items)
 
     -- Set FIFO control register:
-    setReg (dmaStreamFCR tx_regs) $ do
+    modifyReg (dmaStreamFCR tx_regs) $ do
       setBit   dma_sxfcr_dmdis
       setField dma_sxfcr_fth (fromRep 3)
 
     -- Set control register:
-    setReg (dmaStreamCR tx_regs) $ do
+    modifyReg (dmaStreamCR tx_regs) $ do
       setField dma_sxcr_chsel  (fromRep (fromIntegral tx_chan))
       setField dma_sxcr_mburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_pburst (fromRep 0) -- Single (no burst)
@@ -154,10 +156,19 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
       setField dma_sxcr_htie   (fromRep 0) -- Disable half transfer interrupt
       setField dma_sxcr_teie   (fromRep 1) -- Enable transfer error interrupt
       setField dma_sxcr_dmeie  (fromRep 1) -- Enable direct mode error interrupt
+    -- Enable DMA Transmit in UART:
+    modifyReg (uartRegCR3 uart) $ do
+      setField uart_cr3_dmat (fromRep 1)
 
+    -- Set control register:
+    modifyReg (dmaStreamCR tx_regs) $ do
+      setField dma_sxcr_en  (fromRep 1) -- Enable Stream
+
+  -- Debugging states:
   tx_complete     <- state "tx_complete"
   tx_transfer_err <- state "tx_transfer_err"
   tx_direct_err   <- state "tx_direct_err"
+
   handler (dma_stream_signal txstream) "tx_stream_interrupt" $ do
     e <- emitter resp_chan 1
     callback $ const $ do
@@ -172,6 +183,20 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
       when (bitToBool (flags #. dma_isrflag_DMEIF)) $ do
         incr tx_direct_err
 
+      -- Clear flags and re-enable interrupt. (Interrupt has been disabled when
+      -- signal triggered.)
+      dma_stream_clear_isrflags txstream
+
+      -- Disable DMA Transmit in UART:
+      modifyReg (uartRegCR3 uart) $ do
+        setField uart_cr3_dmat (fromRep 0)
+
+      -- Set control register:
+      modifyReg (dmaStreamCR tx_regs) $ do
+        setField dma_sxcr_en  (fromRep 0) -- Disable Stream
+
+      -- Re-enable interrupt:
+      dma_stream_enable_int     txstream
 
   where
   rxstream = dmaUARTRxStream  dmauart streams

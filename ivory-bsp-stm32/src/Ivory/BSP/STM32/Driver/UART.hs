@@ -102,7 +102,7 @@ uartTowerMonitor tocc uart pins baud interrupt rx_chan req_chan resp_chan dbg = 
 
   handler systemInit "init" $ callback $ const $ do
     debug_init dbg
-    uartInit uart pins clockConfig (fromIntegral baud)
+    uartInit uart pins clockConfig (fromIntegral baud) True
 
   let req_pop_byte :: (GetAlloc eff ~ Scope cs)
                    => Ref s' (Stored Uint8) -> Ivory eff IBool
