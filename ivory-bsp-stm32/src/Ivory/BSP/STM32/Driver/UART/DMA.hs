@@ -183,18 +183,19 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
       when (bitToBool (flags #. dma_isrflag_DMEIF)) $ do
         incr tx_direct_err
 
-      -- Clear flags and re-enable interrupt. (Interrupt has been disabled when
-      -- signal triggered.)
-      dma_stream_clear_isrflags txstream
-
       -- Disable DMA Transmit in UART:
       modifyReg (uartRegCR3 uart) $ do
         setField uart_cr3_dmat (fromRep 0)
 
-      -- Set control register:
+      -- Disable transmit interrupts and stream:
       modifyReg (dmaStreamCR tx_regs) $ do
-        setField dma_sxcr_en  (fromRep 0) -- Disable Stream
+        setField dma_sxcr_tcie  (fromRep 0)
+        setField dma_sxcr_teie  (fromRep 0)
+        setField dma_sxcr_dmeie (fromRep 0)
+        setField dma_sxcr_en    (fromRep 0)
 
+      -- Clear flags :
+      dma_stream_clear_isrflags txstream
       -- Re-enable interrupt:
       dma_stream_enable_int     txstream
 
