@@ -196,7 +196,6 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
       let incr r = r %= (+ (1 :: Uint32))
       when (bitToBool (flags #. dma_isrflag_TCIF)) $ do
         incr tx_complete
-        emitV e true
       when (bitToBool (flags #. dma_isrflag_TEIF)) $ do
         incr tx_transfer_err
       when (bitToBool (flags #. dma_isrflag_DMEIF)) $ do
@@ -204,6 +203,12 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
 
       -- Clear stream flags:
       dma_stream_clear_isrflags txstream
+
+      -- Notify request is complete. Indicates true when successful:
+      emitV e (bitToBool (flags #. dma_isrflag_TCIF))
+
+      -- Re-enable interrupt:
+      dma_stream_enable_int txstream
 
   where
   rxstream = dmaUARTRxStream  dmauart streams
