@@ -11,7 +11,6 @@ module Ivory.BSP.STM32F427.UART.DMA
   ) where
 
 import Ivory.BSP.STM32.Peripheral.UART.DMA
-import Ivory.BSP.STM32.Peripheral.DMA
 import Ivory.BSP.STM32.Driver.DMA
 import Ivory.BSP.STM32F427.UART
 import Ivory.BSP.STM32F427.DMA

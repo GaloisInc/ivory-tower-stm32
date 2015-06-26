@@ -4,7 +4,6 @@
 module Ivory.BSP.STM32.Peripheral.DMA.Artifacts where
 
 import qualified Paths_ivory_bsp_stm32 as P
-import Ivory.Language
 import Ivory.Artifact
 
 dmaRefToUint32Header :: String
