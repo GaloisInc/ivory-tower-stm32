@@ -94,14 +94,14 @@ dmaUARTTowerMonitor :: (IvoryString tx, IvoryString rx)
                     -> ChanInput (Stored IBool)
                     -> DMAUARTTowerDebugger
                     -> Monitor e ()
-dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan dbg = do
+dmaUARTTowerMonitor tocc dmauart pins streams baud rx_out_chan req_chan resp_chan dbg = do
   clockConfig <- fmap tocc getEnv
 
   monitorModuleDef $ do
     hw_moduledef
     incl ref_to_uint32_proc
 
-  req_buf <- state "req_buf"
+  req_buf <- state (named "req_buf")
 
   handler (dma_stream_init rxstream) "init" $ callback $ const $ do
     debug_init dbg
@@ -175,9 +175,9 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_chan req_chan resp_chan db
       setField dma_sxcr_en  (fromRep 1) -- Enable Stream
 
   -- Debugging states:
-  tx_complete     <- state "tx_complete"
-  tx_transfer_err <- state "tx_transfer_err"
-  tx_direct_err   <- state "tx_direct_err"
+  tx_complete     <- state (named "tx_complete")
+  tx_transfer_err <- state (named "tx_transfer_err")
+  tx_direct_err   <- state (named "tx_direct_err")
 
   handler (dma_stream_signal txstream) "tx_stream_interrupt" $ do
     e <- emitter resp_chan 1
