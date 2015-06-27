@@ -103,11 +103,102 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_out_chan req_chan resp_cha
 
   req_buf <- state (named "req_buf")
 
+  rx0_buf <- state (named "rx0_buf")
+  rx1_buf <- state (named "rx1_buf")
+
   handler (dma_stream_init rxstream) "init" $ callback $ const $ do
     debug_init dbg
     uartInit uart pins clockConfig (fromIntegral baud) False
     -- Enable TX interrupt:
     dma_stream_enable_int txstream
+
+    --------------------
+    -- Setup Recieve:
+
+    -- Set peripheral address:
+    setReg (dmaStreamPAR rx_regs) $
+      setField dma_sxpar_par (fromRep (bdr_reg_addr (uartRegDR uart)))
+
+    -- Set memory address:
+    buf0_start_addr <- call ref_to_uint32_proc ((rx0_buf ~> stringDataL) ! 0)
+    setReg (dmaStreamM0AR  rx_regs) $
+      setField dma_sxm0ar_m0a (fromRep buf0_start_addr)
+    buf1_start_addr <- call ref_to_uint32_proc ((rx1_buf ~> stringDataL) ! 0)
+    setReg (dmaStreamM1AR  rx_regs) $
+      setField dma_sxm1ar_m1a (fromRep buf1_start_addr)
+
+    -- Set number of data items to be transfered:
+    let safe_items :: Sint32 -> Uint16
+        safe_items n = (n >=? 0 .&& n <? 65535)
+          ? (castWith 0 n, 0)
+    req_items <- assign (safe_items ((arrayLen (rx0_buf ~> stringDataL) - 1)))
+    modifyReg (dmaStreamNDTR rx_regs) $
+      setField dma_sxndtr_ndt (fromRep req_items)
+
+    -- Set FIFO control register:
+    modifyReg (dmaStreamFCR rx_regs) $ do
+      setBit   dma_sxfcr_dmdis
+      setField dma_sxfcr_fth (fromRep 3)
+
+    -- Set control register:
+    modifyReg (dmaStreamCR rx_regs) $ do
+      setField dma_sxcr_chsel  (fromRep (fromIntegral rx_chan))
+      setField dma_sxcr_mburst (fromRep 0) -- Single (no burst)
+      setField dma_sxcr_pburst (fromRep 0) -- Single (no burst)
+      setField dma_sxcr_ct     (fromRep 0) -- Current Target buf 0
+      setField dma_sxcr_dbm    (fromRep 1) -- Double Buffering
+      setField dma_sxcr_pl     (fromRep 0) -- Priority 0 (highest)
+      setField dma_sxcr_msize  (fromRep 0) -- Byte memory size
+      setField dma_sxcr_psize  (fromRep 0) -- Byte peripheral size
+      setField dma_sxcr_minc   (fromRep 1) -- Increment according to msize
+      setField dma_sxcr_pinc   (fromRep 0) -- Fixed (no increment)
+      setField dma_sxcr_circ   (fromRep 0) -- No circular mode
+      setField dma_sxcr_dir    (fromRep 0) -- Peripheral to Memory
+      setField dma_sxcr_pfctrl (fromRep 0) -- DMA is flow controller
+      setField dma_sxcr_tcie   (fromRep 1) -- Enable transfer complete interrupt
+      setField dma_sxcr_htie   (fromRep 0) -- Disable half transfer interrupt
+      setField dma_sxcr_teie   (fromRep 1) -- Enable transfer error interrupt
+      setField dma_sxcr_dmeie  (fromRep 1) -- Enable direct mode error interrupt
+    -- Enable DMA Recieve in UART:
+    modifyReg (uartRegCR3 uart) $ do
+      setField uart_cr3_dmar (fromRep 1)
+
+    -- Set control register:
+    modifyReg (dmaStreamCR rx_regs) $ do
+      setField dma_sxcr_en  (fromRep 1) -- Enable Stream
+
+    -- Enable RX interrupt:
+    dma_stream_enable_int rxstream
+
+  -- Debugging states:
+  rx_complete     <- state (named "rx_complete")
+  rx_transfer_err <- state (named "rx_transfer_err")
+  rx_direct_err   <- state (named "rx_direct_err")
+
+  handler (dma_stream_signal rxstream) "rx_stream_interrupt" $ do
+    e <- emitter rx_out_chan 1
+    callback $ const $ do
+      -- Check stream flags:
+      flags <- dma_stream_get_isrflags rxstream
+
+      let incr r = r %= (+ (1 :: Uint32))
+      when (bitToBool (flags #. dma_isrflag_TCIF)) $ do
+        incr rx_complete
+      when (bitToBool (flags #. dma_isrflag_TEIF)) $ do
+        incr rx_transfer_err
+      when (bitToBool (flags #. dma_isrflag_DMEIF)) $ do
+        incr rx_direct_err
+
+      -- Clear stream flags:
+      dma_stream_clear_isrflags rxstream
+
+      -- XXX placeholder just to infer type of rx0 and rx1 bufs:
+      ifte_ false
+        (emit e (constRef rx0_buf))
+        (emit e (constRef rx1_buf))
+
+      -- Enable RX interrupt:
+      dma_stream_enable_int rxstream
 
   handler req_chan "req_chan" $ callback $ \req -> do
     refCopy req_buf req
