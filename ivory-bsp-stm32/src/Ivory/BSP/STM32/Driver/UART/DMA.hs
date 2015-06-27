@@ -2,7 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Ivory.BSP.STM32.Driver.UART.DMA
   ( dmaUARTTower
@@ -211,21 +211,21 @@ dmaUARTTransmitMonitor dmauart streams req_chan resp_chan init_chan = do
 
 
 
-dmaUARTReceiveMonitor :: (IvoryString rx)
-                       => DMAUART
-                       -> DMATowerStreams
-                       -> ChanInput  rx
-                       -> ChanOutput (Stored ITime)
-                       -> ChanOutput (Stored ITime)
-                       -> Monitor e ()
+dmaUARTReceiveMonitor :: forall rx e
+                       . (IvoryString rx)
+                      => DMAUART
+                      -> DMATowerStreams
+                      -> ChanInput  rx
+                      -> ChanOutput (Stored ITime)
+                      -> ChanOutput (Stored ITime)
+                      -> Monitor e ()
 dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
   rx0_buf <- state (named "rx0_buf")
   rx1_buf <- state (named "rx1_buf")
 
-  handler init_chan "dmauart_rx_init" $ callback $ const $ do
-    --------------------
-    -- Setup Recieve:
+  let req_items = arrayLen (rx0_buf ~> stringDataL) - 1
 
+  handler init_chan "dmauart_rx_init" $ callback $ const $ do
     -- Set peripheral address:
     setReg (dmaStreamPAR rx_regs) $
       setField dma_sxpar_par (fromRep (bdr_reg_addr (uartRegDR uart)))
@@ -234,12 +234,12 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
     buf0_start_addr <- call ref_to_uint32_proc ((rx0_buf ~> stringDataL) ! 0)
     setReg (dmaStreamM0AR  rx_regs) $
       setField dma_sxm0ar_m0a (fromRep buf0_start_addr)
+
     buf1_start_addr <- call ref_to_uint32_proc ((rx1_buf ~> stringDataL) ! 0)
     setReg (dmaStreamM1AR  rx_regs) $
       setField dma_sxm1ar_m1a (fromRep buf1_start_addr)
 
     -- Set number of data items to be transfered:
-    req_items <- assign (arrayLen (rx0_buf ~> stringDataL) - 1)
     setReg (dmaStreamNDTR rx_regs) $
       setField dma_sxndtr_ndt (fromRep req_items)
 
@@ -278,6 +278,19 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
     -- Enable RX interrupt:
     dma_stream_enable_int rxstream
 
+  let send_buffer :: Emitter rx
+                  -> Uint16
+                  -> IBool
+                  -> Ivory eff ()
+      send_buffer e len which_buf = do
+        ifte_ which_buf
+          (aux rx1_buf)
+          (aux rx0_buf)
+        where
+        aux buf = do
+          store (buf ~> stringLengthL) (safeCast len)
+          emit e (constRef buf)
+
   -- Debugging states:
   rx_complete     <- state (named "rx_complete")
   rx_transfer_err <- state (named "rx_transfer_err")
@@ -296,14 +309,16 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
         incr rx_transfer_err
       when (bitToBool (flags #. dma_isrflag_DMEIF)) $ do
         incr rx_direct_err
-
       -- Clear stream flags:
       dma_stream_clear_isrflags rxstream
 
-      -- XXX placeholder just to infer type of rx0 and rx1 bufs:
-      ifte_ false
-        (emit e (constRef rx0_buf))
-        (emit e (constRef rx1_buf))
+      when (bitToBool (flags #. dma_isrflag_TCIF)) $ do
+        -- Determine which buffer is now complete:
+        cr <- getReg (dmaStreamCR rx_regs)
+        finished_buf <- assign (iNot (bitToBool (cr #. dma_sxcr_ct)))
+
+        -- Send completed buffer:
+        send_buffer e req_items finished_buf
 
       -- Enable RX interrupt:
       dma_stream_enable_int rxstream
@@ -313,11 +328,9 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
     callback $ const $ do
       -- Disable receive stream:
       disableStream rx_regs
-      flags_rx <- dma_stream_get_isrflags rxstream
       -- Get ndtr, reset to full size:
-      ndt_rx <- getReg (dmaStreamNDTR rx_regs)
+      ndtr <- getReg (dmaStreamNDTR rx_regs)
 
-      req_items <- assign (arrayLen (rx0_buf ~> stringDataL) - 1)
       setReg (dmaStreamNDTR rx_regs) $
         setField dma_sxndtr_ndt (fromRep req_items)
 
@@ -331,17 +344,12 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
         setField dma_sxcr_ct (boolToBit (iNot (bitToBool (cr #. dma_sxcr_ct))))
         setField dma_sxcr_en (fromRep 1)
 
-      -- XXX just for inspecting that ping pong works properly from gdb:
-      ifte_ (bitToBool (cr #. dma_sxcr_ct))
-            (store (rx0_buf ~> stringLengthL) 1 >> store (rx1_buf ~> stringLengthL) 0)
-            (store (rx0_buf ~> stringLengthL) 0 >> store (rx1_buf ~> stringLengthL) 1)
-
-      -- XXX placeholder just to infer type of rx0 and rx1 bufs:
-      ifte_ false
-        (emit e (constRef rx0_buf))
-        (emit e (constRef rx1_buf))
-
-
+      ndt <- assign (toRep (ndtr #. dma_sxndtr_ndt))
+      -- When at least one item has been recieved:
+      when (ndt <? req_items) $ do
+        -- Determine which buffer is complete:
+        finished_buf <- assign (bitToBool (cr #. dma_sxcr_ct))
+        send_buffer e (req_items - ndt) finished_buf
 
   where
   uart = dmaUARTPeriph dmauart
