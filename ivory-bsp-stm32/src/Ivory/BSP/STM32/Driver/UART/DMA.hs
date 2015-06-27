@@ -26,24 +26,26 @@ import Ivory.BSP.STM32.Peripheral.DMA
 import Ivory.BSP.STM32.Driver.DMA
 
 
-dmaUARTTower :: (IvoryString tx, IvoryString rx)
+dmaUARTTower :: (IvoryString tx, IvoryString rx, Time t)
              => (e -> ClockConfig)
              -> DMAUART
              -> UARTPins
              -> DMATowerStreams
              -> Integer
+             -> t
              -> Tower e ( BackpressureTransmit tx (Stored IBool)
                         , ChanOutput rx)
-dmaUARTTower tocc dmauart pins streams baud = do
+dmaUARTTower tocc dmauart pins streams baud rx_flush_per = do
   req_chan  <- channel
   resp_chan <- channel
   rx_chan   <- channel
+  p <- period rx_flush_per
 
   mapM_ towerArtifact dmaArtifacts
 
   monitor (uartName uart ++ "_dma_driver") $ do
     dmaUARTTowerMonitor tocc dmauart pins streams baud
-                        (fst rx_chan) (snd req_chan) (fst resp_chan)
+                        (fst rx_chan) p (snd req_chan) (fst resp_chan)
   return (BackpressureTransmit (fst req_chan) (snd resp_chan), (snd rx_chan))
   where
   uart = dmaUARTPeriph dmauart
@@ -55,10 +57,11 @@ dmaUARTTowerMonitor :: (IvoryString tx, IvoryString rx)
                     -> DMATowerStreams
                     -> Integer
                     -> ChanInput rx
+                    -> ChanOutput (Stored ITime)
                     -> ChanOutput tx
                     -> ChanInput (Stored IBool)
                     -> Monitor e ()
-dmaUARTTowerMonitor tocc dmauart pins streams baud rx_out_chan req_chan resp_chan = do
+dmaUARTTowerMonitor tocc dmauart pins streams baud rx_out_chan rx_flush_chan req_chan resp_chan = do
   clockConfig <- fmap tocc getEnv
 
   monitorModuleDef $ do
@@ -91,11 +94,8 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_out_chan req_chan resp_cha
       setField dma_sxm1ar_m1a (fromRep buf1_start_addr)
 
     -- Set number of data items to be transfered:
-    let safe_items :: Sint32 -> Uint16
-        safe_items n = (n >=? 0 .&& n <? 65535)
-          ? (castWith 0 n, 0)
-    req_items <- assign (safe_items ((arrayLen (rx0_buf ~> stringDataL) - 1)))
-    modifyReg (dmaStreamNDTR rx_regs) $
+    req_items <- assign (arrayLen (rx0_buf ~> stringDataL) - 1)
+    setReg (dmaStreamNDTR rx_regs) $
       setField dma_sxndtr_ndt (fromRep req_items)
 
     -- Set FIFO control register:
@@ -162,6 +162,40 @@ dmaUARTTowerMonitor tocc dmauart pins streams baud rx_out_chan req_chan resp_cha
 
       -- Enable RX interrupt:
       dma_stream_enable_int rxstream
+
+  handler rx_flush_chan "rx_flush" $ do
+    e <- emitter rx_out_chan 1
+    callback $ const $ do
+      -- Disable receive stream:
+      disableStream rx_regs
+      flags_rx <- dma_stream_get_isrflags rxstream
+      -- Get ndtr, reset to full size:
+      ndt_rx <- getReg (dmaStreamNDTR rx_regs)
+
+      req_items <- assign (arrayLen (rx0_buf ~> stringDataL) - 1)
+      setReg (dmaStreamNDTR rx_regs) $
+        setField dma_sxndtr_ndt (fromRep req_items)
+
+      -- Get current cr so we can switch ct (current target)
+      cr <- getReg (dmaStreamCR rx_regs)
+
+      -- start stream over again by clearing flags:
+      dma_stream_clear_isrflags rxstream
+      -- Switch current target, re-enable stream:
+      modifyReg (dmaStreamCR rx_regs) $ do
+        setField dma_sxcr_ct (boolToBit (iNot (bitToBool (cr #. dma_sxcr_ct))))
+        setField dma_sxcr_en (fromRep 1)
+
+      -- XXX just for inspecting that ping pong works properly from gdb:
+      ifte_ (bitToBool (cr #. dma_sxcr_ct))
+            (store (rx0_buf ~> stringLengthL) 1 >> store (rx1_buf ~> stringLengthL) 0)
+            (store (rx0_buf ~> stringLengthL) 0 >> store (rx1_buf ~> stringLengthL) 1)
+
+      -- XXX placeholder just to infer type of rx0 and rx1 bufs:
+      ifte_ false
+        (emit e (constRef rx0_buf))
+        (emit e (constRef rx1_buf))
+
 
   handler req_chan "req_chan" $ callback $ \req -> do
     refCopy req_buf req

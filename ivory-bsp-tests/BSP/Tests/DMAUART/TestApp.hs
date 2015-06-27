@@ -48,7 +48,7 @@ app toleds tocc todma = do
       pins = testDMAUARTPins d
   streams <- dmaTower (dmaUARTDMAPeriph u)
   (BackpressureTransmit req res, (_ostream :: ChanOutput UARTBuffer))
-      <- dmaUARTTower tocc u pins streams 115200
+      <- dmaUARTTower tocc u pins streams 115200 (Milliseconds 500)
   -- Start the task defined below
   byte_ostream <- channel
   echoPrompt "hello world!" req res (snd byte_ostream) (fst redledctl)
