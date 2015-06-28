@@ -35,7 +35,7 @@ dmaUARTTower :: (IvoryString tx, IvoryString rx, Time t)
              -> t
              -> Tower e ( BackpressureTransmit tx (Stored IBool)
                         , ChanOutput rx)
-dmaUARTTower tocc dmauart pins streams baud rx_flush_per = do
+dmaUARTTower tocc dmauart pins streams baud rx_flush_per = guard_periph_match $ do
   req_chan  <- channel
   resp_chan <- channel
   rx_chan   <- channel
@@ -60,6 +60,17 @@ dmaUARTTower tocc dmauart pins streams baud rx_flush_per = do
   where
   uart = dmaUARTPeriph dmauart
   dma_initialized = dma_stream_init $ dmaUARTRxStream  dmauart streams
+
+  stream_dmaName = dma_stream_periph streams
+  dmauart_dmaName = dmaName (dmaUARTDMAPeriph dmauart)
+
+  guard_periph_match k = case stream_dmaName == dmauart_dmaName of
+    True -> k
+    False -> error ("DMA Streams for " ++ stream_dmaName
+                   ++" provided to " ++ uartName uart
+                   ++ "DMAUART Driver, which requires "
+                   ++ dmauart_dmaName)
+
 
 dmaUARTHardwareMonitor :: (e -> ClockConfig)
                        -> DMAUART
@@ -200,7 +211,6 @@ dmaUARTTransmitMonitor dmauart streams req_chan resp_chan init_chan = do
       dma_stream_enable_int txstream
 
   where
-
   txstream = dmaUARTTxStream  dmauart streams
   tx_chan  = dmaUARTTxChannel dmauart
   tx_regs  = dma_stream_regs  txstream
