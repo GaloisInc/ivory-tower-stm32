@@ -6,6 +6,7 @@
 
 module Ivory.BSP.STM32.Driver.UART.DMA
   ( dmaUARTTower
+  , dmaUARTTower'
   ) where
 
 import Ivory.Language
@@ -25,8 +26,32 @@ import Ivory.BSP.STM32.Peripheral.DMA
 
 import Ivory.BSP.STM32.Driver.DMA
 
-
 dmaUARTTower :: forall tx rx e
+              . (IvoryString tx, IvoryString rx)
+             => (e -> ClockConfig)
+             -> DMAUART
+             -> UARTPins
+             -> Integer
+             -> Proxy rx
+             -> Tower e ( BackpressureTransmit tx (Stored IBool)
+                        , ChanOutput (Stored Uint8))
+dmaUARTTower tocc dmauart pins baud _ = do
+  (tx, (buf_rx :: ChanOutput rx)) <- dmaUARTTower' tocc dmauart pins baud
+  char_rx <- channel
+  monitor (uartName (dmaUARTPeriph dmauart) ++ "_dma_rx_byte_shim") $ do
+    handler buf_rx "buf_rx" $ do
+      e <- emitter (fst char_rx) (arrayLen (somebuf ~> stringDataL))
+      callback $ \buf -> do
+        len <- deref (buf ~> stringLengthL)
+        arrayMap $ \ix -> do
+          when (fromIx ix <? len) $
+            emit e ((buf ~> stringDataL) ! ix)
+  return (tx, snd char_rx)
+  where
+  somebuf :: Ref s rx
+  somebuf = undefined
+
+dmaUARTTower' :: forall tx rx e
               . (IvoryString tx, IvoryString rx)
              => (e -> ClockConfig)
              -> DMAUART
@@ -34,7 +59,7 @@ dmaUARTTower :: forall tx rx e
              -> Integer
              -> Tower e ( BackpressureTransmit tx (Stored IBool)
                         , ChanOutput rx)
-dmaUARTTower tocc dmauart pins baud = do
+dmaUARTTower' tocc dmauart pins baud = do
   req_chan  <- channel
   resp_chan <- channel
   rx_chan   <- channel
