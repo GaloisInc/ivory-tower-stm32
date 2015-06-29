@@ -41,6 +41,8 @@ dmaUARTTower tocc dmauart pins streams baud rx_flush_per = guard_periph_match $ 
   rx_chan   <- channel
 
   dmauart_initialized <- channel
+
+  p <- period (Milliseconds ms_per_frame)
   p <- period rx_flush_per
 
   mapM_ towerArtifact dmaArtifacts
@@ -61,9 +63,12 @@ dmaUARTTower tocc dmauart pins streams baud rx_flush_per = guard_periph_match $ 
   uart = dmaUARTPeriph dmauart
   dma_initialized = dma_stream_init $ dmaUARTRxStream  dmauart streams
 
+  bytes_per_sec :: Integer
+  bytes_per_sec = baud `div` 9
   stream_dmaName = dma_stream_periph streams
   dmauart_dmaName = dmaName (dmaUARTDMAPeriph dmauart)
 
+  bytes_per_ms = (bytes_per_sec `div` bytes_per_sec) + 1
   guard_periph_match k = case stream_dmaName == dmauart_dmaName of
     True -> k
     False -> error ("DMA Streams for " ++ stream_dmaName
@@ -71,6 +76,9 @@ dmaUARTTower tocc dmauart pins streams baud rx_flush_per = guard_periph_match $ 
                    ++ "DMAUART Driver, which requires "
                    ++ dmauart_dmaName)
 
+  frame_len = arrayLen ((undefined :: Ref s rx) ~> stringDataL)
+
+  ms_per_frame = (frame_len `div` bytes_per_ms) - 1
 
 dmaUARTHardwareMonitor :: (e -> ClockConfig)
                        -> DMAUART
@@ -232,6 +240,7 @@ dmaUARTReceiveMonitor :: forall rx e
 dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
   rx0_buf <- state (named "rx0_buf")
   rx1_buf <- state (named "rx1_buf")
+  isr_buf <- state (named "isr_buf")
 
   let req_items = arrayLen (rx0_buf ~> stringDataL) - 1
 
@@ -288,18 +297,18 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
     -- Enable RX interrupt:
     dma_stream_enable_int rxstream
 
-  let send_buffer :: Emitter rx
-                  -> Uint16
-                  -> IBool
-                  -> Ivory eff ()
-      send_buffer e len which_buf = do
+  let complete_buffer :: Uint16
+                      -> IBool
+                      -> (ConstRef Global rx -> Ivory eff ())
+                      -> Ivory eff ()
+      complete_buffer len which_buf k = do
         ifte_ which_buf
           (aux rx1_buf)
           (aux rx0_buf)
         where
         aux buf = do
           store (buf ~> stringLengthL) (safeCast len)
-          emit e (constRef buf)
+          k (constRef buf)
 
   -- Debugging states:
   rx_complete     <- state (named "rx_complete")
@@ -307,7 +316,6 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
   rx_direct_err   <- state (named "rx_direct_err")
 
   handler (dma_stream_signal rxstream) "rx_stream_interrupt" $ do
-    e <- emitter out_chan 1
     callback $ const $ do
       -- Check stream flags:
       flags <- dma_stream_get_isrflags rxstream
@@ -327,14 +335,14 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
         cr <- getReg (dmaStreamCR rx_regs)
         finished_buf <- assign (iNot (bitToBool (cr #. dma_sxcr_ct)))
 
-        -- Send completed buffer:
-        send_buffer e req_items finished_buf
+        -- Defer completed buffer to be sent by flush:
+        complete_buffer req_items finished_buf (refCopy isr_buf)
 
       -- Enable RX interrupt:
       dma_stream_enable_int rxstream
 
   handler flush_chan "rx_flush" $ do
-    e <- emitter out_chan 1
+    e <- emitter out_chan 2
     callback $ const $ do
       -- Disable receive stream:
       disableStream rx_regs
@@ -354,12 +362,18 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
         setField dma_sxcr_ct (boolToBit (iNot (bitToBool (cr #. dma_sxcr_ct))))
         setField dma_sxcr_en (fromRep 1)
 
+      -- Check to see if we got a buffer from the rx_stream_interupt:
+      isr_buf_len <- deref (isr_buf ~> stringLengthL)
+      when (isr_buf_len >? 0) $ do
+        emit e (constRef isr_buf)
+        store (isr_buf ~> stringLengthL) 0
+
       ndt <- assign (toRep (ndtr #. dma_sxndtr_ndt))
       -- When at least one item has been recieved:
       when (ndt <? req_items) $ do
         -- Determine which buffer is complete:
         finished_buf <- assign (bitToBool (cr #. dma_sxcr_ct))
-        send_buffer e (req_items - ndt) finished_buf
+        complete_buffer (req_items - ndt) finished_buf (emit e)
 
   where
   uart = dmaUARTPeriph dmauart
