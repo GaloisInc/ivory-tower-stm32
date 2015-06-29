@@ -11,7 +11,6 @@ module Ivory.BSP.STM32F427.UART.DMA
   ) where
 
 import Ivory.BSP.STM32.Peripheral.UART.DMA
-import Ivory.BSP.STM32.Driver.DMA
 import Ivory.BSP.STM32F427.UART
 import Ivory.BSP.STM32F427.DMA
 
@@ -26,72 +25,72 @@ dmaUART1, dmaUART2, dmaUART3, dmaUART4, dmaUART5, dmaUART6, dmaUART7, dmaUART8 :
 dmaUART1 = DMAUART
   { dmaUARTPeriph    = uart1
   , dmaUARTDMAPeriph = dma2
-  , dmaUARTTxStream  = dma_stream_7
+  , dmaUARTTxStream  = 7
   , dmaUARTTxChannel = 4
-  , dmaUARTRxStream  = dma_stream_2
+  , dmaUARTRxStream  = 2
   , dmaUARTRxChannel = 4
   }
 
 dmaUART2 = DMAUART
   { dmaUARTPeriph    = uart2
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = dma_stream_6
+  , dmaUARTTxStream  = 6
   , dmaUARTTxChannel = 4
-  , dmaUARTRxStream  = dma_stream_5
+  , dmaUARTRxStream  = 5
   , dmaUARTRxChannel = 4
   }
 
 dmaUART3 = DMAUART
   { dmaUARTPeriph    = uart3
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = dma_stream_3
+  , dmaUARTTxStream  = 3
   , dmaUARTTxChannel = 4
-  , dmaUARTRxStream  = dma_stream_1
+  , dmaUARTRxStream  = 1
   , dmaUARTRxChannel = 4
   }
 
 dmaUART4 = DMAUART
   { dmaUARTPeriph    = uart4
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = dma_stream_4
+  , dmaUARTTxStream  = 4
   , dmaUARTTxChannel = 4
-  , dmaUARTRxStream  = dma_stream_2
+  , dmaUARTRxStream  = 2
   , dmaUARTRxChannel = 4
   }
 
 dmaUART5 = DMAUART
   { dmaUARTPeriph    = uart5
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = dma_stream_7
+  , dmaUARTTxStream  = 7
   , dmaUARTTxChannel = 4
-  , dmaUARTRxStream  = dma_stream_0
+  , dmaUARTRxStream  = 0
   , dmaUARTRxChannel = 4
   }
 
 dmaUART6 = DMAUART
   { dmaUARTPeriph    = uart6
   , dmaUARTDMAPeriph = dma2
-  , dmaUARTTxStream  = dma_stream_6
+  , dmaUARTTxStream  = 6
   , dmaUARTTxChannel = 5
-  , dmaUARTRxStream  = dma_stream_1
+  , dmaUARTRxStream  = 1
   , dmaUARTRxChannel = 5
   }
 
 dmaUART7 = DMAUART
   { dmaUARTPeriph    = uart7
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = dma_stream_1
+  , dmaUARTTxStream  = 1
   , dmaUARTTxChannel = 5
-  , dmaUARTRxStream  = dma_stream_3
+  , dmaUARTRxStream  = 3
   , dmaUARTRxChannel = 5
   }
 
 dmaUART8 = DMAUART
   { dmaUARTPeriph    = uart8
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = dma_stream_0
+  , dmaUARTTxStream  = 0
   , dmaUARTTxChannel = 5
-  , dmaUARTRxStream  = dma_stream_6
+  , dmaUARTRxStream  = 6
   , dmaUARTRxChannel = 5
   }
 
