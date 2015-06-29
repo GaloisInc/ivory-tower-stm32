@@ -18,8 +18,6 @@ import BSP.Tests.Platforms
 import BSP.Tests.LED.Blink
 import BSP.Tests.UART.Types
 
-import Ivory.BSP.STM32.Peripheral.UART.DMA
-import Ivory.BSP.STM32.Driver.DMA
 import Ivory.BSP.STM32.Driver.UART.DMA
 import Ivory.BSP.STM32.ClockConfig
 
@@ -33,7 +31,7 @@ app :: (e -> ColoredLEDs)
     -> (e -> ClockConfig)
     -> (e -> TestDMA)
     -> Tower e ()
-app toleds tocc todma = do
+app toleds tocc totestdma = do
   towerDepends uartTestTypes
   towerModule  uartTestTypes
 
@@ -43,13 +41,12 @@ app toleds tocc todma = do
   blink p [blueLED (toleds e)]
   -- A new queue
   redledctl <- channel
-  -- Starts a UART (serial) task
-  let d = todma e
-      u = testDMAUARTPeriph d
-      pins = testDMAUARTPins d
-  streams <- dmaTower (dmaUARTDMAPeriph u)
+  -- Starts a DMA UART (serial) task
+  let testdma = totestdma e
+      dmauart = testDMAUARTPeriph testdma
+      pins    = testDMAUARTPins testdma
   (BackpressureTransmit req res, (ostream :: ChanOutput UARTBuffer))
-      <- dmaUARTTower tocc u pins streams 115200 (Milliseconds 50)
+      <- dmaUARTTower tocc dmauart pins 115200
 
   -- Unpack UARTBuffers into a stream of bytes.
   byte_ostream <- channel
