@@ -26,16 +26,15 @@ import Ivory.BSP.STM32.Peripheral.DMA
 import Ivory.BSP.STM32.Driver.DMA
 
 
-dmaUARTTower :: (IvoryString tx, IvoryString rx, Time t)
+dmaUARTTower :: forall tx rx e
+              . (IvoryString tx, IvoryString rx)
              => (e -> ClockConfig)
              -> DMAUART
              -> UARTPins
-             -> DMATowerStreams
              -> Integer
-             -> t
              -> Tower e ( BackpressureTransmit tx (Stored IBool)
                         , ChanOutput rx)
-dmaUARTTower tocc dmauart pins streams baud rx_flush_per = guard_periph_match $ do
+dmaUARTTower tocc dmauart pins baud = do
   req_chan  <- channel
   resp_chan <- channel
   rx_chan   <- channel
@@ -43,38 +42,33 @@ dmaUARTTower tocc dmauart pins streams baud rx_flush_per = guard_periph_match $ 
   dmauart_initialized <- channel
 
   p <- period (Milliseconds ms_per_frame)
-  p <- period rx_flush_per
 
   mapM_ towerArtifact dmaArtifacts
 
+  txstream <- dmaTowerStream dma (dmaUARTTxStream dmauart) (dmaUARTTxChannel dmauart)
+  rxstream <- dmaTowerStream dma (dmaUARTRxStream dmauart) (dmaUARTRxChannel dmauart)
+
   monitor (uartName uart ++ "_dma_driver") $ do
     dmaUARTHardwareMonitor tocc dmauart pins baud
-      dma_initialized (fst dmauart_initialized)
+      (fst dmauart_initialized)
 
-    dmaUARTTransmitMonitor dmauart streams (snd req_chan) (fst resp_chan)
+    dmaUARTTransmitMonitor uart txstream (snd req_chan) (fst resp_chan)
       (snd dmauart_initialized)
 
-    dmaUARTReceiveMonitor  dmauart streams (fst rx_chan) p
+    dmaUARTReceiveMonitor  uart rxstream (fst rx_chan) p
       (snd dmauart_initialized)
 
   return (BackpressureTransmit (fst req_chan) (snd resp_chan), (snd rx_chan))
 
   where
+
   uart = dmaUARTPeriph dmauart
-  dma_initialized = dma_stream_init $ dmaUARTRxStream  dmauart streams
+  dma = dmaUARTDMAPeriph dmauart
 
   bytes_per_sec :: Integer
   bytes_per_sec = baud `div` 9
-  stream_dmaName = dma_stream_periph streams
-  dmauart_dmaName = dmaName (dmaUARTDMAPeriph dmauart)
 
   bytes_per_ms = (bytes_per_sec `div` bytes_per_sec) + 1
-  guard_periph_match k = case stream_dmaName == dmauart_dmaName of
-    True -> k
-    False -> error ("DMA Streams for " ++ stream_dmaName
-                   ++" provided to " ++ uartName uart
-                   ++ "DMAUART Driver, which requires "
-                   ++ dmauart_dmaName)
 
   frame_len = arrayLen ((undefined :: Ref s rx) ~> stringDataL)
 
@@ -84,27 +78,28 @@ dmaUARTHardwareMonitor :: (e -> ClockConfig)
                        -> DMAUART
                        -> UARTPins
                        -> Integer
-                       -> ChanOutput (Stored ITime)
                        -> ChanInput (Stored ITime)
                        -> Monitor e ()
-dmaUARTHardwareMonitor tocc dmauart pins baud init_chan init_cb = do
+dmaUARTHardwareMonitor tocc dmauart pins baud init_cb = do
   clockConfig <- fmap tocc getEnv
-  handler init_chan "dmauart_hw_init" $ do
+  handler systemInit "dmauart_hw_init" $ do
     e <- emitter init_cb 1
     callback $ \t -> do
+      dmaRCCEnable dma
       uartInit uart pins clockConfig (fromIntegral baud) False
       emit e t
   where
   uart = dmaUARTPeriph dmauart
+  dma = dmaUARTDMAPeriph dmauart
 
 dmaUARTTransmitMonitor :: (IvoryString tx)
-                       => DMAUART
-                       -> DMATowerStreams
+                       => UART
+                       -> DMATowerStream
                        -> ChanOutput tx
                        -> ChanInput  (Stored IBool)
                        -> ChanOutput (Stored ITime)
                        -> Monitor e ()
-dmaUARTTransmitMonitor dmauart streams req_chan resp_chan init_chan = do
+dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
 
   monitorModuleDef $ do
     hw_moduledef
@@ -154,7 +149,7 @@ dmaUARTTransmitMonitor dmauart streams req_chan resp_chan init_chan = do
 
     -- Set control register:
     modifyReg (dmaStreamCR tx_regs) $ do
-      setField dma_sxcr_chsel  (fromRep (fromIntegral tx_chan))
+      setField dma_sxcr_chsel  (fromRep (fromIntegral (dma_stream_channel txstream)))
       setField dma_sxcr_mburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_pburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_dbm    (fromRep 0) -- Single Buffering
@@ -219,25 +214,21 @@ dmaUARTTransmitMonitor dmauart streams req_chan resp_chan init_chan = do
       dma_stream_enable_int txstream
 
   where
-  txstream = dmaUARTTxStream  dmauart streams
-  tx_chan  = dmaUARTTxChannel dmauart
   tx_regs  = dma_stream_regs  txstream
 
-
-  uart = dmaUARTPeriph dmauart
   named n = uartName uart ++ "_dma_" ++ n
 
 
 
 dmaUARTReceiveMonitor :: forall rx e
                        . (IvoryString rx)
-                      => DMAUART
-                      -> DMATowerStreams
+                      => UART
+                      -> DMATowerStream
                       -> ChanInput  rx
                       -> ChanOutput (Stored ITime)
                       -> ChanOutput (Stored ITime)
                       -> Monitor e ()
-dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
+dmaUARTReceiveMonitor uart rxstream out_chan flush_chan init_chan = do
   rx0_buf <- state (named "rx0_buf")
   rx1_buf <- state (named "rx1_buf")
   isr_buf <- state (named "isr_buf")
@@ -269,7 +260,7 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
 
     -- Set control register:
     modifyReg (dmaStreamCR rx_regs) $ do
-      setField dma_sxcr_chsel  (fromRep (fromIntegral rx_chan))
+      setField dma_sxcr_chsel  (fromRep (fromIntegral (dma_stream_channel rxstream)))
       setField dma_sxcr_mburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_pburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_ct     (fromRep 0) -- Current Target buf 0
@@ -376,11 +367,8 @@ dmaUARTReceiveMonitor dmauart streams out_chan flush_chan init_chan = do
         complete_buffer (req_items - ndt) finished_buf (emit e)
 
   where
-  uart = dmaUARTPeriph dmauart
   named n = uartName uart ++ "_dma_" ++ n
 
-  rxstream = dmaUARTRxStream  dmauart streams
-  rx_chan  = dmaUARTRxChannel dmauart
   rx_regs  = dma_stream_regs  rxstream
 
 bdr_reg_addr :: BitDataReg a -> Uint32
