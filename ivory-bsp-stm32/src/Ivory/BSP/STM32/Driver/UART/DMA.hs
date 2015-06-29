@@ -320,6 +320,11 @@ dmaUARTReceiveMonitor uart rxstream out_chan flush_chan init_chan = do
         incr rx_direct_err
       -- Clear stream flags:
       dma_stream_clear_isrflags rxstream
+      modifyReg (dmaStreamCR rx_regs) $ do
+        setField dma_sxcr_tcie   (fromRep 1)
+        setField dma_sxcr_htie   (fromRep 0)
+        setField dma_sxcr_teie   (fromRep 1)
+        setField dma_sxcr_dmeie  (fromRep 1)
 
       when (bitToBool (flags #. dma_isrflag_TCIF)) $ do
         -- Determine which buffer is now complete:

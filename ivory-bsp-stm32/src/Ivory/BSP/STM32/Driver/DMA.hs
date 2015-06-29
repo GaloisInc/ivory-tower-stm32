@@ -13,6 +13,7 @@ module Ivory.BSP.STM32.Driver.DMA
 
 import Ivory.Language
 import Ivory.Tower
+import Ivory.HW
 
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.Peripheral.DMA
@@ -32,15 +33,21 @@ dmaTowerStream :: DMA -> DMAStream -> DMAChannel ->  Tower e DMATowerStream
 dmaTowerStream periph stream chan = do
   sig <- signalUnsafe (Interrupt int)
                     (Microseconds 10)
-                    (interrupt_disable int)
+                    (do interrupt_disable int
+                        modifyReg (dmaStreamCR stream_regs) $ do
+                          setField dma_sxcr_tcie  (fromRep 0)
+                          setField dma_sxcr_teie  (fromRep 0)
+                          setField dma_sxcr_dmeie (fromRep 0)
+                    )
 
   return (mkStream sig)
   where
   int = streamInterrupt periph stream
+  stream_regs = getStreamRegs periph stream
   mkStream sig = DMATowerStream
     { dma_stream_signal         = sig
     , dma_stream_channel        = chan
-    , dma_stream_regs           = getStreamRegs periph stream
+    , dma_stream_regs           = stream_regs
     , dma_stream_enable_int     = interrupt_enable int
     , dma_stream_get_isrflags   = getISRFlags   periph stream
     , dma_stream_clear_isrflags = clearISRFlags periph stream
