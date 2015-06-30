@@ -130,18 +130,24 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
     hw_moduledef
     incl ref_to_uint32_proc
 
-  req_buf <- state (named "req_buf")
+  req_buf   <- state (named "req_buf")
+  tx_active <- state (named "tx_active")
 
   handler init_chan "dmauart_tx_init" $ callback $ const $ do
     -- Enable TX interrupt:
     dma_stream_enable_int txstream
+    store tx_active false
 
 
   handler req_chan "req_chan" $ callback $ \req -> do
-    refCopy req_buf req
     -- XXX should do something here to assert backpressure
     -- transmit scheme is being followed, and we're not interrupting
     -- an ongoing stream request.
+    a <- deref tx_active
+    assert (iNot a)
+    store tx_active true
+
+    refCopy req_buf req
 
     -- Disable transmit stream:
     disableStream tx_regs
@@ -160,7 +166,7 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
     -- Set number of data items to be transfered:
     let safe_items :: Sint32 -> Uint16
         safe_items n =
-          (n <? arrayLen (req_buf ~> stringDataL) .&& n >=? 0 .&& n <? 65535)
+          (n <=? arrayLen (req_buf ~> stringDataL) .&& n >=? 0 .&& n <? 65535)
           ? (castWith 0 n, 0)
     len <- deref (req_buf ~> stringLengthL)
     req_items <- assign (safe_items len)
@@ -234,6 +240,7 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
 
       -- Notify request is complete. Indicates true when successful:
       emitV e (bitToBool (flags #. dma_isrflag_TCIF))
+      store tx_active false
 
       -- Re-enable interrupt:
       dma_stream_enable_int txstream
