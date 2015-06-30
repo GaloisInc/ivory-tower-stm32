@@ -39,7 +39,7 @@ spiTower tocc devices pins = do
   reschan <- channel
   readychan <- channel
   irq <- signalUnsafe (Interrupt interrupt)
-                (Microseconds 20)
+                (Microseconds 9)
                 (do debugToggle debugPin1
                     interrupt_disable interrupt)
   monitor (periphname ++ "PeripheralDriver") $
