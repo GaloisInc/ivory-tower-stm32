@@ -93,7 +93,7 @@ dmaUARTTower' tocc dmauart pins baud = do
   bytes_per_sec :: Integer
   bytes_per_sec = baud `div` 9
 
-  bytes_per_ms = (bytes_per_sec `div` bytes_per_sec) + 1
+  bytes_per_ms = (bytes_per_sec `div` 1000) + 1
 
   frame_len = arrayLen ((undefined :: Ref s rx) ~> stringDataL)
 
