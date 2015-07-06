@@ -90,14 +90,14 @@ dmaUARTTower' tocc dmauart pins baud = do
   uart = dmaUARTPeriph dmauart
   dma = dmaUARTDMAPeriph dmauart
 
-  bytes_per_sec :: Integer
-  bytes_per_sec = baud `div` 9
 
-  bytes_per_ms = (bytes_per_sec `div` 1000) + 1
+  ms_per_frame = max 1 ((10 {- bits per byte -}
+                          * frame_len
+                          * 1000 {- ms per sec -})
+                        `div` baud)
 
   frame_len = arrayLen ((undefined :: Ref s rx) ~> stringDataL)
 
-  ms_per_frame = (frame_len `div` bytes_per_ms) - 1
 
 dmaUARTHardwareMonitor :: (e -> ClockConfig)
                        -> DMAUART
