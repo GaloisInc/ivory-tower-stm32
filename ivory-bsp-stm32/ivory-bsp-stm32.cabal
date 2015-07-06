@@ -95,6 +95,7 @@ library
 
                        Ivory.BSP.STM32.Driver.UART,
                        Ivory.BSP.STM32.Driver.UART.DMA,
+                       Ivory.BSP.STM32.Driver.UART.DMA.Synchronous,
 
                        Ivory.BSP.STM32.Driver.RNG,
 
