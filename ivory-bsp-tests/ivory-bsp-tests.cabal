@@ -22,6 +22,7 @@ library
 
                        BSP.Tests.SPI.TestApp
                        BSP.Tests.UART.Types,
+                       BSP.Tests.UART.Buffer,
                        BSP.Tests.UART.TestApp,
 
                        BSP.Tests.DMAUART.TestApp
