@@ -31,12 +31,13 @@ syncDMAUARTTower :: forall tx rx e
                  -> DMAUART
                  -> UARTPins
                  -> Integer
-                 -> Tower e (BackpressureTransmit tx rx)
+                 -> Tower e (BackpressureTransmit tx rx, ChanOutput (Stored ITime))
 syncDMAUARTTower tocc dmauart pins baud = do
   req_chan  <- channel
   rx_chan   <- channel
 
   dmauart_initialized <- channel
+  driver_initialized <- channel
 
   p <- period (Milliseconds ms_per_frame)
 
@@ -52,8 +53,9 @@ syncDMAUARTTower tocc dmauart pins baud = do
     syncDMAMonitor uart txstream rxstream p
       (snd req_chan) (fst rx_chan)
       (snd dmauart_initialized)
+      (fst driver_initialized)
 
-  return $ BackpressureTransmit (fst req_chan) (snd rx_chan)
+  return (BackpressureTransmit (fst req_chan) (snd rx_chan), snd driver_initialized)
 
   where
 
@@ -94,8 +96,9 @@ syncDMAMonitor :: (IvoryString tx, IvoryString rx)
                -> ChanOutput tx
                -> ChanInput  rx
                -> ChanOutput (Stored ITime)
+               -> ChanInput  (Stored ITime)
                -> Monitor e ()
-syncDMAMonitor uart txstream rxstream flush_chan req_chan rx_chan init_chan = do
+syncDMAMonitor uart txstream rxstream flush_chan req_chan rx_chan init_chan init_cb = do
 
   monitorModuleDef $ do
     hw_moduledef
@@ -108,12 +111,15 @@ syncDMAMonitor uart txstream rxstream flush_chan req_chan rx_chan init_chan = do
 
   let rx_req_items = arrayLen (rx_buf ~> stringDataL) - 1
 
-  handler init_chan "dmauart_tx_init" $ callback $ const $ do
-    -- Enable TX interrupt:
-    dma_stream_enable_int txstream
-    store tx_active false
-    store rx_active false
-
+  handler init_chan "dmauart_tx_init" $ do
+    e <- emitter init_cb 1
+    callback $ \t -> do
+      -- Enable TX interrupt:
+      dma_stream_enable_int txstream
+      store tx_active false
+      store rx_active false
+      -- Message init callbacks
+      emit e t
 
   handler req_chan "req_chan" $ callback $ \req -> do
     -- XXX should do something here to assert backpressure
