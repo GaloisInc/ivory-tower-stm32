@@ -4,7 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module BSP.Tests.UART.TestApp (app) where
+module BSP.Tests.UART.TestApp (app, echoPrompt) where
 
 import Data.Char (ord)
 
@@ -15,7 +15,9 @@ import Ivory.Tower
 import BSP.Tests.Platforms
 import BSP.Tests.LED.Blink
 import BSP.Tests.UART.Buffer
+import BSP.Tests.UART.Types
 
+import Ivory.Tower.HAL.Bus.Interface
 import Ivory.BSP.STM32.Driver.UART
 import Ivory.BSP.STM32.ClockConfig
 
@@ -40,7 +42,7 @@ app toleds tocc touart = do
                                                        115200
   -- UART buffer transmits in buffers. We want to transmit byte-by-byte and let
   -- this monitor manage periodically flushing a buffer.
-  ostream <- uartUnbuffer buffered_ostream
+  ostream <- uartUnbuffer (buffered_ostream :: BackpressureTransmit UARTBuffer (Stored IBool))
 
   -- Start the user interaction monitor defined below
   echoPrompt "hello world" ostream istream ledctl_input
@@ -84,12 +86,16 @@ echoPrompt greeting ostream istream ledctl = do
         putc o input -- echo to terminal
         let testChar = (input `isChar`)
         cond_
-          [ testChar '1'  ==> emitV l true
-          , testChar '2'  ==> emitV l false
+          [ testChar '1'  ==> puts o "\r\noutput on\r\n"  >> emitV l true
+          , testChar '2'  ==> puts o "\r\noutput off\r\n" >> emitV l false
           , testChar '\n' ==> puts o prompt
           ]
   where prompt = "tower> "
 
 isChar :: Uint8 -> Char -> IBool
 isChar b c = b ==? (fromIntegral $ ord c)
+
+uartTestTypes :: Module
+uartTestTypes = package "uartTestTypes" $ do
+  defStringType (Proxy :: Proxy UARTBuffer)
 

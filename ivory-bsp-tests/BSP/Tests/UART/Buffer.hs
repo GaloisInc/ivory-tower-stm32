@@ -9,13 +9,10 @@ import Ivory.Language
 import Ivory.Stdlib
 import Ivory.Tower
 import Ivory.Tower.HAL.Bus.Interface
-import BSP.Tests.UART.Types
 
-uartTestTypes :: Module
-uartTestTypes = package "uartTestTypes" $ do
-  defStringType (Proxy :: Proxy UARTBuffer)
-
-uartUnbuffer :: BackpressureTransmit UARTBuffer (Stored IBool)
+uartUnbuffer :: forall b e
+              . (IvoryString b)
+             => BackpressureTransmit b (Stored IBool)
              -> Tower e (ChanInput (Stored Uint8))
 uartUnbuffer (BackpressureTransmit req res) = do
   c <- channel
@@ -26,7 +23,7 @@ uartUnbuffer (BackpressureTransmit req res) = do
     let ready_buf :: Ivory eff IBool
         ready_buf = fmap (>? 0) (deref (buf ~> stringLengthL))
 
-        send_buf :: Emitter UARTBuffer -> Ivory eff ()
+        send_buf :: Emitter b -> Ivory eff ()
         send_buf e = do
           emit e (constRef buf)
           store (buf ~> stringLengthL) 0
