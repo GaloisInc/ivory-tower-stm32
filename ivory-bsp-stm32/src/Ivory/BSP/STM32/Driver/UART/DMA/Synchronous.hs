@@ -39,7 +39,7 @@ syncDMAUARTTower tocc dmauart pins baud = do
   dmauart_initialized <- channel
   driver_initialized <- channel
 
-  p <- period (Milliseconds ms_per_frame)
+  p <- period ms_per_frame
 
   mapM_ towerArtifact dmaArtifacts
 
@@ -54,6 +54,7 @@ syncDMAUARTTower tocc dmauart pins baud = do
       (snd req_chan) (fst rx_chan)
       (snd dmauart_initialized)
       (fst driver_initialized)
+      ms_per_frame
 
   return (BackpressureTransmit (fst req_chan) (snd rx_chan), snd driver_initialized)
 
@@ -62,10 +63,11 @@ syncDMAUARTTower tocc dmauart pins baud = do
   uart = dmaUARTPeriph dmauart
   dma = dmaUARTDMAPeriph dmauart
 
-  ms_per_frame = max 1 ((10 {- bits per byte -}
-                          * frame_len
-                          * 1000 {- ms per sec -})
-                        `div` baud)
+  ms_per_frame = Milliseconds $
+    max 1 ((10 {- bits per byte -}
+          * frame_len
+          * 1000 {- ms per sec -})
+      `div` baud)
 
   frame_len = arrayLen ((undefined :: Ref s rx) ~> stringDataL)
 
@@ -97,8 +99,9 @@ syncDMAMonitor :: (IvoryString tx, IvoryString rx)
                -> ChanInput  rx
                -> ChanOutput (Stored ITime)
                -> ChanInput  (Stored ITime)
+               -> Milliseconds
                -> Monitor e ()
-syncDMAMonitor uart txstream rxstream flush_chan req_chan rx_chan init_chan init_cb = do
+syncDMAMonitor uart txstream rxstream flush_chan req_chan rx_chan init_chan init_cb rx_period = do
 
   monitorModuleDef $ do
     hw_moduledef
@@ -108,6 +111,7 @@ syncDMAMonitor uart txstream rxstream flush_chan req_chan rx_chan init_chan init
   rx_buf    <- state (named "rx_buf")
   tx_active <- state (named "tx_active")
   rx_active <- state (named "rx_active")
+  rx_deadline <- state (named "rx_deadline")
 
   let rx_req_items = arrayLen (rx_buf ~> stringDataL) - 1
 
@@ -122,14 +126,19 @@ syncDMAMonitor uart txstream rxstream flush_chan req_chan rx_chan init_chan init
       emit e t
 
   handler req_chan "req_chan" $ callback $ \req -> do
-    -- XXX should do something here to assert backpressure
-    -- transmit scheme is being followed, and we're not interrupting
-    -- an ongoing stream request.
+    -- Assert that the backpressure protocol is being followed.
     tx_a <- deref tx_active
     rx_a <- deref rx_active
     assert (iNot tx_a .&& iNot rx_a)
     store tx_active true
     store rx_active true
+
+    --IMPORTANT: flush_chan has period of rx_period we need to be sure we've
+    -- waited At Least that much time. Because requests are on a different
+    -- clock, the worst case scenario means we have to wait two ticks before
+    -- finishing the rx.
+    now <- getTime
+    store rx_deadline (now + (2 * (toITime rx_period)))
 
     refCopy req_buf req
 
@@ -278,11 +287,20 @@ syncDMAMonitor uart txstream rxstream flush_chan req_chan rx_chan init_chan init
       -- Re-enable interrupt:
       dma_stream_enable_int txstream
 
+  -- XXX FIX THIS: SHOULD BE THE IDLE INTERRUPT ON THE RX LINE
   handler flush_chan "rx_flush" $ do
     e <- emitter rx_chan 1
-    callback $ const $ do
+    callbackV $ \now -> do
       rx_a <- deref rx_active
-      when rx_a $ do
+      tx_a <- deref tx_active
+      rx_dl <- deref rx_deadline
+      when (rx_a .&& iNot tx_a .&& now >=? rx_dl) $ do
+
+        -- TODO: first check uart SR for errors:
+        --    ORE (overrun), NE (noise), FE (framing)
+        --    ensure IDLE is set
+        -- read uart DR to clear status
+
         -- Disable receive stream:
         disableStream rx_regs
         -- Get ndtr, reset to full size:
@@ -297,11 +315,6 @@ syncDMAMonitor uart txstream rxstream flush_chan req_chan rx_chan init_chan init
         emit e (constRef rx_buf)
 
         store rx_active false
-
-        -- Tx better be done:
-        -- XXX replace this with actual error catching and reporting
-        tx_done <- fmap iNot (deref tx_active)
-        assert tx_done
 
   where
   tx_regs  = dma_stream_regs  txstream
