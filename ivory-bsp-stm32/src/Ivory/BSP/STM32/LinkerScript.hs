@@ -8,9 +8,9 @@ import Ivory.Artifact.Template
 import qualified Paths_ivory_bsp_stm32 as P
 import Ivory.BSP.STM32.Processor
 
-linker_script :: Processor -> Integer -> String -> Artifact
-linker_script p bl_offset reset_handler =
-  artifactCabalFileTemplate P.getDataDir path (attrs p)
+linker_script :: FilePath -> Processor -> Integer -> String -> Artifact
+linker_script name p bl_offset reset_handler =
+  artifactCabalFileTemplate' P.getDataDir path name (attrs p)
   where
   path = "support/linker_script.lds.template"
   -- Yeah yeah i know that these parts are available in variations with differnt
