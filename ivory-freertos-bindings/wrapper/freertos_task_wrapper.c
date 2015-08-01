@@ -3,6 +3,7 @@
 
 #include "FreeRTOS.h"
 #include "task.h"
+#include "ivory.h"
 
 void ivory_freertos_task_create(void (*tsk)(struct taskarg*),
         uint32_t stacksize, uint8_t priority, const char* const name)
@@ -20,6 +21,7 @@ void ivory_freertos_task_create(void (*tsk)(struct taskarg*),
         // FAILURE! possible causes:
         // - FreeRTOS heap is out of memory for allocating stack or tcb
         // - priority level is invalid
+        ASSERTS(0);
         for(;;);
     }
 }
