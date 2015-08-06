@@ -1,5 +1,6 @@
 
 #include "stm32_freertos_init.h"
+#include "ivory.h"
 
 extern uint32_t _sidata;
 extern uint32_t _sdata;
@@ -50,6 +51,7 @@ int main (void) {
 }
 
 extern void vApplicationStackOverflowHook (void) {
+	ASSERTS(0);
 	for(;;);
 }
 
