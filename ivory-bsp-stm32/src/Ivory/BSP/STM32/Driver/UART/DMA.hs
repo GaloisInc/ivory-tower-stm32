@@ -38,8 +38,8 @@ dmaUARTTower :: forall tx rx e
 dmaUARTTower tocc dmauart pins baud _ = do
   (tx, (buf_rx :: ChanOutput rx)) <- dmaUARTTower' tocc dmauart pins baud
   char_rx <- channel
-  monitor (uartName (dmaUARTPeriph dmauart) ++ "_dma_rx_byte_shim") $ do
-    handler buf_rx "buf_rx" $ do
+  monitor (uartName uart ++ "_dma_rx_byte_shim") $ do
+    handler buf_rx (uartName uart ++ "_buf_rx") $ do
       e <- emitter (fst char_rx) (arrayLen (somebuf ~> stringDataL))
       callback $ \buf -> do
         len <- deref (buf ~> stringLengthL)
@@ -48,6 +48,7 @@ dmaUARTTower tocc dmauart pins baud _ = do
             emit e ((buf ~> stringDataL) ! ix)
   return (tx, snd char_rx)
   where
+  uart = dmaUARTPeriph dmauart
   somebuf :: Ref s rx
   somebuf = undefined
 
