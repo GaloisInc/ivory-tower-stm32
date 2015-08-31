@@ -29,6 +29,7 @@ library
                        Ivory.BSP.STM32.VectorTable,
                        Ivory.BSP.STM32.LinkerScript,
 
+                       Ivory.BSP.STM32.Peripheral.ADC,
                        Ivory.BSP.STM32.Peripheral.ADC.Peripheral,
                        Ivory.BSP.STM32.Peripheral.ADC.Regs,
                        Ivory.BSP.STM32.Peripheral.ADC.RegTypes,
