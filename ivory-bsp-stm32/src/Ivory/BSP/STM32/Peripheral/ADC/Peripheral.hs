@@ -91,3 +91,9 @@ adcStartConversion periph chan = do
     clearBit adc_cr2_eocs
     clearBit adc_cr2_dma
     clearBit adc_cr2_cont
+
+adcGetConversion :: ADCPeriph -> Ivory eff Uint16
+adcGetConversion periph = do
+  dr <- getReg (adcRegDR periph)
+  return (toRep (dr #. adc_dr_data))
+
