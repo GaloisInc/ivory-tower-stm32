@@ -136,7 +136,8 @@ library
                        Ivory.BSP.STM32F427.UART,
                        Ivory.BSP.STM32F427.UART.DMA,
                        Ivory.BSP.STM32F427.DMA,
-                       Ivory.BSP.STM32F427.RNG
+                       Ivory.BSP.STM32F427.RNG,
+                       Ivory.BSP.STM32F427.ADC
 
   other-modules:       Paths_ivory_bsp_stm32
 
