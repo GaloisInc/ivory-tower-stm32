@@ -28,10 +28,7 @@ data ADCPeriph = ADCPeriph
   , adcRegDR :: BitDataReg ADC_DR
   , adcRCCEnable :: forall eff . Ivory eff ()
   , adcRCCDisable :: forall eff . Ivory eff ()
-  , adcIntEOC :: HasSTM32Interrupt
-  , adcIntJEOC :: HasSTM32Interrupt
-  , adcIntAWD :: HasSTM32Interrupt
-  , adcIntOVR :: HasSTM32Interrupt
+  , adcInt :: HasSTM32Interrupt
   , adcName :: String
   }
 
@@ -39,13 +36,10 @@ mkADCPeriph :: (STM32Interrupt i)
             => Integer -- ^ Base
             -> (forall eff . Ivory eff ()) -- ^ RCC Enable
             -> (forall eff . Ivory eff ()) -- ^ RCC Disable
-            -> i -- ^ end-of-conversion (regular group) interrupt
-            -> i -- ^ end-of-conversion (injected group) interrupt
-            -> i -- ^ analog watchdog interrupt
-            -> i -- ^ overrun interrupt
+            -> i -- ^ global adc interrupt. NB: shared with other adc periphs!
             -> String -- ^ Name
             -> ADCPeriph
-mkADCPeriph base rccen rccdis intEOC intJEOC intAWD intOVR n =
+mkADCPeriph base rccen rccdis int n =
   ADCPeriph
     { adcRegSR      = reg 0x00 "sr"
     , adcRegCR1     = reg 0x04 "cr1"
@@ -58,10 +52,7 @@ mkADCPeriph base rccen rccdis intEOC intJEOC intAWD intOVR n =
     , adcRegDR      = reg 0x4C "dr"
     , adcRCCEnable  = rccen
     , adcRCCDisable = rccdis
-    , adcIntEOC     = HasSTM32Interrupt intEOC
-    , adcIntJEOC    = HasSTM32Interrupt intJEOC
-    , adcIntAWD     = HasSTM32Interrupt intAWD
-    , adcIntOVR     = HasSTM32Interrupt intOVR
+    , adcInt        = HasSTM32Interrupt int
     , adcName       = n
     }
   where
