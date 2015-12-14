@@ -32,4 +32,9 @@ file.
 [freertos]: http://freertos.org
 [galois]: http://galois.com
 
+## Contributing
 
+This project adheres to the
+[Contributor Covenant code of conduct](CODE_OF_CONDUCT.md).
+By participating, you are expected to uphold this code. Please report unaccpetable
+behavior to [smaccm@galois.com](mailto:smaccm@galois.com).
