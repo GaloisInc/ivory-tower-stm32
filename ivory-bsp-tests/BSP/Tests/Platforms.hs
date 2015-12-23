@@ -17,6 +17,7 @@ module BSP.Tests.Platforms
   , testplatform_clockconfig
   , px4fmuv17
   , px4fmuv17_ioar
+  , px4fmuv24
   , f4discovery
   , open407vc
   ) where
