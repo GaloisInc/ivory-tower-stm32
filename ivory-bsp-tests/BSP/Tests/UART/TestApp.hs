@@ -48,7 +48,7 @@ app toleds tocc touart = do
   echoPrompt "hello world" ostream istream ledctl_input
 
   -- A monitor that takes control output (Boolean) from the echo prompt and
-  -- controls the blue LED
+  -- controls the red LED
   monitor "settableLED" $ ledController [redLED (toleds e)] ledctl_output
 
 --------------------------------------------------------------------------------
