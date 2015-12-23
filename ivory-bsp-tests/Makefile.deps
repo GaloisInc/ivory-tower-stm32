@@ -5,6 +5,7 @@ $(call add-cabal-package-source, \
   $(IVORY_REPO)/ivory-hw \
   $(IVORY_REPO)/ivory-stdlib \
   $(TOWER_REPO)/tower \
+	$(TOWER_REPO)/tower-aadl \
   $(TOWER_REPO)/tower-config \
   $(TOWER_REPO)/tower-hal \
 )

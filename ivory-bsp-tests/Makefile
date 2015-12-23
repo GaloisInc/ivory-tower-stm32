@@ -6,9 +6,11 @@ include ../Makefile.sandbox
 IVORYFLAGS = --const-fold
 
 test: bsp-led-test
+test: bsp_led_aadl_test
 test: bsp-spi-test
 test: bsp-i2c-test
 test: bsp-uart-test
+test: bsp_uart_aadl_test
 test: bsp-can-test
 test: bsp-rng-test
 
@@ -19,6 +21,14 @@ bsp-led-test:
 
 bsp-led-test-clean:
 	rm -rf bsp-led-test
+
+.PHONY: bsp_led_aadl_test
+bsp_led_aadl_test:
+	cabal run bsp-led-aadl-test-gen -- --src-dir=$@ --lib-dir="" $(IVORYFLAGS)
+	make -C bsp_led_aadl_test
+
+bsp_led_aadl_test_clean:
+	rm -rf bsp_led_aadl_test
 
 .PHONY: bsp-spi-test
 bsp-spi-test:
@@ -43,6 +53,14 @@ bsp-uart-test:
 
 bsp-uart-test-clean:
 	rm -rf bsp-uart-test
+
+.PHONY: bsp_uart_aadl_test
+bsp_uart_aadl_test:
+	cabal run bsp-uart-aadl-test-gen -- --src-dir=$@ --lib-dir="" $(IVORYFLAGS)
+	make -C bsp_uart_aadl_test
+
+bsp-uart-aadl-test-clean:
+	rm -rf bsp_uart_aadl_test
 
 .PHONY: bsp-dma-uart-test
 bsp-dma-uart-test:
@@ -69,9 +87,11 @@ bsp-rng-test-clean:
 	rm -rf bsp-rng-test
 
 clean: bsp-led-test-clean
+clean: bsp-led-aadl-test-clean
 clean: bsp-spi-test-clean
 clean: bsp-i2c-test-clean
 clean: bsp-uart-test-clean
+clean: bsp-uart-aadl-test-clean
 clean: bsp-dma-uart-test-clean
 clean: bsp-can-test-clean
 clean: bsp-rng-test-clean

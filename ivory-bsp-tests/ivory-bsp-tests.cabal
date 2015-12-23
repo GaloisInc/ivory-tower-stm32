@@ -102,6 +102,22 @@ executable bsp-uart-test-gen
                        ivory-bsp-tests
   ghc-options:          -Wall
 
+executable bsp-uart-aadl-test-gen
+  main-is:             UARTAADLTest.hs
+  hs-source-dirs:      tests
+  build-depends:       base >= 4.6,
+                       ivory,
+                       ivory-stdlib,
+                       ivory-backend-c,
+                       ivory-hw,
+                       tower          >= 0.9,
+                       tower-aadl,
+                       tower-config,
+                       tower-freertos-stm32,
+                       ivory-bsp-stm32,
+                       ivory-bsp-tests
+  ghc-options:          -Wall
+
 executable bsp-dma-uart-test-gen
   main-is:             DMAUARTTest.hs
   hs-source-dirs:      tests
@@ -158,6 +174,21 @@ executable bsp-dma-test
                        tower          >= 0.9,
                        tower-config,
                        tower-freertos-stm32,
+                       ivory-bsp-stm32,
+                       ivory-bsp-tests
+  ghc-options:          -Wall
+
+executable bsp-led-aadl-test-gen
+  main-is:             LEDAADLTest.hs
+  hs-source-dirs:      tests
+  build-depends:       base >= 4.6,
+                       ivory,
+                       ivory-stdlib,
+                       ivory-hw,
+                       tower                >= 0.9,
+                       tower-aadl,
+                       tower-config,
+                       tower-freertos-stm32 >= 0.9,
                        ivory-bsp-stm32,
                        ivory-bsp-tests
   ghc-options:          -Wall
