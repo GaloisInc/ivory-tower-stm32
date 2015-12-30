@@ -160,7 +160,8 @@ px4fmuv17 = TestPlatform
       }
   , testplatform_dma = error "DMA tests not supported on this platform"
   , testplatform_rng = F405.rng
-  , testplatform_stm32 = stm32f405Defaults 24
+  , testplatform_stm32 =
+      (stm32f405Defaults 24) { stm32config_px4version = Just PX4FMU_v1 }
   }
 
 -- On IOAR carrier board, we use the FTDI style pinout, attached to uart1.
@@ -339,7 +340,8 @@ px4fmuv24 = TestPlatform
       , testDMAUARTPins   = telem1_pins
       }
   , testplatform_rng = F427.rng
-  , testplatform_stm32 = stm32f427Defaults 24
+  , testplatform_stm32 =
+      (stm32f427Defaults 24) { stm32config_px4version = Just PX4FMU_v2 }
   }
 
   where
