@@ -11,8 +11,7 @@ import qualified Paths_tower_freertos_stm32 as P
 import Ivory.Artifact
 import Ivory.BSP.STM32.VectorTable
 import Ivory.BSP.STM32.LinkerScript
-
-import Ivory.OS.FreeRTOS.Tower.STM32.Config
+import Ivory.BSP.STM32.Config
 
 makefile :: STM32Config -> [FilePath] -> Located Artifact
 makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines

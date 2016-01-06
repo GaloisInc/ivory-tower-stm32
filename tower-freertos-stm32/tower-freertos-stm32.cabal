@@ -18,7 +18,6 @@ data-files: support/stm32_freertos_init.c,
 library
   exposed-modules:      Ivory.OS.FreeRTOS.Tower.STM32,
                         Ivory.OS.FreeRTOS.Tower.STM32.Build,
-                        Ivory.OS.FreeRTOS.Tower.STM32.Config,
                         Ivory.OS.FreeRTOS.Tower.Monitor,
                         Ivory.OS.FreeRTOS.Tower.Signal,
                         Ivory.OS.FreeRTOS.Tower.System,

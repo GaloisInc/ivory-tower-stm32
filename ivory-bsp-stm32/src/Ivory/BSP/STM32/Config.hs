@@ -1,6 +1,6 @@
 
 
-module Ivory.OS.FreeRTOS.Tower.STM32.Config
+module Ivory.BSP.STM32.Config
   ( STM32Config(..)
   , Processor(..)
   , PX4Version(..)
