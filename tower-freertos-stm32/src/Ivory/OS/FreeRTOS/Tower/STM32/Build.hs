@@ -92,9 +92,9 @@ artifacts STM32Config{..} =
   ] ++ init_artifacts ++ aux stm32config_px4version
   where
   init_artifacts =
-    [ Src $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.c"
+    [ Src  $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.c"
     , Incl $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.h"
-    , Src $ artifactCabalFile P.getDataDir "support/stm32_freertos_user_assert.c"
+    , Src  $ artifactCabalFile P.getDataDir "support/stm32_freertos_user_assert.c"
     ]
 
   aux Nothing = [ mk_lds "linker_script.lds" 0 ]
