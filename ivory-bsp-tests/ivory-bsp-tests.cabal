@@ -113,6 +113,7 @@ executable bsp-uart-aadl-test-gen
                        tower          >= 0.9,
                        tower-aadl,
                        tower-config,
+                       tower-echronos-stm32,
                        tower-freertos-stm32,
                        ivory-bsp-stm32,
                        ivory-bsp-tests
@@ -190,6 +191,7 @@ executable bsp-led-aadl-test-gen
                        tower-config,
                        tower-freertos-stm32 >= 0.9,
                        ivory-bsp-stm32,
+                       tower-echronos-stm32,
                        ivory-bsp-tests
   ghc-options:          -Wall
 
