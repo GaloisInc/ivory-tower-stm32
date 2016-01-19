@@ -22,7 +22,7 @@ main = compileTowerAADLForPlatform f p $ do
   app testplatform_leds
   mapM_ towerArtifact hw_artifacts
   where
-  f :: TestPlatform -> (AADLConfig, OSSpecific STM32Config)
+  f :: TestPlatform -> (AADLConfig, OSSpecific STM32Config e)
   f tp = ( defaultAADLConfig { configSystemOS = EChronos
                              , configSystemHW = PIXHAWK
                              }
