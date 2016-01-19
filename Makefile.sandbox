@@ -20,7 +20,7 @@ create-sandbox:
 ifneq ($(strip $(CABAL_PACKAGE_SOURCES)),)
 	cabal sandbox add-source $(CABAL_PACKAGE_SOURCES)
 endif
-	cabal install --dependencies-only
+	cabal install --dependencies-only --max-backjumps 99999999
 
 clean:
 
