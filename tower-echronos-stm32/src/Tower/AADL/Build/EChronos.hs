@@ -111,9 +111,9 @@ echronosMakefile =
 makefile :: [MkStmt]
 makefile = [ Comment "Make sure 'all' is the first target by putting it before any includes"
            , Target "all" ["generate"]
-             ["#This sub-make is here to deal with $(EXE) depending on\\\n\
-              \files that have to be generated first. This requires us\\\n\
-              \to do the build in two phases."
+             [ "# This sub-make is here to deal with $(EXE) depending on"
+             , "# files that have to be generated first. This requires us"
+             , "# to do the build in two phases."
              , "make $(EXE)" ]
            , includeOpt ramsesMakefileName
            , Comment "We assume ECHRONOS_LOCATION and PRJ are set in PRJ_CMD.mk \\\n\
