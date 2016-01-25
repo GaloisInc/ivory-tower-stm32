@@ -5,9 +5,7 @@ import Ivory.Tower.Options
 
 import Tower.AADL
 
-import Ivory.Tower
 import Ivory.Tower.Config
-import Ivory.HW.Module
 
 import Tower.AADL.Build.Common
 import Tower.AADL.Build.EChronos
@@ -20,7 +18,6 @@ import BSP.Tests.LED.TestApp (app)
 main :: IO ()
 main = compileTowerAADLForPlatform f p $ do
   app testplatform_leds
-  mapM_ towerArtifact hw_artifacts
   where
   f :: TestPlatform -> (AADLConfig, OSSpecific STM32Config e)
   f tp = ( defaultAADLConfig { configSystemOS = EChronos

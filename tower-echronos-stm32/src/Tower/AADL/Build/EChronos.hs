@@ -139,7 +139,7 @@ makefile = [ Comment "Make sure 'all' is the first target by putting it before a
            , include    ("gen" </> echronosMakefileName) ]
 
 echronosArtifacts :: AADLConfig -> [Located Artifact]
-echronosArtifacts cfg = map Root ls
+echronosArtifacts cfg = map Root ls ++ hw_artifacts
   where
   ls :: [Artifact]
   ls = artifactString
