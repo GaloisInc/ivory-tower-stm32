@@ -25,7 +25,6 @@ bsp-led-test-clean:
 .PHONY: bsp_led_aadl_test
 bsp_led_aadl_test:
 	cabal run bsp-led-aadl-test-gen -- --src-dir=$@ --lib-dir="" $(IVORYFLAGS)
-	make -C bsp_led_aadl_test
 
 bsp_led_aadl_test_clean:
 	rm -rf bsp_led_aadl_test
@@ -57,7 +56,6 @@ bsp-uart-test-clean:
 .PHONY: bsp_uart_aadl_test
 bsp_uart_aadl_test:
 	cabal run bsp-uart-aadl-test-gen -- --src-dir=$@ --lib-dir="" $(IVORYFLAGS)
-	make -C bsp_uart_aadl_test
 
 bsp-uart-aadl-test-clean:
 	rm -rf bsp_uart_aadl_test
