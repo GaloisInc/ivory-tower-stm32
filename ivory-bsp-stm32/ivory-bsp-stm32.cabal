@@ -19,6 +19,7 @@ library
   exposed-modules:     Ivory.BSP.ARMv7M.Exception,
                        Ivory.BSP.ARMv7M.MemoryMap,
                        Ivory.BSP.ARMv7M.SystemControl.NVIC,
+                       Ivory.BSP.ARMv7M.SysTick,
 
                        Ivory.BSP.STM32.Config,
                        Ivory.BSP.STM32.ClockConfig,

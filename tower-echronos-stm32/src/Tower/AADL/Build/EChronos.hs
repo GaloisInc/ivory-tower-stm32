@@ -19,7 +19,9 @@ import Ivory.HW
 import Tower.AADL.Config (AADLConfig(..))
 import Tower.AADL.Build.Common
 
+import Ivory.BSP.ARMv7M.SysTick
 import Ivory.BSP.STM32.Config
+import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.ClockConfig.Init
 
 --------------------------------------------------------------------------------
@@ -218,6 +220,25 @@ rtos_start = importProc "rtos_start" "rtos-kochab.h"
 import (stdio.h, printf) void printf(string x, uint8_t y)
 |]
 
+inclSysTick :: STM32Config -> ModuleDef
+inclSysTick cfg = do
+  let config = SysTickConfig
+        { sysTickProcessorHz   = clockSysClkHz (stm32config_clock cfg)
+        , sysTickClockFactor   = Processor
+        , sysTickInterruptMode = Interrupt
+        }
+  let storedInterval = area "stored_interval" (Just (ival 0))
+      elapsedTicks = area "elapsed_ticks" (Just (ival 0))
+  private $ do
+    defMemArea storedInterval
+    defMemArea elapsedTicks
+  incl (clock_set_interval_in_us config (addrOf storedInterval))
+  incl (clock_set_interval_in_ms config (addrOf storedInterval))
+  incl (clock_start_timer (addrOf elapsedTicks))
+  incl (clock_get_time (addrOf storedInterval) (addrOf elapsedTicks))
+  incl (clock_irq_callback (addrOf elapsedTicks))
+  incl clock_init
+
 mainMod :: STM32Config -> Module
 mainMod cfg = package "main" $ do
   incl (init_clocks (stm32config_clock cfg))
@@ -227,6 +248,7 @@ mainMod cfg = package "main" $ do
   incl debug_printhex8
   incl fatal
   incl (mainProc cfg)
+--  inclSysTick cfg
   incl initialize_periodic_dispatcher
   incl rtos_start
 
