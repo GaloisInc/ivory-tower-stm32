@@ -38,6 +38,7 @@ instance (STM32Interrupt i) => Signalable (IRQ i) where
     -- XXX MAGIC NUMBER: in tower/freertos, syscalls must be lower (numerically greater
     -- than) level 11. XXX how to make this cross OS platform safely?
     where max_syscall_priority = (12::Uint8)
+  signalNumber = fromIntegral . unIRQn . irqn
 
 irqn :: (STM32Interrupt i) => IRQ i -> IRQn
 irqn (Exception e) = exceptionIRQn e

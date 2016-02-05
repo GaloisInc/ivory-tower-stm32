@@ -22,7 +22,7 @@ data STM32Config =
     { stm32config_processor  :: Processor
     , stm32config_px4version :: Maybe PX4Version
     , stm32config_clock      :: ClockConfig
-    , stm32config_systick    :: SysTickConfig
+--    , stm32config_systick    :: SysTickConfig
     }
 
 data PX4Version
