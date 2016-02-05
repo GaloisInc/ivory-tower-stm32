@@ -206,7 +206,6 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
   compatBackend = STM32FreeRTOSBackend
 
   thread_codes o = Map.toList
-                 $ Map.insertWith mappend (AST.InitThread "systemInit") mempty
                  $ compatoutput_threads o
 
 
