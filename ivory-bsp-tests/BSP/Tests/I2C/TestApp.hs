@@ -46,7 +46,8 @@ app tocc totesti2c = do
                      ]
               emit req_emitter (constRef r))
 
-    handler res "result" $ return () -- XXX
+    handler res "result" $ do
+      callback $ const $ return ()
   where
   -- Test against an AT24 EEPROM or equivalent
   eepromaddr = I2CDeviceAddr 0x50

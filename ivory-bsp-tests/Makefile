@@ -9,6 +9,7 @@ test: bsp-led-test
 test: bsp_led_aadl_test
 test: bsp-spi-test
 test: bsp-i2c-test
+test: bsp_i2c_aadl_test
 test: bsp-uart-test
 test: bsp_uart_aadl_test
 test: bsp-can-test
@@ -44,6 +45,13 @@ bsp-i2c-test:
 
 bsp-i2c-test-clean:
 	rm -rf bsp-i2c-test
+
+.PHONY: bsp_i2c_aadl_test
+bsp_i2c_aadl_test:
+	cabal run bsp_i2c_aadl_test_gen -- --src-dir=bsp_i2c_aadl_test --lib-dir="" $(IVORYFLAGS)
+
+bsp_i2c_aadl_test_clean:
+	rm -rf bsp_i2c_aadl_test
 
 .PHONY: bsp-uart-test
 bsp-uart-test:
