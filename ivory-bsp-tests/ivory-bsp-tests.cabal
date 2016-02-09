@@ -86,6 +86,24 @@ executable bsp-i2c-test-gen
                        ivory-bsp-tests
   ghc-options:          -Wall
 
+executable bsp_i2c_aadl_test_gen
+  main-is:             I2CAADLTest.hs
+  hs-source-dirs:      tests
+  build-depends:       base >= 4.6,
+                       ivory,
+                       ivory-stdlib,
+                       ivory-backend-c,
+                       ivory-hw,
+                       tower          >= 0.9,
+                       tower-aadl,
+                       tower-config,
+                       tower-freertos-stm32,
+                       tower-echronos-stm32,
+                       ivory-bsp-stm32,
+                       ivory-bsp-tests
+  ghc-options:          -Wall
+
+
 
 executable bsp-uart-test-gen
   main-is:             UARTTest.hs
