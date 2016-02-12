@@ -12,8 +12,8 @@ import Ivory.Tower.HAL.Bus.Interface
 
 uartUnbuffer :: forall b e
               . (IvoryString b)
-             => BackpressureTransmit b (Stored IBool)
-             -> Tower e (ChanInput (Stored Uint8))
+             => BackpressureTransmit b ('Stored IBool)
+             -> Tower e (ChanInput ('Stored Uint8))
 uartUnbuffer (BackpressureTransmit req res) = do
   c <- channel
   p <- period (Milliseconds 10)

@@ -42,7 +42,7 @@ app toleds tocc touart = do
                                                        115200
   -- UART buffer transmits in buffers. We want to transmit byte-by-byte and let
   -- this monitor manage periodically flushing a buffer.
-  ostream <- uartUnbuffer (buffered_ostream :: BackpressureTransmit UARTBuffer (Stored IBool))
+  ostream <- uartUnbuffer (buffered_ostream :: BackpressureTransmit UARTBuffer ('Stored IBool))
 
   -- Start the user interaction monitor defined below
   echoPrompt "hello world" ostream istream ledctl_input
@@ -53,19 +53,19 @@ app toleds tocc touart = do
 
 --------------------------------------------------------------------------------
 echoPrompt :: String
-           -> ChanInput  (Stored Uint8)
-           -> ChanOutput (Stored Uint8)
-           -> ChanInput  (Stored IBool)
+           -> ChanInput  ('Stored Uint8)
+           -> ChanOutput ('Stored Uint8)
+           -> ChanInput  ('Stored IBool)
            -> Tower p ()
 echoPrompt greeting ostream istream ledctl = do
   p <- period (Milliseconds 1)
 
-  let puts :: (GetAlloc eff ~ Scope cs)
-           => Emitter (Stored Uint8) -> String -> Ivory eff ()
+  let puts :: (GetAlloc eff ~ 'Scope cs)
+           => Emitter ('Stored Uint8) -> String -> Ivory eff ()
       puts e str = mapM_ (\c -> putc e (fromIntegral (ord c))) str
 
-      putc :: (GetAlloc eff ~ Scope cs)
-           => Emitter (Stored Uint8) -> Uint8 -> Ivory eff ()
+      putc :: (GetAlloc eff ~ 'Scope cs)
+           => Emitter ('Stored Uint8) -> Uint8 -> Ivory eff ()
       putc = emitV
 
   monitor "echoprompt" $ do

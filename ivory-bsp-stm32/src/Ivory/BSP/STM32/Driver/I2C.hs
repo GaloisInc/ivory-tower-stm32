@@ -32,8 +32,8 @@ import Ivory.BSP.STM32.Driver.I2C.I2CDriverState
 i2cTower :: (e -> ClockConfig)
          -> I2CPeriph
          -> I2CPins
-         -> Tower e ( BackpressureTransmit (Struct "i2c_transaction_request") (Struct "i2c_transaction_result")
-                    , ChanOutput (Stored ITime))
+         -> Tower e ( BackpressureTransmit ('Struct "i2c_transaction_request") ('Struct "i2c_transaction_result")
+                    , ChanOutput ('Stored ITime))
 i2cTower tocc periph I2CPins{..} = do
   towerDepends i2cTowerTypes
   towerModule  i2cTowerTypes
@@ -72,12 +72,12 @@ i2cPeripheralDriver :: forall e
                     -> I2CPeriph
                     -> GPIOPin
                     -> GPIOPin
-                    -> ChanOutput (Stored ITime)
-                    -> ChanOutput (Stored ITime)
-                    -> ChanOutput (Struct "i2c_transaction_request")
-                    -> ChanInput  (Struct "i2c_transaction_result")
-                    -> ChanOutput (Stored ITime)
-                    -> ChanInput  (Stored ITime)
+                    -> ChanOutput ('Stored ITime)
+                    -> ChanOutput ('Stored ITime)
+                    -> ChanOutput ('Struct "i2c_transaction_request")
+                    -> ChanInput  ('Struct "i2c_transaction_result")
+                    -> ChanOutput ('Stored ITime)
+                    -> ChanInput  ('Stored ITime)
                     -> Monitor e ()
 i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_per ready_in = do
   clockConfig <- fmap tocc getEnv
@@ -104,18 +104,18 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
       unless r $ emit send_ready now
       store ready_sent true
 
-  (reqbuffer :: Ref Global (Struct "i2c_transaction_request")) <- state "reqbuffer"
-  (reqbufferpos :: Ref Global (Stored (Ix 128)))               <- state "reqbufferpos"
+  (reqbuffer :: Ref 'Global ('Struct "i2c_transaction_request")) <- state "reqbuffer"
+  (reqbufferpos :: Ref 'Global ('Stored (Ix 128)))               <- state "reqbufferpos"
 
-  (resbuffer :: Ref Global (Struct "i2c_transaction_result"))  <- state "resbuffer"
-  (resbufferpos :: Ref Global (Stored (Ix 128)))               <- state "resbufferpos"
+  (resbuffer :: Ref 'Global ('Struct "i2c_transaction_result"))  <- state "resbuffer"
+  (resbufferpos :: Ref 'Global ('Stored (Ix 128)))               <- state "resbufferpos"
 
-  (invalid_request :: Ref Global (Stored Uint32)) <- state "invalid_request"
+  (invalid_request :: Ref 'Global ('Stored Uint32)) <- state "invalid_request"
 
-  (transaction_delayed :: Ref Global (Stored Uint32)) <- state "transaction_delayed"
+  (transaction_delayed :: Ref 'Global ('Stored Uint32)) <- state "transaction_delayed"
 
-  let sendresult :: Emitter (Struct "i2c_transaction_result")
-                 -> Ref s' (Struct "i2c_transaction_result")
+  let sendresult :: Emitter ('Struct "i2c_transaction_result")
+                 -> Ref s' ('Struct "i2c_transaction_result")
                  -> Uint8
                  -> Ivory eff ()
       sendresult e res code = do

@@ -60,15 +60,15 @@ app toleds tocc totestdma = do
 
 echoPrompt :: String
            -> ChanInput  UARTBuffer
-           -> ChanOutput (Stored IBool)
-           -> ChanOutput (Stored Uint8)
-           -> ChanInput  (Stored IBool)
+           -> ChanOutput ('Stored IBool)
+           -> ChanOutput ('Stored Uint8)
+           -> ChanInput  ('Stored IBool)
            -> Tower p ()
 echoPrompt greeting req res ostream ledctl = do
   p <- period (Milliseconds 50)
 
   monitor "echoprompt" $ do
-    (out_req :: Ref Global UARTBuffer) <- state "out_req"
+    (out_req :: Ref 'Global UARTBuffer) <- state "out_req"
 
     flush_defer    <- state "flush_defer"
 
@@ -91,7 +91,7 @@ echoPrompt greeting req res ostream ledctl = do
           store (out_req ~> stringLengthL) 0
           store flush_defer true
 
-        flush :: (GetAlloc eff ~ Scope cs)
+        flush :: (GetAlloc eff ~ 'Scope cs)
               => Emitter UARTBuffer -> Ivory eff ()
         flush e = do
           defer <- deref flush_defer

@@ -26,10 +26,10 @@ canTower :: (e -> ClockConfig)
          -> Integer
          -> GPIOPin
          -> GPIOPin
-         -> Tower e ( ChanOutput (Struct "can_message")
-                    , AbortableTransmit (Struct "can_message") (Stored IBool)
-                    , AbortableTransmit (Struct "can_message") (Stored IBool)
-                    , AbortableTransmit (Struct "can_message") (Stored IBool)
+         -> Tower e ( ChanOutput ('Struct "can_message")
+                    , AbortableTransmit ('Struct "can_message") ('Stored IBool)
+                    , AbortableTransmit ('Struct "can_message") ('Stored IBool)
+                    , AbortableTransmit ('Struct "can_message") ('Stored IBool)
                     )
 canTower tocc periph bitrate rxpin txpin = do
   towerDepends canDriverTypes

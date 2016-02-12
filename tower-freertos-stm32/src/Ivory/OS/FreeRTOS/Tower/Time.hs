@@ -14,7 +14,7 @@ time_module = package "tower_time" $ do
   T.moddef
   incl getTimeProc
   where
-  getTimeProc :: Def('[]:->ITime)
+  getTimeProc :: Def('[]':->ITime)
   getTimeProc = proc "tower_get_time" $ body $ do
     ticks  <- call T.getTickCount
     ratems <- call T.getTickRateMilliseconds

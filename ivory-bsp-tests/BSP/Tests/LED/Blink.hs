@@ -12,7 +12,7 @@ import BSP.Tests.LED
 -- | LED Controller: Given a set of leds and a control channel of booleans,
 --   setup the pin hardware, and turn the leds on when the control channel is
 --   true.
-ledController :: [LED] -> ChanOutput (Stored IBool) -> Monitor e ()
+ledController :: [LED] -> ChanOutput ('Stored IBool) -> Monitor e ()
 ledController leds rxer = do
   -- Bookkeeping: this task uses Ivory.HW.Module.hw_moduledef
   monitorModuleDef $ hw_moduledef
@@ -29,7 +29,7 @@ ledController leds rxer = do
 
 -- | Blink task: Given a period and a channel source, output an alternating
 --   stream of true / false on each period.
-blinker :: Time a => a -> Tower e (ChanOutput (Stored IBool))
+blinker :: Time a => a -> Tower e (ChanOutput ('Stored IBool))
 blinker t = do
   p_chan <- period t
   (cin, cout) <- channel

@@ -10,8 +10,8 @@ import Ivory.Language
 
 import Ivory.OS.FreeRTOS.Types ()
 
-type Mutex = Struct "mutex"
-type MutexHandle = Ref Global Mutex
+type Mutex = 'Struct "mutex"
+type MutexHandle = Ref 'Global Mutex
 
 mutexWrapperHeader :: String
 mutexWrapperHeader = "freertos_mutex_wrapper.h"
@@ -22,13 +22,13 @@ moddef = do
   incl take
   incl give
 
-create :: Def ('[ MutexHandle ] :-> ())
+create :: Def ('[ MutexHandle ] ':-> ())
 create =
   importProc "ivory_freertos_mutex_create" mutexWrapperHeader
 
-take :: Def ('[ MutexHandle ] :-> ())
+take :: Def ('[ MutexHandle ] ':-> ())
 take = importProc "ivory_freertos_mutex_takeblocking" mutexWrapperHeader
 
-give :: Def('[ MutexHandle ] :-> ())
+give :: Def('[ MutexHandle ] ':-> ())
 give = importProc "ivory_freertos_mutex_give" mutexWrapperHeader
 

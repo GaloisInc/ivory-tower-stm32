@@ -49,14 +49,14 @@ app toleds tocc touart torng = do
 
 randReporter :: String
              -> ChanInput  UARTBuffer
-             -> ChanOutput (Stored IBool)
-             -> ChanOutput (Stored Uint32)
+             -> ChanOutput ('Stored IBool)
+             -> ChanOutput ('Stored Uint32)
              -> Tower p ()
 randReporter greeting req res rands = do
   p <- period (Milliseconds 1)
 
   monitor "randReporter" $ do
-    (out_req :: Ref Global UARTBuffer) <- state "out_req"
+    (out_req :: Ref 'Global UARTBuffer) <- state "out_req"
 
     let puts :: String -> Ivory eff ()
         puts str = mapM_ (\c -> putc (fromIntegral (ord c))) str
@@ -68,7 +68,7 @@ randReporter greeting req res rands = do
             store (out_req ~> stringDataL ! toIx pos) byte
             store (out_req ~> stringLengthL) (pos + 1)
 
-        flush :: (GetAlloc eff ~ Scope cs)
+        flush :: (GetAlloc eff ~ 'Scope cs)
               => Emitter UARTBuffer -> Ivory eff ()
         flush e = do
           emit e (constRef out_req)

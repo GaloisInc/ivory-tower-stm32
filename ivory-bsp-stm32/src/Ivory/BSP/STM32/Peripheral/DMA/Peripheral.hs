@@ -106,7 +106,7 @@ getStreamM0AR dma n = dmaStreamM0AR (getStreamRegs dma n)
 -- | Disable a DMA stream. We must read the bit in a loop to make
 -- sure that it is disabled because a previous request may still
 -- be in progress.
-disableStream :: GetBreaks (AllowBreak eff) ~ Break => DMAStreamRegs -> Ivory eff ()
+disableStream :: GetBreaks (AllowBreak eff) ~ 'Break => DMAStreamRegs -> Ivory eff ()
 disableStream regs = do
   let reg_SxCR = dmaStreamCR regs
   forever $ do

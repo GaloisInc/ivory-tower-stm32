@@ -33,8 +33,8 @@ dmaUARTTower :: forall tx rx e
              -> UARTPins
              -> Integer
              -> Proxy rx
-             -> Tower e ( BackpressureTransmit tx (Stored IBool)
-                        , ChanOutput (Stored Uint8))
+             -> Tower e ( BackpressureTransmit tx ('Stored IBool)
+                        , ChanOutput ('Stored Uint8))
 dmaUARTTower tocc dmauart pins baud _ = do
   (tx, (buf_rx :: ChanOutput rx)) <- dmaUARTTower' tocc dmauart pins baud
   char_rx <- channel
@@ -58,7 +58,7 @@ dmaUARTTower' :: forall tx rx e
              -> DMAUART
              -> UARTPins
              -> Integer
-             -> Tower e ( BackpressureTransmit tx (Stored IBool)
+             -> Tower e ( BackpressureTransmit tx ('Stored IBool)
                         , ChanOutput rx)
 dmaUARTTower' tocc dmauart pins baud = do
   req_chan  <- channel
@@ -104,7 +104,7 @@ dmaUARTHardwareMonitor :: (e -> ClockConfig)
                        -> DMAUART
                        -> UARTPins
                        -> Integer
-                       -> ChanInput (Stored ITime)
+                       -> ChanInput ('Stored ITime)
                        -> Monitor e ()
 dmaUARTHardwareMonitor tocc dmauart pins baud init_cb = do
   clockConfig <- fmap tocc getEnv
@@ -122,8 +122,8 @@ dmaUARTTransmitMonitor :: (IvoryString tx)
                        => UART
                        -> DMATowerStream
                        -> ChanOutput tx
-                       -> ChanInput  (Stored IBool)
-                       -> ChanOutput (Stored ITime)
+                       -> ChanInput  ('Stored IBool)
+                       -> ChanOutput ('Stored ITime)
                        -> Monitor e ()
 dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
 
@@ -258,8 +258,8 @@ dmaUARTReceiveMonitor :: forall rx e
                       => UART
                       -> DMATowerStream
                       -> ChanInput  rx
-                      -> ChanOutput (Stored ITime)
-                      -> ChanOutput (Stored ITime)
+                      -> ChanOutput ('Stored ITime)
+                      -> ChanOutput ('Stored ITime)
                       -> Monitor e ()
 dmaUARTReceiveMonitor uart rxstream out_chan flush_chan init_chan = do
   rx0_buf <- state (named "rx0_buf")
@@ -323,7 +323,7 @@ dmaUARTReceiveMonitor uart rxstream out_chan flush_chan init_chan = do
 
   let complete_buffer :: Uint16
                       -> IBool
-                      -> (ConstRef Global rx -> Ivory eff ())
+                      -> (ConstRef 'Global rx -> Ivory eff ())
                       -> Ivory eff ()
       complete_buffer len which_buf k = do
         ifte_ which_buf
@@ -413,7 +413,7 @@ bdr_reg_addr :: BitDataReg a -> Uint32
 bdr_reg_addr = fromInteger . unReg . bdr_reg
   where unReg (Reg a) = a
 
-ref_to_uint32_proc :: Def('[Ref s (Stored Uint8)] :-> Uint32)
+ref_to_uint32_proc :: Def('[Ref s ('Stored Uint8)] ':-> Uint32)
 ref_to_uint32_proc = importProc "ref_to_uint32" dmaRefToUint32Header
 
 

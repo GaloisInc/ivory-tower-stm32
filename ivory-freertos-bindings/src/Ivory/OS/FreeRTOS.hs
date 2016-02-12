@@ -9,7 +9,6 @@ module Ivory.OS.FreeRTOS
 import System.FilePath
 import qualified Paths_ivory_freertos_bindings as P
 import Ivory.Artifact
-import Ivory.Artifact.Location
 import Ivory.OS.FreeRTOS.Config
 
 kernel :: Config -> [Located Artifact]

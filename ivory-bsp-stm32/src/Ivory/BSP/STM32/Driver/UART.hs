@@ -50,8 +50,8 @@ uartTower :: IvoryString s
           -> UART
           -> UARTPins
           -> Integer
-          -> Tower e ( BackpressureTransmit s (Stored IBool)
-                     , ChanOutput (Stored Uint8))
+          -> Tower e ( BackpressureTransmit s ('Stored IBool)
+                     , ChanOutput ('Stored Uint8))
 uartTower tocc u p b = uartTowerDebuggable tocc u p b emptyDbg
 
 uartTowerDebuggable :: IvoryString s
@@ -60,8 +60,8 @@ uartTowerDebuggable :: IvoryString s
                     -> UARTPins
                     -> Integer
                     -> UARTTowerDebugger
-                    -> Tower e ( BackpressureTransmit s (Stored IBool)
-                               , ChanOutput (Stored Uint8))
+                    -> Tower e ( BackpressureTransmit s ('Stored IBool)
+                               , ChanOutput ('Stored Uint8))
 uartTowerDebuggable tocc uart pins baud dbg = do
   req_chan  <- channel
   resp_chan <- channel
@@ -83,10 +83,10 @@ uartTowerMonitor :: IvoryString s
                  -> UART
                  -> UARTPins
                  -> Integer
-                 -> ChanOutput (Stored ITime)
-                 -> ChanInput (Stored Uint8)   -- byte at a time rx
+                 -> ChanOutput ('Stored ITime)
+                 -> ChanInput ('Stored Uint8)   -- byte at a time rx
                  -> ChanOutput s
-                 -> ChanInput (Stored IBool)
+                 -> ChanInput ('Stored IBool)
                  -> UARTTowerDebugger
                  -> Monitor e ()
 uartTowerMonitor tocc uart pins baud interrupt rx_chan req_chan resp_chan dbg = do
@@ -104,8 +104,8 @@ uartTowerMonitor tocc uart pins baud interrupt rx_chan req_chan resp_chan dbg = 
     debug_init dbg
     uartInit uart pins clockConfig (fromIntegral baud) True
 
-  let req_pop_byte :: (GetAlloc eff ~ Scope cs)
-                   => Ref s' (Stored Uint8) -> Ivory eff IBool
+  let req_pop_byte :: (GetAlloc eff ~ 'Scope cs)
+                   => Ref s' ('Stored Uint8) -> Ivory eff IBool
       req_pop_byte b = do
         result <- local (ival false)
         pos <- deref req_pos

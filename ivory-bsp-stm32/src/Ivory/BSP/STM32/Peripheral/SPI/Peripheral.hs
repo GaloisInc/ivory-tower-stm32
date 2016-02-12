@@ -89,7 +89,7 @@ initOutPin pin af = do
 
 -- | Enable peripheral and setup GPIOs. Must be performed
 --   before any other SPI peripheral actions.
-spiInit :: (GetAlloc eff ~ Scope s) => SPIPeriph -> SPIPins -> Ivory eff ()
+spiInit :: (GetAlloc eff ~ 'Scope s) => SPIPeriph -> SPIPins -> Ivory eff ()
 spiInit spi pins = do
   spiRCCEnable spi
   spiClearCr1 spi
@@ -98,7 +98,7 @@ spiInit spi pins = do
   initOutPin (spiPinMosi pins) (spiPinAF pins)
   initOutPin (spiPinSck  pins) (spiPinAF pins)
 
-spiInitISR :: (GetAlloc eff ~ Scope s)
+spiInitISR :: (GetAlloc eff ~ 'Scope s)
            => SPIPeriph -> Ivory eff ()
 spiInitISR spi = interrupt_enable $ spiInterrupt spi
 
@@ -120,7 +120,7 @@ data SPIDevice = SPIDevice
   , spiDevName          :: String
   }
 
-spiDeviceInit :: (GetAlloc eff ~ Scope s) => SPIDevice -> Ivory eff ()
+spiDeviceInit :: (GetAlloc eff ~ 'Scope s) => SPIDevice -> Ivory eff ()
 spiDeviceInit dev = do
   let pin = spiDevCSPin dev
   pinEnable         pin
@@ -129,7 +129,7 @@ spiDeviceInit dev = do
   pinSetOutputType  pin gpio_outputtype_pushpull
   pinSetSpeed       pin gpio_speed_2mhz
 
-spiBusBegin :: (GetAlloc eff ~ Scope cs)
+spiBusBegin :: (GetAlloc eff ~ 'Scope cs)
             => ClockConfig -> SPIDevice -> Ivory eff ()
 spiBusBegin clockconfig dev = do
   modifyReg (spiRegCR1 periph) $ clearBit spi_cr1_spe

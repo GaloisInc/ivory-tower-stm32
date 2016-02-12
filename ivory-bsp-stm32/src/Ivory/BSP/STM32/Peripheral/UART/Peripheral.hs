@@ -86,7 +86,7 @@ initPin p af = do
   pinSetMode       p gpio_mode_af
 
 -- | Set the BRR register of a UART given a baud rate.
-setBaudRate :: (GetAlloc eff ~ Scope s)
+setBaudRate :: (GetAlloc eff ~ 'Scope s)
             => UART -> ClockConfig -> Uint32 -> Ivory eff ()
 setBaudRate uart clockconfig baud = do
   --pclk    <- assign =<< getFreqPClk platform (uartPClk uart)
@@ -123,7 +123,7 @@ setParity uart x =
     setField uart_cr1_pce (boolToBit x)
 
 -- | Initialize a UART device given a baud rate.
-uartInit :: (GetAlloc eff ~ Scope s)
+uartInit :: (GetAlloc eff ~ 'Scope s)
          => UART -> UARTPins -> ClockConfig -> Uint32 -> Bool -> Ivory eff ()
 uartInit uart pins clockconfig baud useinterrupts = do
   -- Enable the peripheral clock and set up GPIOs.

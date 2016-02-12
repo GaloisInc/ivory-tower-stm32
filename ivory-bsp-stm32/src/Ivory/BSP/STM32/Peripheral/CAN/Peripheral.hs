@@ -132,7 +132,7 @@ mkCANPeriph base rccen rccdis txint rx0int rx1int sceint n =
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
 
-loopUntil :: GetBreaks (AllowBreak eff) ~ Break => Ivory (AllowBreak eff) IBool -> Ivory eff ()
+loopUntil :: GetBreaks (AllowBreak eff) ~ 'Break => Ivory (AllowBreak eff) IBool -> Ivory eff ()
 loopUntil p = forever $ do
   done <- p
   ifte_ done breakOut (return ())
@@ -183,8 +183,8 @@ legalTimings pclk bitrate =
   , t_seg2 >= 1 && t_seg2 <= 8
   ]
 
-canInit :: ( GetAlloc eff ~ Scope cs
-           , Break ~ GetBreaks (AllowBreak eff))
+canInit :: ( GetAlloc eff ~ 'Scope cs
+           , 'Break ~ GetBreaks (AllowBreak eff))
         => CANPeriph -> Integer -> GPIOPin -> GPIOPin -> ClockConfig
         -> Ivory eff ()
 canInit periph bitrate rxpin txpin clockconfig = do

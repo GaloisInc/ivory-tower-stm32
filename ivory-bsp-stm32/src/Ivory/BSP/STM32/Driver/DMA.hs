@@ -21,7 +21,7 @@ import Ivory.BSP.STM32.Peripheral.DMA
 
 data DMATowerStream =
   DMATowerStream
-    { dma_stream_signal         :: ChanOutput (Stored ITime)
+    { dma_stream_signal         :: ChanOutput ('Stored ITime)
     , dma_stream_channel        :: DMAChannel
     , dma_stream_regs           :: DMAStreamRegs
     , dma_stream_enable_int     :: forall eff . Ivory eff ()

@@ -54,17 +54,17 @@ monitorLockArea mon = area (monitorLockName mon) Nothing
 monitorLock :: AST.Monitor -> Mutex.MutexHandle
 monitorLock mon = addrOf (monitorLockArea mon)
 
-monitorInitProc :: AST.Monitor -> Def('[]:->())
+monitorInitProc :: AST.Monitor -> Def('[]':->())
 monitorInitProc mon = proc n $ body $
   call_ Mutex.create (monitorLock mon)
   where
   n = "monitor_init_" ++ AST.monitorName mon
 
-monitorUnlockProc :: AST.Monitor -> Def('[]:->())
+monitorUnlockProc :: AST.Monitor -> Def('[]':->())
 monitorUnlockProc mon = proc (monitorUnlockProcName mon) $ body $
   call_ Mutex.give (monitorLock mon)
 
-monitorLockProc :: AST.Monitor -> Def('[]:->())
+monitorLockProc :: AST.Monitor -> Def('[]':->())
 monitorLockProc mon = proc (monitorLockProcName mon) $ body $
   call_ Mutex.take (monitorLock mon)
 
