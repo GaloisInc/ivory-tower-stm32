@@ -173,7 +173,13 @@ defaultEChronosOS cfg =
 ----------------------------------------------------------------------------
 mainProc :: STM32Config -> Def ('[] :-> ())
 mainProc cfg = proc "main" $ body $ do
+
+  -- XXX: We premultiply by 8 here because Mike's clock init code divides by 8.
+  -- His code assumes the systick clock source is always AHB/8. That is his code
+  -- sets bit 2 of the STK_CTRL register is always 0.
+  let rate = 8*fromIntegral (clockSysClkHz (stm32config_clock cfg))
   call_ (init_clocks (stm32config_clock cfg))
+  call_ clock_set_cpu_rate_in_hz rate
   result <- call initialize_periodic_dispatcher
   ifte_ (iNot result)
     (do call_ debug_println "Unable to initialize periodic dispatcher."
@@ -194,6 +200,10 @@ eChronosMain cfg = do
 initialize_periodic_dispatcher :: Def('[] :-> IBool)
 initialize_periodic_dispatcher =
   importProc "initialize_periodic_dispatcher" "smaccm_decls.h"
+
+clock_set_cpu_rate_in_hz  :: Def('[Sint64] :-> ())
+clock_set_cpu_rate_in_hz  =
+  importProc "clock_set_cpu_rate_in_hz" "clock_driver.h"
 
 debug_println :: Def('[IString] :-> ())
 debug_println = importProc "debug_println" "debug.h"
@@ -251,6 +261,7 @@ mainMod cfg = package "main" $ do
 --  inclSysTick cfg
   incl initialize_periodic_dispatcher
   incl rtos_start
+  incl clock_set_cpu_rate_in_hz
 
 towerDepModule :: Module
 towerDepModule = package "towerDeps" $ do
