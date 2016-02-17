@@ -85,8 +85,8 @@ echronosMakefile =
           \           -nostartfiles                      \\\n\
           \           -mlittle-endian                    \\\n\
           \           -mthumb -mcpu=cortex-m4            \\\n\
-          \           -mfloat-abi=hard -mfpu=fpv4-sp-d16 \\\n\
-          \           -lm"
+          \           -mfloat-abi=hard -mfpu=fpv4-sp-d16"
+  , "LDLIBS"      =: "-lm"
   , "LD"          =: "arm-none-eabi-gcc"
   , "SOURCES_GCC" =: "$(wildcard $(SRC)/src/*.c)                \\\n\
       \               $(wildcard $(SRC)/lib/src/*.c)            \\\n\
@@ -101,7 +101,7 @@ echronosMakefile =
   , Target "$(EXE)" ["$(OBJECTS_GCC)", "$(OBJECTS_AS)"]
     ["@echo building executable from assembly files: $(OBJECTS_AS) and .c files: $(OBJECTS_GCC)"
     ,"@echo linking executable"
-    ,"$(LD) $(LDFLAGS) -o $@ $^"]
+    ,"$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)"]
   , Target ".PHONY" ["echronos-clean"] []
   , Target "echronos-clean" []
     ["@echo remove all the object files"
@@ -165,7 +165,7 @@ defaultEChronosOS cfg =
     , osSpecificConfig    = cfg
     , osSpecificArtifacts = const echronosArtifacts
     , osSpecificSrcDir    = const id
-    , osSpecificTower     = eChronosMain cfg
+    , osSpecificTower     = eChronosModules cfg
     }
 
 ----------------------------------------------------------------------------
@@ -190,12 +190,14 @@ mainProc cfg = proc "main" $ body $ do
   call_ rtos_start
   forever (return ())
 
-eChronosMain :: STM32Config -> Tower e ()
-eChronosMain cfg = do
+eChronosModules :: STM32Config -> Tower e ()
+eChronosModules cfg = do
   towerModule  towerDepModule
   towerDepends towerDepModule
   towerModule  (mainMod cfg)
   towerDepends (mainMod cfg)
+  towerModule  timeModule
+  towerDepends timeModule
 
 initialize_periodic_dispatcher :: Def('[] :-> IBool)
 initialize_periodic_dispatcher =
@@ -267,3 +269,18 @@ towerDepModule :: Module
 towerDepModule = package "towerDeps" $ do
   incl printf
 
+-- Tower's time function
+
+timeModule :: Module
+timeModule = package "tower_time" $ do
+  -- T.moddef
+  incl getTimeProc
+  incl clock_get_time
+  where
+  getTimeProc :: Def('[]:->ITime)
+  getTimeProc = proc "tower_get_time" $ body $ do
+    t <- call clock_get_time
+    ret t
+  -- XXX: This is really Uint64 not ITime aka Sint64
+  clock_get_time :: Def('[]:->ITime)
+  clock_get_time = importProc "clock_get_time" "clock_driver.h"
