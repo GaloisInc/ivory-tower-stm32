@@ -2,6 +2,7 @@
 {-# LANGUAGE TypeOperators     #-}
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts  #-}
 -- Create Ramses build script.
 --
 -- (c) 2015 Galois, Inc.
@@ -171,7 +172,7 @@ defaultEChronosOS cfg =
 ----------------------------------------------------------------------------
 -- eChronos requires a custom main() function ------------------------------
 ----------------------------------------------------------------------------
-mainProc :: STM32Config -> Def ('[] :-> ())
+mainProc :: STM32Config -> Def ('[] ':-> ())
 mainProc cfg = proc "main" $ body $ do
 
   -- XXX: We premultiply by 8 here because Mike's clock init code divides by 8.
@@ -199,33 +200,33 @@ eChronosModules cfg = do
   towerModule  timeModule
   towerDepends timeModule
 
-initialize_periodic_dispatcher :: Def('[] :-> IBool)
+initialize_periodic_dispatcher :: Def('[] ':-> IBool)
 initialize_periodic_dispatcher =
   importProc "initialize_periodic_dispatcher" "smaccm_decls.h"
 
-clock_set_cpu_rate_in_hz  :: Def('[Sint64] :-> ())
+clock_set_cpu_rate_in_hz  :: Def('[Sint64] ':-> ())
 clock_set_cpu_rate_in_hz  =
   importProc "clock_set_cpu_rate_in_hz" "clock_driver.h"
 
-debug_println :: Def('[IString] :-> ())
+debug_println :: Def('[IString] ':-> ())
 debug_println = importProc "debug_println" "debug.h"
 
-debug_printhex8 :: Def('[Uint8] :-> ())
+debug_printhex8 :: Def('[Uint8] ':-> ())
 debug_printhex8 = importProc "debug_printhex8" "debug.h"
 
-debug_print :: Def('[IString] :-> ())
+debug_print :: Def('[IString] ':-> ())
 debug_print = importProc "debug_print" "debug.h"
 
 type RTosErrorId = Uint8
 
-fatal :: Def('[RTosErrorId] :-> ())
+fatal :: Def('[RTosErrorId] ':-> ())
 fatal = proc "fatal" $ \error_id -> body $ do
   call_ debug_print "FATAL ERROR: "
   call_ debug_printhex8 error_id
   call_ debug_println ""
   forever (return ())
 
-rtos_start :: Def ('[] :-> ())
+rtos_start :: Def ('[] ':-> ())
 rtos_start = importProc "rtos_start" "rtos-kochab.h"
 
 [ivory|
@@ -275,12 +276,12 @@ timeModule :: Module
 timeModule = package "tower_time" $ do
   -- T.moddef
   incl getTimeProc
-  incl clock_get_time
+  incl clock_get_time'
   where
-  getTimeProc :: Def('[]:->ITime)
+  getTimeProc :: Def('[] ':-> ITime)
   getTimeProc = proc "tower_get_time" $ body $ do
-    t <- call clock_get_time
+    t <- call clock_get_time'
     ret t
   -- XXX: This is really Uint64 not ITime aka Sint64
-  clock_get_time :: Def('[]:->ITime)
-  clock_get_time = importProc "clock_get_time" "clock_driver.h"
+  clock_get_time' :: Def('[]':->ITime)
+  clock_get_time' = importProc "clock_get_time" "clock_driver.h"
