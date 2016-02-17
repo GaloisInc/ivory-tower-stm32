@@ -13,6 +13,7 @@ test: bsp_i2c_aadl_test
 test: bsp-uart-test
 test: bsp_uart_aadl_test
 test: bsp-can-test
+test: bsp_can_aadl_test
 test: bsp-rng-test
 
 .PHONY: bsp-led-test
@@ -83,6 +84,13 @@ bsp-can-test:
 
 bsp-can-test-clean:
 	rm -rf bsp-can-test
+
+.PHONY: bsp_can_aadl_test
+bsp_can_aadl_test:
+	cabal run bsp_can_aadl_test_gen -- --src-dir=bsp_can_aadl_test --lib-dir="" $(IVORYFLAGS)
+
+bsp_can_aadl_test_clean:
+	rm -rf bsp_can_aadl_test
 
 .PHONY: bsp-rng-test
 bsp-rng-test:
