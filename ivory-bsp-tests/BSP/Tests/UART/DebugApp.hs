@@ -36,8 +36,8 @@ garbage_vals :: Uint8
 garbage_vals = 4
 
 
-pollingLoopback :: ChannelSource (Stored Uint8)
-                -> ChannelSink (Stored Uint8)
+pollingLoopback :: ChannelSource ('Stored Uint8)
+                -> ChannelSink ('Stored Uint8)
                 -> GPIOPin
                 -> String
                 -> Uint8

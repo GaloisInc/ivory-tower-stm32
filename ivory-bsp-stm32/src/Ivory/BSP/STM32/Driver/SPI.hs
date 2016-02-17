@@ -30,8 +30,8 @@ spiTower :: forall e
           . (e -> ClockConfig)
          -> [SPIDevice]
          -> SPIPins
-         -> Tower e ( BackpressureTransmit (Struct "spi_transaction_request") (Struct "spi_transaction_result")
-                    , ChanOutput (Stored ITime))
+         -> Tower e ( BackpressureTransmit ('Struct "spi_transaction_request") ('Struct "spi_transaction_result")
+                    , ChanOutput ('Stored ITime))
 spiTower tocc devices pins = do
   towerDepends spiDriverTypes
   towerModule  spiDriverTypes
@@ -66,10 +66,10 @@ spiPeripheralDriver :: forall e
                     -> SPIPeriph
                     -> SPIPins
                     -> [SPIDevice]
-                    -> ChanOutput   (Struct "spi_transaction_request")
-                    -> ChanInput    (Struct "spi_transaction_result")
-                    -> ChanInput    (Stored ITime)
-                    -> ChanOutput (Stored ITime)
+                    -> ChanOutput   ('Struct "spi_transaction_request")
+                    -> ChanInput    ('Struct "spi_transaction_result")
+                    -> ChanInput    ('Stored ITime)
+                    -> ChanOutput ('Stored ITime)
                     -> Monitor e ()
 spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
   clockconfig <- fmap tocc getEnv
@@ -132,7 +132,7 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
         ]
       interrupt_enable interrupt
 
-  let deviceBeginProc :: SPIDevice -> Def('[]:->())
+  let deviceBeginProc :: SPIDevice -> Def('[]':->())
       deviceBeginProc dev = proc ((spiDevName dev) ++ "_devicebegin") $
         body $ do
           spiBusBegin clockconfig dev
@@ -170,7 +170,7 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
   interrupt = spiInterrupt periph
 
   chooseDevice :: (SPIDevice -> Ivory eff ())
-               -> Ref Global (Stored SPIDeviceHandle) -> Ivory eff ()
+               -> Ref 'Global ('Stored SPIDeviceHandle) -> Ivory eff ()
   chooseDevice cb devref = do
     comment "selecting device:"
     currdev <- deref devref

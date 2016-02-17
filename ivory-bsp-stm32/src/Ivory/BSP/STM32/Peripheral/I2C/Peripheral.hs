@@ -76,7 +76,7 @@ mkI2CPeriph base rccenable rccdisable evtint errint n =
   reg :: (IvoryIOReg (BitDataRep d)) => Integer -> String -> BitDataReg d
   reg offs name = mkBitDataRegNamed (base + offs) (n ++ "->" ++ name)
 
-i2cInit :: (GetAlloc eff ~ Scope cs)
+i2cInit :: (GetAlloc eff ~ 'Scope cs)
         => I2CPeriph -> GPIOPin -> GPIOPin -> ClockConfig -> Ivory eff ()
 i2cInit periph sda scl clockconfig = do
   i2cRCCEnable periph

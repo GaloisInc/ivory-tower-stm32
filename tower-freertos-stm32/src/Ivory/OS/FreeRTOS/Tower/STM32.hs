@@ -10,10 +10,12 @@ module Ivory.OS.FreeRTOS.Tower.STM32
   , module Ivory.BSP.STM32.Config
   ) where
 
-import Control.Monad
+import Prelude ()
+import Prelude.Compat
+
+import Control.Monad (forM_)
 import Data.List (nub)
 import qualified Data.Map as Map
-import Data.Monoid
 import System.FilePath
 
 import Ivory.Language
@@ -46,9 +48,9 @@ import Ivory.BSP.STM32.Config
 data STM32FreeRTOSBackend = STM32FreeRTOSBackend
 
 instance TowerBackend STM32FreeRTOSBackend where
-  newtype TowerBackendCallback STM32FreeRTOSBackend a = STM32FreeRTOSCallback (forall s. AST.Handler -> AST.Thread -> (Def ('[ConstRef s a] :-> ()), ModuleDef))
+  newtype TowerBackendCallback STM32FreeRTOSBackend a = STM32FreeRTOSCallback (forall s. AST.Handler -> AST.Thread -> (Def ('[ConstRef s a] ':-> ()), ModuleDef))
   newtype TowerBackendEmitter STM32FreeRTOSBackend = STM32FreeRTOSEmitter (Maybe (AST.Monitor -> AST.Thread -> EmitterCode))
-  data TowerBackendHandler STM32FreeRTOSBackend a = STM32FreeRTOSHandler AST.Handler (forall s. AST.Monitor -> AST.Thread -> (Def ('[ConstRef s a] :-> ()), ThreadCode))
+  data TowerBackendHandler STM32FreeRTOSBackend a = STM32FreeRTOSHandler AST.Handler (forall s. AST.Monitor -> AST.Thread -> (Def ('[ConstRef s a] ':-> ()), ThreadCode))
   newtype TowerBackendMonitor STM32FreeRTOSBackend = STM32FreeRTOSMonitor (AST.Tower -> TowerBackendOutput STM32FreeRTOSBackend)
     deriving Monoid
   data TowerBackendOutput STM32FreeRTOSBackend = STM32FreeRTOSOutput
@@ -105,7 +107,7 @@ data EmitterCode = EmitterCode
 emitterCode :: (IvoryArea a, IvoryZero a)
             => AST.Emitter
             -> AST.Thread
-            -> (forall s. [Def ('[ConstRef s a] :-> ())])
+            -> (forall s. [Def ('[ConstRef s a] ':-> ())])
             -> EmitterCode
 emitterCode ast thr sinks = EmitterCode
   { emittercode_init = store (addrOf messageCount) 0
@@ -126,7 +128,7 @@ emitterCode ast thr sinks = EmitterCode
   }
   where
   max_messages = AST.emitter_bound ast - 1
-  messageCount :: MemArea (Stored Uint32)
+  messageCount :: MemArea ('Stored Uint32)
   messageCount = area (e_per_thread "message_count") Nothing
 
   messages = [ area (e_per_thread ("message_" ++ show d)) Nothing
@@ -153,14 +155,14 @@ emitterCode ast thr sinks = EmitterCode
 trampolineProc :: IvoryArea a
                => AST.Emitter
                -> (forall eff. ConstRef s a -> Ivory eff ())
-               -> Def ('[ConstRef s a] :-> ())
+               -> Def ('[ConstRef s a] ':-> ())
 trampolineProc ast f = proc (emitterProcName ast) $ \ r -> body $ f r
 
 handlerProc :: (IvoryArea a, IvoryZero a)
-            => [Def ('[ConstRef s a] :-> ())]
+            => [Def ('[ConstRef s a] ':-> ())]
             -> [EmitterCode]
             -> AST.Thread -> AST.Monitor -> AST.Handler
-            -> Def ('[ConstRef s a] :-> ())
+            -> Def ('[ConstRef s a] ':-> ())
 handlerProc callbacks emitters t m h =
   proc (handlerProcName h t) $ \ msg -> body $ do
     comment "init emitters"
@@ -223,18 +225,18 @@ stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]
       incl init_libc
       incl main_proc
 
-  reset_handler_proc :: Def('[]:->())
+  reset_handler_proc :: Def('[]':->())
   reset_handler_proc = proc reset_handler $ body $ do
     call_ init_relocate
     call_ (init_clocks (stm32config_clock conf))
     call_ init_libc
     call_ main_proc
 
-  init_relocate :: Def('[]:->())
+  init_relocate :: Def('[]':->())
   init_relocate = importProc "init_relocate" "stm32_freertos_init.h"
-  init_libc :: Def('[]:->())
+  init_libc :: Def('[]':->())
   init_libc = importProc "init_libc" "stm32_freertos_init.h"
-  main_proc :: Def('[]:->())
+  main_proc :: Def('[]':->())
   main_proc = importProc "main" "stm32_freertos_init.h"
 
 

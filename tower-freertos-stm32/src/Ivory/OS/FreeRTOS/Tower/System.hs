@@ -72,12 +72,12 @@ threadModules d sigcode tcodes twr = concatMap pertask tcodes
     | (m,_) <- AST.threadHandlers (AST.messageGraph twr) t ]
 
 threadLoopRunHandlers :: AST.Tower -> AST.Thread
-                      -> Ref s (Stored ITime) -> Ivory eff ()
+                      -> Ref s ('Stored ITime) -> Ivory eff ()
 threadLoopRunHandlers twr thr t = sequence_
   [ call_ (hproc h) (constRef t)
   | (_m,h) <- AST.towerChanHandlers twr (AST.threadChan thr) ]
   where
-  hproc :: AST.Handler -> Def('[ConstRef s (Stored ITime)]:->())
+  hproc :: AST.Handler -> Def('[ConstRef s ('Stored ITime)]':->())
   hproc h = proc (handlerProcName h thr) (const (body (return ())))
 
 threadLoopModdef :: AST.Tower -> AST.Thread -> SignalCode -> ModuleDef
@@ -89,7 +89,7 @@ threadLoopModdef twr thr@(AST.PeriodThread p) _ = do
   where
   period_ms :: Uint32
   period_ms = fromIntegral (toMilliseconds (AST.period_dt p))
-  tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
+  tloopProc :: Def('[Ref 'Global ('Struct "taskarg")]':->())
   tloopProc = proc (AST.threadLoopProcName thr) $ const $ body $ noReturn $ do
     tick_rate <- call Time.getTickRateMilliseconds
     let tickITime :: Uint32 -> ITime
@@ -122,7 +122,7 @@ threadLoopModdef twr thr@(AST.SignalThread s) sigcode = do
   app_ready gensignal = unGeneratedSignal gensignal (codegensignal_ready cgs)
 
   cgs = codegenSignal thr
-  tloopProc :: Def('[Ref Global (Struct "taskarg")]:->())
+  tloopProc :: Def('[Ref 'Global ('Struct "taskarg")]':->())
   tloopProc = proc (AST.threadLoopProcName thr) $ const $ body $ noReturn $ do
     t_rate <- call Time.getTickRateMilliseconds
     let tickITime :: Uint32 -> ITime
@@ -156,7 +156,7 @@ systemModules twr = [initModule]
               | t <- AST.towerThreads twr ]
     incl entryProc
     where
-    entryProc :: Def('[]:->())
+    entryProc :: Def('[]':->())
     entryProc = proc "tower_entry" $ body $ do
       forM_ (AST.tower_monitors twr) $ \m -> do
         call_ (monitorInitProc m)
@@ -174,7 +174,7 @@ systemModules twr = [initModule]
     call_ Task.begin (Task.taskProc threadLoopProcStub)
                   stacksize priority debugname
     where
-    threadLoopProcStub :: Def('[Ref s (Struct "taskarg")]:->())
+    threadLoopProcStub :: Def('[Ref s ('Struct "taskarg")]':->())
     threadLoopProcStub = proc (AST.threadLoopProcName thr)
                           (const (body (return ())))
     stacksize :: Uint32

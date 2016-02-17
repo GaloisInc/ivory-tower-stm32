@@ -1,11 +1,9 @@
-
 module Ivory.OS.FreeRTOS.Config
   ( Config(..)
   , configHeader
   ) where
 
 import Ivory.Artifact
-import Ivory.Artifact.Location
 import Ivory.Artifact.Template
 import qualified Paths_ivory_freertos_bindings as P
 

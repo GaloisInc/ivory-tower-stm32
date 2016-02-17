@@ -16,7 +16,7 @@ import Ivory.BSP.STM32.Peripheral.RNG
 rngTower :: (Time t)
          => RNG
          -> t
-         -> Tower e (ChanOutput (Stored Uint32))
+         -> Tower e (ChanOutput ('Stored Uint32))
 rngTower rng t = do
   reschan <- channel
 

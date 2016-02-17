@@ -9,10 +9,10 @@ module Ivory.OS.FreeRTOS.Atomic
 
 import Ivory.Language
 
-enter :: Def ('[] :-> ())
+enter :: Def ('[] ':-> ())
 enter = importProc "ivory_freertos_begin_atomic" atomicWrapperHeader
 
-exit :: Def ('[] :-> ())
+exit :: Def ('[] ':-> ())
 exit = importProc "ivory_freertos_end_atomic" atomicWrapperHeader
 
 atomicWrapperHeader :: String

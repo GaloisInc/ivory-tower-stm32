@@ -286,7 +286,7 @@ static void prvPortStartFirstTask( void )
 					" ldr r0, [r0] 			\n"
 					" ldr r0, [r0] 			\n"
 					" msr msp, r0			\n" /* Set the msp back to the start of the stack. */
-					" cpsie i				\n" /* Globally enable interrupts. */
+					" cpsie i				\n" /* Globally enable interrupts. */
 					" cpsie f				\n"
 					" dsb					\n"
 					" isb					\n"

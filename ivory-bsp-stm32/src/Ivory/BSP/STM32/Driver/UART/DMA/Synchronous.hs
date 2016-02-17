@@ -31,7 +31,7 @@ syncDMAUARTTower :: forall tx rx e
                  -> DMAUART
                  -> UARTPins
                  -> Integer
-                 -> Tower e (BackpressureTransmit tx rx, ChanOutput (Stored ITime))
+                 -> Tower e (BackpressureTransmit tx rx, ChanOutput ('Stored ITime))
 syncDMAUARTTower tocc dmauart pins baud = do
   req_chan  <- channel
   rx_chan   <- channel
@@ -76,7 +76,7 @@ dmaUARTHardwareMonitor :: (e -> ClockConfig)
                        -> DMAUART
                        -> UARTPins
                        -> Integer
-                       -> ChanInput (Stored ITime)
+                       -> ChanInput ('Stored ITime)
                        -> Monitor e ()
 dmaUARTHardwareMonitor tocc dmauart pins baud init_cb = do
   clockConfig <- fmap tocc getEnv
@@ -94,11 +94,11 @@ syncDMAMonitor :: (IvoryString tx, IvoryString rx)
                => UART
                -> DMATowerStream
                -> DMATowerStream
-               -> ChanOutput (Stored ITime)
+               -> ChanOutput ('Stored ITime)
                -> ChanOutput tx
                -> ChanInput  rx
-               -> ChanOutput (Stored ITime)
-               -> ChanInput  (Stored ITime)
+               -> ChanOutput ('Stored ITime)
+               -> ChanInput  ('Stored ITime)
                -> Milliseconds
                -> Monitor e ()
 syncDMAMonitor uart txstream rxstream flush_chan req_chan rx_chan init_chan init_cb rx_period = do
@@ -326,7 +326,7 @@ bdr_reg_addr :: BitDataReg a -> Uint32
 bdr_reg_addr = fromInteger . unReg . bdr_reg
   where unReg (Reg a) = a
 
-ref_to_uint32_proc :: Def('[Ref s (Stored Uint8)] :-> Uint32)
+ref_to_uint32_proc :: Def('[Ref s ('Stored Uint8)] ':-> Uint32)
 ref_to_uint32_proc = importProc "ref_to_uint32" dmaRefToUint32Header
 
 

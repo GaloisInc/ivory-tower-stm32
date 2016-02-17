@@ -1,28 +1,23 @@
-IVORY_REPO ?= ../../ivory
-TOWER_REPO ?= ../../tower
-BSP_REPO ?= ..
-include ../Makefile.sandbox
+include ../stack.mk
 
-IVORYFLAGS = --const-fold
+IVORYFLAGS ?= --const-fold
+# TODO: this needs to be refactored
+TESTS  := bsp-led-test bsp-spi-test bsp-i2c-test bsp-uart-test bsp-can-test bsp-rng-test \
+          bsp_led_aadl_test bsp_i2c_aadl_test bsp_uart_aadl_test bsp_can_aadl_test
+	        
+CLEANS := $(foreach test,$(TESTS),$(test)-clean)
 
-test: bsp-led-test
-test: bsp_led_aadl_test
-test: bsp-spi-test
-test: bsp-i2c-test
-test: bsp_i2c_aadl_test
-test: bsp-uart-test
-test: bsp_uart_aadl_test
-test: bsp-can-test
-test: bsp_can_aadl_test
-test: bsp-rng-test
+.PHONY: test clean $(TESTS) $(CLEANS)
+test: $(TESTS)
+clean: $(CLEANS)
 
-.PHONY: bsp-led-test
-bsp-led-test:
-	cabal run bsp-led-test-gen -- --src-dir=bsp-led-test $(IVORYFLAGS)
-	make -C bsp-led-test
-
-bsp-led-test-clean:
-	rm -rf bsp-led-test
+define MKTEST
+$(1):
+	stack build . --exec '$(1)-gen --src-dir=$(1) $(IVORYFLAGS)'
+	make -C $(1)
+$(1)-clean:
+	rm -rf $(1)
+endef
 
 .PHONY: bsp_led_aadl_test
 bsp_led_aadl_test:
@@ -31,22 +26,6 @@ bsp_led_aadl_test:
 bsp_led_aadl_test_clean:
 	rm -rf bsp_led_aadl_test
 
-.PHONY: bsp-spi-test
-bsp-spi-test:
-	cabal run bsp-spi-test-gen -- --src-dir=bsp-spi-test $(IVORYFLAGS)
-	make -C bsp-spi-test
-
-bsp-spi-test-clean:
-	rm -rf bsp-spi-test
-
-.PHONY: bsp-i2c-test
-bsp-i2c-test:
-	cabal run bsp-i2c-test-gen -- --src-dir=bsp-i2c-test $(IVORYFLAGS)
-	make -C bsp-i2c-test
-
-bsp-i2c-test-clean:
-	rm -rf bsp-i2c-test
-
 .PHONY: bsp_i2c_aadl_test
 bsp_i2c_aadl_test:
 	cabal run bsp_i2c_aadl_test_gen -- --src-dir=bsp_i2c_aadl_test --lib-dir="" $(IVORYFLAGS)
@@ -54,36 +33,9 @@ bsp_i2c_aadl_test:
 bsp_i2c_aadl_test_clean:
 	rm -rf bsp_i2c_aadl_test
 
-.PHONY: bsp-uart-test
-bsp-uart-test:
-	cabal run bsp-uart-test-gen -- --src-dir=bsp-uart-test $(IVORYFLAGS)
-	make -C bsp-uart-test
-
-bsp-uart-test-clean:
-	rm -rf bsp-uart-test
-
 .PHONY: bsp_uart_aadl_test
 bsp_uart_aadl_test:
 	cabal run bsp-uart-aadl-test-gen -- --src-dir=$@ --lib-dir="" $(IVORYFLAGS)
-
-bsp-uart-aadl-test-clean:
-	rm -rf bsp_uart_aadl_test
-
-.PHONY: bsp-dma-uart-test
-bsp-dma-uart-test:
-	cabal run bsp-dma-uart-test-gen -- --src-dir=bsp-dma-uart-test $(IVORYFLAGS)
-	make -C bsp-dma-uart-test
-
-bsp-dma-uart-test-clean:
-	rm -rf bsp-dma-uart-test
-
-.PHONY: bsp-can-test
-bsp-can-test:
-	cabal run bsp-can-test-gen -- --src-dir=bsp-can-test $(IVORYFLAGS)
-	make -C bsp-can-test
-
-bsp-can-test-clean:
-	rm -rf bsp-can-test
 
 .PHONY: bsp_can_aadl_test
 bsp_can_aadl_test:
@@ -92,20 +44,4 @@ bsp_can_aadl_test:
 bsp_can_aadl_test_clean:
 	rm -rf bsp_can_aadl_test
 
-.PHONY: bsp-rng-test
-bsp-rng-test:
-	cabal run bsp-rng-test-gen -- --src-dir=bsp-rng-test $(IVORYFLAGS)
-	make -C bsp-rng-test
-
-bsp-rng-test-clean:
-	rm -rf bsp-rng-test
-
-clean: bsp-led-test-clean
-clean: bsp-led-aadl-test-clean
-clean: bsp-spi-test-clean
-clean: bsp-i2c-test-clean
-clean: bsp-uart-test-clean
-clean: bsp-uart-aadl-test-clean
-clean: bsp-dma-uart-test-clean
-clean: bsp-can-test-clean
-clean: bsp-rng-test-clean
+$(foreach test,$(TESTS),$(eval $(call MKTEST,$(test))))
