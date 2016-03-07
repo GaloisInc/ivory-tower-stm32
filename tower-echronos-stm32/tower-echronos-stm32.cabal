@@ -14,6 +14,7 @@ library
                , filepath
                , ivory >= 0.1.0.2
                , ivory-artifact
+               , ivory-backend-c
                , ivory-hw
                , ivory-bsp-stm32
                , tower

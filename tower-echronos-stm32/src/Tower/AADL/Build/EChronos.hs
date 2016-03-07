@@ -10,12 +10,15 @@
 
 module Tower.AADL.Build.EChronos where
 
+import Data.Maybe ( fromMaybe )
 import System.FilePath
 
 import Ivory.Artifact
 import Ivory.Language
 import Ivory.Tower
 import Ivory.HW
+
+import qualified Ivory.Compile.C.CmdlineFrontend as O
 
 import Tower.AADL.Config (AADLConfig(..))
 import Tower.AADL.Build.Common
@@ -41,6 +44,8 @@ ramsesMakefile c =
   , Target ".tag.ramses" []
     ["java -jar $(RAMSES_PATH)/ramses.jar -g rtos -i $(AADL2RTOS_CONFIG_DIR) \
           \-o . -l trace -s sys.impl -m SMACCM_SYS.aadl,$(AADL_LIST)"
+    ,"mv user_code/*.c gen/"
+    ,"-rmdir user_code"
     ,"touch .tag.ramses"
     ]
   , Target "tower-clean" []
@@ -54,16 +59,16 @@ ramsesMakefile c =
 
 --------------------------------------------------------------------------------
 echronosMakefileName :: FilePath
-echronosMakefileName = "Makefile"
+echronosMakefileName = "echronos.mk"
 
 echronosMakefile :: [MkStmt]
 echronosMakefile =
   [ "SHELL"       =: "/bin/bash"
   , "ROOT"        =: "$(shell pwd)"
   , "SRC"         =: "$(ROOT)/."
-  , "EXE"         =: "sys"
+  , "EXE"         =: "image"
   , "AS"          =: "arm-none-eabi-as -mthumb -g3 -mlittle-endian -mcpu=cortex-m4 \\\n\
-               \      -mfloat-abi=hard -mfpu=fpv4-sp-d16 -I$(SRC) -I$(SRC)/include"
+               \      -mfloat-abi=hard -mfpu=fpv4-sp-d16 -I$(SRC)"
   , "CC"          =: "arm-none-eabi-gcc"
   , "CFLAGS"      =: "-Os -g3 -Wall -Werror              \\\n\
            \          -std=gnu99                         \\\n\
@@ -75,9 +80,8 @@ echronosMakefile =
            \          -mthumb -mcpu=cortex-m4            \\\n\
            \          -mfloat-abi=hard -mfpu=fpv4-sp-d16 \\\n\
            \          -I$(SRC)                           \\\n\
-           \          -I$(SRC)/include                   \\\n\
-           \          -I$(SRC)/lib/include               \\\n\
            \          -I$(SRC)/gen                       \\\n\
+           \          -I$(SRC)/include                   \\\n\
            \          -I$(SRC)/echronos_gen"
   , "LDSCRIPT"    =: "$(SRC)/echronos_gen/default.ld"
   , "LDFLAGS"     =: "-Wl,--script=$(LDSCRIPT)           \\\n\
@@ -87,11 +91,10 @@ echronosMakefile =
           \           -mfloat-abi=hard -mfpu=fpv4-sp-d16"
   , "LDLIBS"      =: "-lm -lc -lnosys -lgcc"
   , "LD"          =: "arm-none-eabi-gcc"
-  , "SOURCES_GCC" =: "$(wildcard $(SRC)/src/*.c)                \\\n\
-      \               $(wildcard $(SRC)/lib/src/*.c)            \\\n\
+  , "SOURCES_GCC" =: "$(wildcard $(SRC)/*.c)                    \\\n\
       \               $(wildcard $(SRC)/gen/*.c)                \\\n\
       \               $(wildcard $(SRC)/echronos_gen/*.c)"
-  , "SOURCES_AS"  =: "$(wildcard $(SRC)/src/*.s)                \\\n\
+  , "SOURCES_AS"  =: "$(wildcard $(SRC)*.s)                     \\\n\
        \              $(wildcard $(SRC)/gen/*.s)                \\\n\
        \              $(wildcard $(SRC)/echronos_gen/*.s)"
   , "OBJECTS_GCC" =: "$(SOURCES_GCC:.c=.o)"
@@ -137,7 +140,7 @@ makefile = [ Comment "Make sure 'all' is the first target by putting it before a
              ]
            , Target "clean" ["echronos-clean", "tower-clean"]
              [ "rm -f .tag.echronos" ]
-           , include    ("gen" </> echronosMakefileName) ]
+           , include echronosMakefileName ]
 
 echronosArtifacts :: AADLConfig -> [Located Artifact]
 echronosArtifacts cfg = map Root ls ++ hw_artifacts
@@ -151,11 +154,9 @@ echronosArtifacts cfg = map Root ls ++ hw_artifacts
       [ artifactString
           makefileName
           (renderMkStmts makefile)
-      , artifactPath
-          "gen"
-          (artifactString
-            echronosMakefileName
-            (renderMkStmts echronosMakefile)) ]
+      , artifactString
+          echronosMakefileName
+          (renderMkStmts echronosMakefile) ]
 
 defaultEChronosOS :: STM32Config -> OSSpecific STM32Config e
 defaultEChronosOS cfg =
@@ -165,6 +166,18 @@ defaultEChronosOS cfg =
     , osSpecificArtifacts = const echronosArtifacts
     , osSpecificSrcDir    = const id
     , osSpecificTower     = eChronosModules cfg
+    , osSpecificOptsApps  = \cfg copts ->
+        let dir = fromMaybe "." (O.outDir copts)
+        in copts { O.outDir    = Just (dir </> configSrcsDir cfg)
+                 , O.outHdrDir = Just (dir </> configHdrDir  cfg)
+                 , O.outArtDir = Just dir
+                 }
+    , osSpecificOptsLibs  = \cfg copts ->
+        let dir = fromMaybe "." (O.outDir copts)
+        in copts { O.outDir    = Just (dir </> configSrcsDir cfg)
+                 , O.outHdrDir = Just (dir </> configHdrDir  cfg)
+                 , O.outArtDir = Just dir
+                 }
     }
 
 ----------------------------------------------------------------------------

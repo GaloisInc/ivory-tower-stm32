@@ -20,7 +20,7 @@ endef
 
 define MK_AADL_TEST
 $(1):
-	stack build . --exec "$(1)_gen --src-dir=$(1) --lib-dir="" $(IVORYFLAGS)"
+	stack build . --exec '$(1)_gen --src-dir=$(1) $(IVORYFLAGS)'
 $(1)_clean:
 	rm -rf $(1)
 endef
