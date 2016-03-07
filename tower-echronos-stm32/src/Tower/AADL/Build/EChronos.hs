@@ -44,9 +44,7 @@ ramsesMakefile c =
     ,"touch .tag.ramses"
     ]
   , Target "tower-clean" []
-    [ rm aadlFilesMk
-    , rm "*.aadl"
-    , rm (configSrcsDir c)
+    [ rm (configSrcsDir c)
     , rm (configHdrDir  c)
     , rm ".tag.ramses"
     ]
@@ -83,11 +81,11 @@ echronosMakefile =
            \          -I$(SRC)/echronos_gen"
   , "LDSCRIPT"    =: "$(SRC)/echronos_gen/default.ld"
   , "LDFLAGS"     =: "-Wl,--script=$(LDSCRIPT)           \\\n\
-          \           -nostartfiles                      \\\n\
+          \           -nodefaultlibs                     \\\n\
           \           -mlittle-endian                    \\\n\
           \           -mthumb -mcpu=cortex-m4            \\\n\
           \           -mfloat-abi=hard -mfpu=fpv4-sp-d16"
-  , "LDLIBS"      =: "-lm"
+  , "LDLIBS"      =: "-lm -lc -lnosys -lgcc"
   , "LD"          =: "arm-none-eabi-gcc"
   , "SOURCES_GCC" =: "$(wildcard $(SRC)/src/*.c)                \\\n\
       \               $(wildcard $(SRC)/lib/src/*.c)            \\\n\
