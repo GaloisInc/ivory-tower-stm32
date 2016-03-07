@@ -120,7 +120,7 @@ executable bsp-uart-test-gen
                        ivory-bsp-tests
   ghc-options:          -Wall
 
-executable bsp-uart-aadl-test-gen
+executable bsp_uart_aadl_test_gen
   main-is:             UARTAADLTest.hs
   hs-source-dirs:      tests
   build-depends:       base >= 4.6,
@@ -215,7 +215,7 @@ executable bsp-dma-test
                        ivory-bsp-tests
   ghc-options:          -Wall
 
-executable bsp-led-aadl-test-gen
+executable bsp_led_aadl_test_gen
   main-is:             LEDAADLTest.hs
   hs-source-dirs:      tests
   build-depends:       base >= 4.6,

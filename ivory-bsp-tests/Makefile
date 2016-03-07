@@ -1,14 +1,13 @@
 include ../stack.mk
 
 IVORYFLAGS ?= --const-fold
-# TODO: this needs to be refactored
-TESTS  := bsp-led-test bsp-spi-test bsp-i2c-test bsp-uart-test bsp-can-test bsp-rng-test \
-          bsp_led_aadl_test bsp_i2c_aadl_test bsp_uart_aadl_test bsp_can_aadl_test
-	        
-CLEANS := $(foreach test,$(TESTS),$(test)-clean)
+TESTS      := bsp-led-test bsp-spi-test bsp-i2c-test bsp-uart-test bsp-can-test bsp-rng-test
+AADL_TESTS := bsp_led_aadl_test bsp_i2c_aadl_test bsp_uart_aadl_test bsp_can_aadl_test
+CLEANS     := $(foreach test,$(TESTS),$(test)-clean) \
+	            $(foreach test,$(AADL_TESTS),$(test)_clean)
 
-.PHONY: test clean $(TESTS) $(CLEANS)
-test: $(TESTS)
+.PHONY: test clean $(TESTS) $(AADL_TESTS) $(CLEANS)
+test: $(TESTS) $(AADL_TESTS)
 clean: $(CLEANS)
 
 define MKTEST
@@ -19,29 +18,12 @@ $(1)-clean:
 	rm -rf $(1)
 endef
 
-.PHONY: bsp_led_aadl_test
-bsp_led_aadl_test:
-	cabal run bsp-led-aadl-test-gen -- --src-dir=$@ --lib-dir="" $(IVORYFLAGS)
-
-bsp_led_aadl_test_clean:
-	rm -rf bsp_led_aadl_test
-
-.PHONY: bsp_i2c_aadl_test
-bsp_i2c_aadl_test:
-	cabal run bsp_i2c_aadl_test_gen -- --src-dir=bsp_i2c_aadl_test --lib-dir="" $(IVORYFLAGS)
-
-bsp_i2c_aadl_test_clean:
-	rm -rf bsp_i2c_aadl_test
-
-.PHONY: bsp_uart_aadl_test
-bsp_uart_aadl_test:
-	cabal run bsp-uart-aadl-test-gen -- --src-dir=$@ --lib-dir="" $(IVORYFLAGS)
-
-.PHONY: bsp_can_aadl_test
-bsp_can_aadl_test:
-	cabal run bsp_can_aadl_test_gen -- --src-dir=bsp_can_aadl_test --lib-dir="" $(IVORYFLAGS)
-
-bsp_can_aadl_test_clean:
-	rm -rf bsp_can_aadl_test
+define MK_AADL_TEST
+$(1):
+	stack build . --exec "$(1)_gen --src-dir=$(1) --lib-dir="" $(IVORYFLAGS)"
+$(1)_clean:
+	rm -rf $(1)
+endef
 
 $(foreach test,$(TESTS),$(eval $(call MKTEST,$(test))))
+$(foreach test,$(AADL_TESTS),$(eval $(call MK_AADL_TEST,$(test))))
