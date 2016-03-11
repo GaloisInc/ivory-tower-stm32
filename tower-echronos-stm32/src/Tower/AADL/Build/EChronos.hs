@@ -291,7 +291,7 @@ timeModule = package "tower_time" $ do
   getTimeProc :: Def('[] ':-> ITime)
   getTimeProc = proc "tower_get_time" $ body $ do
     t <- call clock_get_time'
-    ret t
+    ret (fromIMilliseconds t)
   -- XXX: This is really Uint64 not ITime aka Sint64
   clock_get_time' :: Def('[]':->ITime)
   clock_get_time' = importProc "clock_get_time" "clock_driver.h"
