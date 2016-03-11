@@ -44,15 +44,10 @@ ramsesMakefile c =
   , Target ".tag.ramses" []
     ["java -jar $(RAMSES_PATH)/ramses.jar -g rtos -i $(AADL2RTOS_CONFIG_DIR) \
           \-o . -l trace -s sys.impl -m SMACCM_SYS.aadl,$(AADL_LIST)"
-    ,"mv user_code/*.c gen/"
-    ,"-rmdir user_code"
     ,"touch .tag.ramses"
     ]
   , Target "tower-clean" []
-    [ rm (configSrcsDir c)
-    , rm (configHdrDir  c)
-    , rm ".tag.ramses"
-    ]
+    [ rm ".tag.ramses" ]
   ]
   where
   rm s = "-rm -rf " ++ s
@@ -61,8 +56,8 @@ ramsesMakefile c =
 echronosMakefileName :: FilePath
 echronosMakefileName = "echronos.mk"
 
-echronosMakefile :: [MkStmt]
-echronosMakefile =
+echronosMakefile :: AADLConfig -> [MkStmt]
+echronosMakefile c =
   [ "SHELL"       =: "/bin/bash"
   , "ROOT"        =: "$(shell pwd)"
   , "SRC"         =: "$(ROOT)/."
@@ -80,8 +75,8 @@ echronosMakefile =
            \          -mthumb -mcpu=cortex-m4            \\\n\
            \          -mfloat-abi=hard -mfpu=fpv4-sp-d16 \\\n\
            \          -I$(SRC)                           \\\n\
+           \          -I$(SRC)/" ++ configHdrDir c ++  " \\\n\
            \          -I$(SRC)/gen                       \\\n\
-           \          -I$(SRC)/include                   \\\n\
            \          -I$(SRC)/echronos_gen"
   , "LDSCRIPT"    =: "$(SRC)/echronos_gen/default.ld"
   , "LDFLAGS"     =: "-Wl,--script=$(LDSCRIPT)           \\\n\
@@ -100,10 +95,14 @@ echronosMakefile =
   , "OBJECTS_GCC" =: "$(SOURCES_GCC:.c=.o)"
   , "OBJECTS_AS"  =: "$(SOURCES_AS:.s=.o)"
   , "VPATH"       =: "$(SRC)"
+  , "OBJCOPY"     =: "arm-none-eabi-objcopy"
   , Target "$(EXE)" ["$(OBJECTS_GCC)", "$(OBJECTS_AS)"]
     ["@echo building executable from assembly files: $(OBJECTS_AS) and .c files: $(OBJECTS_GCC)"
     ,"@echo linking executable"
-    ,"$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)"]
+    ,"$(LD) $(LDFLAGS) -o $@ $^ $(LDLIBS)"
+    ]
+  , Target "bl_image.bin" ["$(EXE)"]
+    ["$(OBJCOPY) -O binary $< $@"]
   , Target ".PHONY" ["echronos-clean"] []
   , Target "echronos-clean" []
     ["@echo remove all the object files"
@@ -112,35 +111,39 @@ echronosMakefile =
     ,"rm -f $(SYS)"]
   ]
 
-makefile :: [MkStmt]
-makefile = [ Comment "Make sure 'all' is the first target by putting it before any includes"
-           , Target "all" ["generate"]
-             [ "# This sub-make is here to deal with $(EXE) depending on"
-             , "# files that have to be generated first. This requires us"
-             , "# to do the build in two phases."
-             , "make $(EXE)" ]
-           , includeOpt ramsesMakefileName
-           , Comment "We assume ECHRONOS_LOCATION and PRJ are set in PRJ_CMD.mk \\\n\
-                     \ECHRONOS_LOCATION should be the path to the echronos install where\\\n\
-                     \the setenv script and packages can be found. For example, the top of\\\n\
-                     \your echronos repository. PRJ should point to the prj tool."
-           , includeOpt "../PRJ_CMD.mk"
-           , "PRJ" ?= "prj"
-           , "ECHRONOS_LOCATION" ?= "$(shell which prj)"
-           , Target ".PHONY" ["generate", "clean"] []
-           , Target "generate" [".tag.echronos", ".tag.ramses"] []
-           , Target ".tag.echronos" [".tag.ramses"]
-             [ "pushd $(ECHRONOS_LOCATION) && source setenv && popd &&  \\\n\
-             \  $(PRJ) --output echronos_gen                            \\\n\
-             \         --search-path $(ECHRONOS_LOCATION)/packages      \\\n\
-             \         --no-project                                     \\\n\
-             \         gen                                              \\\n\
-             \         sys_impl.prx"
-             , "touch .tag.echronos"
-             ]
-           , Target "clean" ["echronos-clean", "tower-clean"]
-             [ "rm -f .tag.echronos" ]
-           , include echronosMakefileName ]
+makefile :: AADLConfig -> [MkStmt]
+makefile c =
+  [ Comment "Make sure 'all' is the first target by putting it before any includes"
+  , Target "all" ["generate"]
+    [ "# This sub-make is here to deal with bl_image.bin depending on"
+    , "# files that have to be generated first. This requires us"
+    , "# to do the build in two phases."
+    , "make bl_image.bin" ]
+  , includeOpt ramsesMakefileName
+  , Comment "We assume ECHRONOS_LOCATION and PRJ are set in PRJ_CMD.mk \\\n\
+            \ECHRONOS_LOCATION should be the path to the echronos install where\\\n\
+            \the setenv script and packages can be found. For example, the top of\\\n\
+            \your echronos repository. PRJ should point to the prj tool."
+  , includeOpt "../PRJ_CMD.mk"
+  , "PRJ" ?= "prj"
+  , "ECHRONOS_LOCATION" ?= "$(shell which prj)"
+  , Target ".PHONY" ["generate", "clean"] []
+  , Target "generate" [".tag.echronos", ".tag.ramses"]
+    ["-mv " ++ configSrcsDir c ++ "/*.[cs] gen/"
+    ,"-rmdir " ++ configSrcsDir c
+    ]
+  , Target ".tag.echronos" [".tag.ramses"]
+    [ "pushd $(ECHRONOS_LOCATION) && source setenv && popd &&  \\\n\
+    \  $(PRJ) --output echronos_gen                            \\\n\
+    \         --search-path $(ECHRONOS_LOCATION)/packages      \\\n\
+    \         --no-project                                     \\\n\
+    \         gen                                              \\\n\
+    \         sys_impl.prx"
+    , "touch .tag.echronos"
+    ]
+  , Target "clean" ["echronos-clean", "tower-clean"]
+    [ "rm -f .tag.echronos" ]
+  , include echronosMakefileName ]
 
 echronosArtifacts :: AADLConfig -> [Located Artifact]
 echronosArtifacts cfg = map Root ls ++ hw_artifacts
@@ -153,20 +156,20 @@ echronosArtifacts cfg = map Root ls ++ hw_artifacts
   osSpecific =
       [ artifactString
           makefileName
-          (renderMkStmts makefile)
+          (renderMkStmts (makefile cfg))
       , artifactString
           echronosMakefileName
-          (renderMkStmts echronosMakefile) ]
+          (renderMkStmts (echronosMakefile cfg)) ]
 
 defaultEChronosOS :: STM32Config -> OSSpecific STM32Config e
 defaultEChronosOS cfg =
   OSSpecific
-    { osSpecificName      = "eChronos"
-    , osSpecificConfig    = cfg
-    , osSpecificArtifacts = const echronosArtifacts
-    , osSpecificSrcDir    = const id
-    , osSpecificTower     = eChronosModules cfg
-    , osSpecificOptsApps  = \cfg copts ->
+    { osSpecificName       = "eChronos"
+    , osSpecificConfig     = cfg
+    , osSpecificArtifacts  = const echronosArtifacts
+    , osSpecificSrcDir     = const id
+    , osSpecificTower      = eChronosModules cfg
+    , osSpecificOptsApps   = \cfg copts ->
         let dir = fromMaybe "." (O.outDir copts)
         in copts { O.outDir    = Just (dir </> configSrcsDir cfg)
                  , O.outHdrDir = Just (dir </> configHdrDir  cfg)
@@ -185,11 +188,7 @@ defaultEChronosOS cfg =
 ----------------------------------------------------------------------------
 mainProc :: STM32Config -> Def ('[] ':-> ())
 mainProc cfg = proc "main" $ body $ do
-
-  -- XXX: We premultiply by 8 here because Mike's clock init code divides by 8.
-  -- His code assumes the systick clock source is always AHB/8. That is his code
-  -- sets bit 2 of the STK_CTRL register is always 0.
-  let rate = 8*fromIntegral (clockSysClkHz (stm32config_clock cfg))
+  let rate = fromIntegral (clockSysClkHz (stm32config_clock cfg))
   call_ (init_clocks (stm32config_clock cfg))
   call_ clock_set_cpu_rate_in_hz rate
   result <- call initialize_periodic_dispatcher
