@@ -12,7 +12,6 @@ module Ivory.BSP.STM32.Config
 
 import qualified Data.Char as C
 
-import Ivory.BSP.ARMv7M.SysTick
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Processor
 import Ivory.Tower.Config
