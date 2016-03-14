@@ -32,8 +32,8 @@ import Ivory.BSP.STM32.ClockConfig.Init
 -- Ramses build
 
 -- Ramses Makefile ------------------------------------------------------------
-ramsesMakefile :: AADLConfig -> [MkStmt]
-ramsesMakefile c =
+ramsesMakefile :: [MkStmt]
+ramsesMakefile =
   [ include    aadlFilesMk
   , includeOpt "../RAMSES_PATH.mk"
   , "RAMSES_PATH" ?= "./"
@@ -151,7 +151,7 @@ echronosArtifacts cfg = map Root ls ++ hw_artifacts
   ls :: [Artifact]
   ls = artifactString
          ramsesMakefileName
-         (renderMkStmts (ramsesMakefile cfg))
+         (renderMkStmts ramsesMakefile)
      : osSpecific
   osSpecific =
       [ artifactString
@@ -169,16 +169,16 @@ defaultEChronosOS cfg =
     , osSpecificArtifacts  = const echronosArtifacts
     , osSpecificSrcDir     = const id
     , osSpecificTower      = eChronosModules cfg
-    , osSpecificOptsApps   = \cfg copts ->
+    , osSpecificOptsApps   = \c copts ->
         let dir = fromMaybe "." (O.outDir copts)
-        in copts { O.outDir    = Just (dir </> configSrcsDir cfg)
-                 , O.outHdrDir = Just (dir </> configHdrDir  cfg)
+        in copts { O.outDir    = Just (dir </> configSrcsDir c)
+                 , O.outHdrDir = Just (dir </> configHdrDir  c)
                  , O.outArtDir = Just dir
                  }
-    , osSpecificOptsLibs  = \cfg copts ->
+    , osSpecificOptsLibs  = \c copts ->
         let dir = fromMaybe "." (O.outDir copts)
-        in copts { O.outDir    = Just (dir </> configSrcsDir cfg)
-                 , O.outHdrDir = Just (dir </> configHdrDir  cfg)
+        in copts { O.outDir    = Just (dir </> configSrcsDir c)
+                 , O.outHdrDir = Just (dir </> configHdrDir  c)
                  , O.outArtDir = Just dir
                  }
     }
