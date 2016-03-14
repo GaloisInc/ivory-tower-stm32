@@ -86,6 +86,24 @@ executable bsp-i2c-test-gen
                        ivory-bsp-tests
   ghc-options:          -Wall
 
+executable bsp_i2c_aadl_test_gen
+  main-is:             I2CAADLTest.hs
+  hs-source-dirs:      tests
+  build-depends:       base >= 4.6,
+                       ivory,
+                       ivory-stdlib,
+                       ivory-backend-c,
+                       ivory-hw,
+                       tower          >= 0.9,
+                       tower-aadl,
+                       tower-config,
+                       tower-freertos-stm32,
+                       tower-echronos-stm32,
+                       ivory-bsp-stm32,
+                       ivory-bsp-tests
+  ghc-options:          -Wall
+
+
 
 executable bsp-uart-test-gen
   main-is:             UARTTest.hs
@@ -97,6 +115,23 @@ executable bsp-uart-test-gen
                        ivory-hw,
                        tower          >= 0.9,
                        tower-config,
+                       tower-freertos-stm32,
+                       ivory-bsp-stm32,
+                       ivory-bsp-tests
+  ghc-options:          -Wall
+
+executable bsp_uart_aadl_test_gen
+  main-is:             UARTAADLTest.hs
+  hs-source-dirs:      tests
+  build-depends:       base >= 4.6,
+                       ivory,
+                       ivory-stdlib,
+                       ivory-backend-c,
+                       ivory-hw,
+                       tower          >= 0.9,
+                       tower-aadl,
+                       tower-config,
+                       tower-echronos-stm32,
                        tower-freertos-stm32,
                        ivory-bsp-stm32,
                        ivory-bsp-tests
@@ -132,6 +167,24 @@ executable bsp-can-test-gen
                        ivory-bsp-tests
   ghc-options:          -Wall
 
+executable bsp_can_aadl_test_gen
+  main-is:             CANAADLTest.hs
+  hs-source-dirs:      tests
+  build-depends:       base >= 4.6,
+                       ivory,
+                       ivory-stdlib,
+                       ivory-backend-c,
+                       ivory-hw,
+                       tower          >= 0.9,
+                       tower-config,
+                       tower-aadl,
+                       tower-freertos-stm32,
+                       tower-echronos-stm32,
+                       ivory-bsp-stm32,
+                       ivory-bsp-tests
+  ghc-options:          -Wall
+
+
 executable bsp-rng-test-gen
   main-is:             RNGTest.hs
   hs-source-dirs:      tests
@@ -159,6 +212,22 @@ executable bsp-dma-test
                        tower-config,
                        tower-freertos-stm32,
                        ivory-bsp-stm32,
+                       ivory-bsp-tests
+  ghc-options:          -Wall
+
+executable bsp_led_aadl_test_gen
+  main-is:             LEDAADLTest.hs
+  hs-source-dirs:      tests
+  build-depends:       base >= 4.6,
+                       ivory,
+                       ivory-stdlib,
+                       ivory-hw,
+                       tower                >= 0.9,
+                       tower-aadl,
+                       tower-config,
+                       tower-freertos-stm32 >= 0.9,
+                       ivory-bsp-stm32,
+                       tower-echronos-stm32,
                        ivory-bsp-tests
   ghc-options:          -Wall
 

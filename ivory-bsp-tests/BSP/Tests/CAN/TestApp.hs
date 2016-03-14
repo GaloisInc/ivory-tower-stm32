@@ -22,8 +22,8 @@ app :: (e -> ClockConfig)
     -> (e -> ColoredLEDs)
     -> Tower e ()
 app tocc totestcan toleds = do
-  can <- fmap totestcan getEnv
-  leds <- fmap toleds getEnv
+  can  <- fmap totestcan getEnv
+  leds <- fmap toleds    getEnv
 
   (res, req, _, _) <- canTower tocc (testCAN can) 500000 (testCANRX can) (testCANTX can)
 
@@ -33,19 +33,21 @@ app tocc totestcan toleds = do
     handler systemInit "init" $ do
       callback $ const $ do
         let emptyID = CANFilterID32 (fromRep 0) (fromRep 0) False False
-        canFilterInit (testCANFilters can) [CANFilterBank CANFIFO0 CANFilterMask $ CANFilter32 emptyID emptyID] []
+        canFilterInit (testCANFilters can)
+                      [CANFilterBank CANFIFO0 CANFilterMask $ CANFilter32 emptyID emptyID]
+                      []
         ledSetup $ redLED leds
-        ledOn $ redLED leds
+        ledOn    $ redLED leds
 
     tx_pending <- state "tx_pending"
-    last_sent <- state "last_sent"
+    last_sent  <- state "last_sent"
 
     handler periodic "periodic" $ do
-      abort_emitter <- emitter (abortableAbort req) 1
-      req_emitter <- emitter (abortableTransmit req) 1
+      abort_emitter <- emitter (abortableAbort    req) 1
+      req_emitter   <- emitter (abortableTransmit req) 1
       callbackV $ \ p -> do
-        let time :: Uint64
-            time = signCast $ toIMicroseconds p
+        let time  :: Uint64
+            time  = signCast $ toIMicroseconds p
         let msgid = standardCANID (fromRep 0x7FF) (boolToBit false)
         r <- local $ istruct
           [ can_message_id  .= ival msgid
@@ -76,4 +78,4 @@ app tocc totestcan toleds = do
         store received (count + 1)
         ifte_ (count .& 1 ==? 0)
           (ledOff $ redLED leds)
-          (ledOn $ redLED leds)
+          (ledOn  $ redLED leds)

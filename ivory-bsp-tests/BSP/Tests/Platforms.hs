@@ -17,6 +17,7 @@ module BSP.Tests.Platforms
   , testplatform_clockconfig
   , px4fmuv17
   , px4fmuv17_ioar
+  , px4fmuv24
   , f4discovery
   , open407vc
   ) where
@@ -49,7 +50,7 @@ import Ivory.BSP.STM32.Peripheral.I2C
 import Ivory.BSP.STM32.Peripheral.RNG
 import Ivory.BSP.STM32.Peripheral.UART.DMA
 import Ivory.BSP.STM32.ClockConfig
-import Ivory.OS.FreeRTOS.Tower.STM32.Config
+import Ivory.BSP.STM32.Config
 
 import BSP.Tests.LED
 

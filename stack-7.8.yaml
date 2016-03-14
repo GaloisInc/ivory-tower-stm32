@@ -9,6 +9,7 @@ packages:
 - ivory-bsp-tests/
 - ivory-freertos-bindings/
 - tower-freertos-stm32/
+- tower-echronos-stm32/
 - tower-freertos-stm32-tests/
 - location: ../ivory/
   extra-dep: true

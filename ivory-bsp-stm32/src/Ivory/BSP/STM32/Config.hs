@@ -1,6 +1,6 @@
 
 
-module Ivory.OS.FreeRTOS.Tower.STM32.Config
+module Ivory.BSP.STM32.Config
   ( STM32Config(..)
   , Processor(..)
   , PX4Version(..)
@@ -12,6 +12,7 @@ module Ivory.OS.FreeRTOS.Tower.STM32.Config
 
 import qualified Data.Char as C
 
+import Ivory.BSP.ARMv7M.SysTick
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.Processor
 import Ivory.Tower.Config
@@ -21,6 +22,7 @@ data STM32Config =
     { stm32config_processor  :: Processor
     , stm32config_px4version :: Maybe PX4Version
     , stm32config_clock      :: ClockConfig
+--    , stm32config_systick    :: SysTickConfig
     }
 
 data PX4Version
