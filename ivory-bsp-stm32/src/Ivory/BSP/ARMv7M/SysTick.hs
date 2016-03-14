@@ -50,7 +50,7 @@ data SysTickConfig = SysTickConfig
 -- | Sets the SysTick interval to the given number of microseconds,
 -- and then starts the SysTick counter.
 clock_set_interval_in_us :: SysTickConfig
-                         -> Ref Global (Stored Uint64)
+                         -> Ref 'Global ('Stored Uint64)
                          -> Def('[Uint64]':->())
 clock_set_interval_in_us sysTick storedInterval =
   proc "clock_set_interval_in_us" $ \(interval :: Uint64) -> body $ do
@@ -85,7 +85,7 @@ clock_set_interval_in_us sysTick storedInterval =
 -- | Sets the SysTick interval to the given number of milliseconds,
 -- and then starts the SysTick counter.
 clock_set_interval_in_ms :: SysTickConfig
-                         -> Ref Global (Stored Uint64)
+                         -> Ref 'Global ('Stored Uint64)
                          -> Def('[Uint32]':->())
 clock_set_interval_in_ms sysTick storedInterval =
   proc "clock_set_interval_in_ms" $ \(interval :: Uint32) -> body $ do
@@ -96,7 +96,7 @@ clock_set_interval_in_ms sysTick storedInterval =
 -- to be able to use 'clock_get_time'.
 -- 
 -- XXX: These should really be in the echronos glue code, not the SysTick setup
-clock_irq_callback :: Ref Global (Stored Uint64) -> Def('[]':->())
+clock_irq_callback :: Ref 'Global ('Stored Uint64) -> Def('[]':->())
 clock_irq_callback elapsedTicks = proc "clock_irq_callback" $ body $ do
   ticks <- deref elapsedTicks
   store elapsedTicks (ticks + 1)
@@ -104,7 +104,7 @@ clock_irq_callback elapsedTicks = proc "clock_irq_callback" $ body $ do
 -- | Reset the time reported by 'clock_get_time' to 0.
 -- 
 -- XXX: These should really be in the echronos glue code, not the SysTick setup
-clock_start_timer :: Ref Global (Stored Uint64) -> Def('[]':->())
+clock_start_timer :: Ref 'Global ('Stored Uint64) -> Def('[]':->())
 clock_start_timer elapsedTicks = proc "clock_start_timer" $ body $ do
   store elapsedTicks 0
 
@@ -113,8 +113,8 @@ clock_start_timer elapsedTicks = proc "clock_start_timer" $ body $ do
 -- 'clock_set_interval_in_ms' has been called.
 -- 
 -- XXX: These should really be in the echronos glue code, not the SysTick setup
-clock_get_time :: Ref Global (Stored Uint64)
-               -> Ref Global (Stored Uint64)
+clock_get_time :: Ref 'Global ('Stored Uint64)
+               -> Ref 'Global ('Stored Uint64)
                -> Def('[]':->Uint64)
 clock_get_time storedInterval elapsedTicks =
   proc "clock_get_time" $ body $ do
