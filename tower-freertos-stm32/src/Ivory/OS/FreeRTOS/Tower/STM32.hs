@@ -9,6 +9,7 @@ module Ivory.OS.FreeRTOS.Tower.STM32
   ( compileTowerSTM32FreeRTOS
   , parseTowerSTM32FreeRTOS
   , compileTowerSTM32FreeRTOSWithOps
+  , parseTowerSTM32FreeRTOSWithOpts
   , module Ivory.BSP.STM32.Config
   ) where
 
@@ -220,13 +221,15 @@ compileTowerSTM32FreeRTOSWithOps fromEnv getEnv twr optslist = do
                  $ compatoutput_threads o
 
 
-
-
 parseTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO AST.Tower
-parseTowerSTM32FreeRTOS _ getEnv twr = do
+parseTowerSTM32FreeRTOS _ getEnv twr = parseTowerSTM32FreeRTOSWithOpts _ getEnv twr []
+
+parseTowerSTM32FreeRTOSWithOpts :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> [AST.Tower -> IO AST.Tower] -> IO AST.Tower
+parseTowerSTM32FreeRTOSWithOpts _ getEnv twr = do
   (_, topts) <- towerGetOpts
   env <- getEnv topts
-  let (ast, _, _, _) = runTower compatBackend twr env
+  let (ast2, _, _, _) = runTower compatBackend twr env
+  ast <- foldlM (\a f -> f a) ast2 optslist
   return ast
   where
   compatBackend = STM32FreeRTOSBackend
