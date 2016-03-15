@@ -222,10 +222,10 @@ compileTowerSTM32FreeRTOSWithOps fromEnv getEnv twr optslist = do
 
 
 parseTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO AST.Tower
-parseTowerSTM32FreeRTOS _ getEnv twr = parseTowerSTM32FreeRTOSWithOpts _ getEnv twr []
+parseTowerSTM32FreeRTOS aa getEnv twr = parseTowerSTM32FreeRTOSWithOpts aa getEnv twr []
 
 parseTowerSTM32FreeRTOSWithOpts :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> [AST.Tower -> IO AST.Tower] -> IO AST.Tower
-parseTowerSTM32FreeRTOSWithOpts _ getEnv twr = do
+parseTowerSTM32FreeRTOSWithOpts _ getEnv twr optslist = do
   (_, topts) <- towerGetOpts
   env <- getEnv topts
   let (ast2, _, _, _) = runTower compatBackend twr env
