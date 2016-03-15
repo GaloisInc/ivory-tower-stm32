@@ -29,7 +29,6 @@ import Ivory.Tower.Backend
 import Ivory.Tower.Types.ThreadCode
 import Ivory.Tower.Types.Unique
 
-import qualified Ivory.Tower.AST as AST
 import qualified Ivory.OS.FreeRTOS as FreeRTOS
 import Ivory.Tower.Types.Dependencies
 import Ivory.Tower (Tower)
@@ -214,11 +213,11 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
                  $ compatoutput_threads o
 
 parseTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO AST.Tower
-parseTowerSTM32FreeRTOS fromEnv getEnv twr = do
+parseTowerSTM32FreeRTOS _ getEnv twr = do
   (_, topts) <- towerGetOpts
   env <- getEnv topts
   let (ast, _, _, _) = runTower compatBackend twr env
-    return ast
+  return ast
   where
   compatBackend = STM32FreeRTOSBackend
 
