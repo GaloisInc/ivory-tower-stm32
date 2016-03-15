@@ -8,6 +8,7 @@
 module Ivory.OS.FreeRTOS.Tower.STM32
   ( compileTowerSTM32FreeRTOS
   , parseTowerSTM32FreeRTOS
+  , compileTowerSTM32FreeRTOSWithOps
   , module Ivory.BSP.STM32.Config
   ) where
 
@@ -16,6 +17,7 @@ import Prelude.Compat
 
 import Control.Monad (forM_)
 import Data.List (nub)
+import Data.Foldable (foldlM)
 import qualified Data.Map as Map
 import System.FilePath
 
@@ -190,14 +192,19 @@ callbackProcName callbackname _handlername tast
 --------
 
 compileTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO ()
-compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
+compileTowerSTM32FreeRTOS fromEnv getEnv twr = compileTowerSTM32FreeRTOSWithOps fromEnv getEnv twr []
+
+
+
+compileTowerSTM32FreeRTOSWithOps :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> [AST.Tower -> IO AST.Tower] -> IO ()
+compileTowerSTM32FreeRTOSWithOps fromEnv getEnv twr optslist = do
   (copts, topts) <- towerGetOpts
   env <- getEnv topts
 
   let cfg = fromEnv env
       (ast, o, deps, sigs) = runTower compatBackend twr env
-
-      mods = dependencies_modules deps
+  ast <- foldlM (\a f -> f a) ast optslist
+  let mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
           ++ monitorModules deps (Map.toList (compatoutput_monitors o))
           ++ stm32Modules cfg ast
@@ -211,6 +218,9 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
   thread_codes o = Map.toList
                  $ Map.insertWith mappend (AST.InitThread AST.Init) mempty
                  $ compatoutput_threads o
+
+
+
 
 parseTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO AST.Tower
 parseTowerSTM32FreeRTOS _ getEnv twr = do
