@@ -7,6 +7,7 @@
 
 module Ivory.OS.FreeRTOS.Tower.STM32
   ( compileTowerSTM32FreeRTOS
+  , parseTowerSTM32FreeRTOS
   , module Ivory.BSP.STM32.Config
   ) where
 
@@ -28,6 +29,7 @@ import Ivory.Tower.Backend
 import Ivory.Tower.Types.ThreadCode
 import Ivory.Tower.Types.Unique
 
+import qualified Ivory.Tower.AST as AST
 import qualified Ivory.OS.FreeRTOS as FreeRTOS
 import Ivory.Tower.Types.Dependencies
 import Ivory.Tower (Tower)
@@ -211,7 +213,16 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
                  $ Map.insertWith mappend (AST.InitThread AST.Init) mempty
                  $ compatoutput_threads o
 
+parseTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO AST.Tower
+parseTowerSTM32FreeRTOS fromEnv getEnv twr = do
+  (_, topts) <- towerGetOpts
+  env <- getEnv topts
+  let (ast, _, _, _) = runTower compatBackend twr env
+    return ast
+  where
+  compatBackend = STM32FreeRTOSBackend
 
+                  
 stm32Modules :: STM32Config -> AST.Tower -> [Module]
 stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]
   where
