@@ -41,8 +41,7 @@ library
                         ivory-bsp-stm32,
                         tower-config,
                         tower >= 0.9,
-                        tower-opts,
-                        deepseq
+                        tower-opts
 
   hs-source-dirs:       src
   default-language:     Haskell2010
