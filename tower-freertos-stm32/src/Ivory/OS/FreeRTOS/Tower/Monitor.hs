@@ -71,13 +71,13 @@ monitorInitProc mon =
       monitorInitProcRaw mon
 
 monitorInitProcRaw :: AST.Monitor -> Def('[]':->())
-monitorInitProcRaw mon = proc n $ body $
+monitorInitProcRaw mon = proc n $ body $ do
   call_ Mutex.create (monitorLock mon)
   where
   n = "monitor_init_" ++ AST.monitorName mon
 
 monitorInitProcLockCoarsening :: AST.Monitor -> Def('[]':->())
-monitorInitProcLockCoarsening mon = proc n $ body $
+monitorInitProcLockCoarsening mon = proc n $ body $ 
   traverse_ (call_ Mutex.create) $ map (monitorLockWithCoarsening mon) [1..(length $ AST.monitor_globals mon)]
   where
   n = "monitor_init_" ++ AST.monitorName mon

@@ -17,7 +17,7 @@ import Prelude ()
 import Prelude.Compat
 
 import Control.Monad (forM_)
-import Data.List (nub)
+import Data.List
 import Data.Foldable (foldlM)
 import qualified Data.Map as Map
 import System.FilePath
@@ -47,7 +47,6 @@ import qualified Ivory.OS.FreeRTOS.Tower.STM32.Build as STM32
 import Ivory.BSP.STM32.VectorTable (reset_handler)
 import Ivory.BSP.STM32.ClockConfig.Init (init_clocks)
 import Ivory.BSP.STM32.Config
-
 
 data STM32FreeRTOSBackend = STM32FreeRTOSBackend
 
@@ -203,9 +202,7 @@ compileTowerSTM32FreeRTOSWithOpts fromEnv getEnv twr optslist = do
   env <- getEnv topts
 
   let cfg = fromEnv env
-      (ast2, o, deps, sigs) = runTower compatBackend twr env
-  print copts
-  ast <- foldlM (\a f -> f a) ast2 optslist
+  (ast, o, deps, sigs) <- runTower compatBackend twr env optslist
   let mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
           ++ monitorModules deps (Map.toList (compatoutput_monitors o))
@@ -229,8 +226,7 @@ parseTowerSTM32FreeRTOSWithOpts :: (e -> STM32Config) -> (TOpts -> IO e) -> Towe
 parseTowerSTM32FreeRTOSWithOpts _ getEnv twr optslist = do
   (_, topts) <- towerGetOpts
   env <- getEnv topts
-  let (ast2, _, _, _) = runTower compatBackend twr env
-  ast <- foldlM (\a f -> f a) ast2 optslist
+  (ast, _, _, _) <- runTower compatBackend twr env optslist
   return ast
   where
   compatBackend = STM32FreeRTOSBackend
