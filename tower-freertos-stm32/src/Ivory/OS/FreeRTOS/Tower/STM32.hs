@@ -8,7 +8,7 @@
 module Ivory.OS.FreeRTOS.Tower.STM32
   ( compileTowerSTM32FreeRTOS
   , parseTowerSTM32FreeRTOS
-  , compileTowerSTM32FreeRTOSWithOps
+  , compileTowerSTM32FreeRTOSWithOpts
   , parseTowerSTM32FreeRTOSWithOpts
   , module Ivory.BSP.STM32.Config
   ) where
@@ -172,11 +172,11 @@ handlerProc callbacks emitters t m h =
     comment "init emitters"
     mapM_ emittercode_init emitters
     comment "take monitor lock"
-    call_ (monitorLockProc m)
+    monitorLockProc m h
     comment "run callbacks"
     forM_ callbacks $ \ cb -> call_ cb msg
     comment "release monitor lock"
-    call_ (monitorUnlockProc m)
+    monitorUnlockProc m h
     comment "deliver emitters"
     mapM_ emittercode_deliver emitters
 
@@ -193,17 +193,18 @@ callbackProcName callbackname _handlername tast
 --------
 
 compileTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO ()
-compileTowerSTM32FreeRTOS fromEnv getEnv twr = compileTowerSTM32FreeRTOSWithOps fromEnv getEnv twr []
+compileTowerSTM32FreeRTOS fromEnv getEnv twr = compileTowerSTM32FreeRTOSWithOpts fromEnv getEnv twr []
 
 
 
-compileTowerSTM32FreeRTOSWithOps :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> [AST.Tower -> IO AST.Tower] -> IO ()
-compileTowerSTM32FreeRTOSWithOps fromEnv getEnv twr optslist = do
+compileTowerSTM32FreeRTOSWithOpts :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> [AST.Tower -> IO AST.Tower] -> IO ()
+compileTowerSTM32FreeRTOSWithOpts fromEnv getEnv twr optslist = do
   (copts, topts) <- towerGetOpts
   env <- getEnv topts
 
   let cfg = fromEnv env
       (ast2, o, deps, sigs) = runTower compatBackend twr env
+  print copts
   ast <- foldlM (\a f -> f a) ast2 optslist
   let mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
