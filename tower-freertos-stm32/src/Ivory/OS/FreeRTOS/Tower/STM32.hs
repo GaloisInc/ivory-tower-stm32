@@ -18,7 +18,6 @@ import Prelude.Compat hiding (length, foldl)
 
 import Control.Monad (forM_)
 import Data.List
-import Data.Foldable (foldlM)
 import qualified Data.Map as Map
 import System.FilePath
 
