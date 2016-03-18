@@ -14,7 +14,7 @@ module Ivory.OS.FreeRTOS.Tower.STM32
   ) where
 
 import Prelude ()
-import Prelude.Compat
+import Prelude.Compat hiding (length, foldl)
 
 import Control.Monad (forM_)
 import Data.List
