@@ -161,13 +161,13 @@ echronosArtifacts cfg = map Root ls ++ hw_artifacts
           echronosMakefileName
           (renderMkStmts (echronosMakefile cfg)) ]
 
-defaultEChronosOS :: STM32Config -> OSSpecific STM32Config e
+defaultEChronosOS :: STM32Config -> OSSpecific STM32Config
 defaultEChronosOS cfg =
   OSSpecific
     { osSpecificName       = "eChronos"
     , osSpecificConfig     = cfg
     , osSpecificArtifacts  = \_ c _ -> echronosArtifacts c
-    , osSpecificSrcDir     = const id
+    , osSpecificSrcDir     = \_ x -> x
     , osSpecificTower      = eChronosModules cfg
     , osSpecificOptsApps   = \c copts ->
         let dir = fromMaybe "." (O.outDir copts)
