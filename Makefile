@@ -1,6 +1,7 @@
 include stack.mk
 
-SUBDIRS = tower-freertos-stm32-tests ivory-bsp-tests ivory-freertos-bindings ivory-bsp-stm32 tower-freertos-stm32
+SUBDIRS = tower-freertos-stm32-tests ivory-bsp-tests ivory-freertos-bindings ivory-bsp-stm32 \
+					tower-freertos-stm32 tower-echronos-stm32
 
 default: $(SUBDIRS)
 
