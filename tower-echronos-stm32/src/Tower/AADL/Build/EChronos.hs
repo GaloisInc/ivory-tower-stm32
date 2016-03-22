@@ -166,7 +166,7 @@ defaultEChronosOS cfg =
   OSSpecific
     { osSpecificName       = "eChronos"
     , osSpecificConfig     = cfg
-    , osSpecificArtifacts  = const echronosArtifacts
+    , osSpecificArtifacts  = \_ c _ -> echronosArtifacts c
     , osSpecificSrcDir     = const id
     , osSpecificTower      = eChronosModules cfg
     , osSpecificOptsApps   = \c copts ->
