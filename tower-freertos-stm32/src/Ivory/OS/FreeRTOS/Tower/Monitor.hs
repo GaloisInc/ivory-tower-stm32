@@ -18,8 +18,8 @@ import qualified Ivory.Tower.AST as AST
 
 import Ivory.Language
 import qualified Ivory.OS.FreeRTOS.Mutex as Mutex
-import Data.Foldable (traverse_)
-import Data.List
+--import Data.Foldable (traverse_)
+--import Data.List
 import Ivory.Tower.Types.Opts
 
 monitorStateModName :: AST.Monitor -> String
@@ -56,11 +56,11 @@ monitorLock :: AST.Monitor -> Mutex.MutexHandle
 monitorLock mon = addrOf (monitorLockArea mon)
 
 
-monitorLockAreaWithCoarsening :: AST.Monitor -> Int -> MemArea Mutex.Mutex
-monitorLockAreaWithCoarsening mon lockId = area ("lock" ++ (show lockId) ++ "_"  ++ AST.monitorName mon) Nothing
+--monitorLockAreaWithCoarsening :: AST.Monitor -> Int -> MemArea Mutex.Mutex
+--monitorLockAreaWithCoarsening mon lockId = area ("lock" ++ (show lockId) ++ "_"  ++ AST.monitorName mon) Nothing
 
-monitorLockWithCoarsening :: AST.Monitor -> Int -> Mutex.MutexHandle
-monitorLockWithCoarsening mon lockId = addrOf (monitorLockAreaWithCoarsening mon lockId)
+--monitorLockWithCoarsening :: AST.Monitor -> Int -> Mutex.MutexHandle
+--monitorLockWithCoarsening mon lockId = addrOf (monitorLockAreaWithCoarsening mon lockId)
 
 monitorInitProc :: AST.Monitor -> Def('[]':->())
 monitorInitProc mon = 
@@ -85,7 +85,7 @@ monitorInitProcRaw mon = proc n $ body $ do
 
 
 monitorUnlockProc :: AST.Monitor -> AST.Handler -> Ivory eff ()
-monitorUnlockProc mon h =
+monitorUnlockProc mon _h =
   if (LockCoarsening OptVoid `elemOpt` (AST.monitor_transformers mon))
     then 
       --monitorUnlockProcLockCoarsening mon h
@@ -108,7 +108,7 @@ monitorUnlockProcRaw mon =
 
 
 monitorLockProc :: AST.Monitor -> AST.Handler -> Ivory eff ()
-monitorLockProc mon h =
+monitorLockProc mon _h =
   if (LockCoarsening OptVoid `elemOpt` (AST.monitor_transformers mon))
     then 
       --monitorLockProcLockCoarsening mon h
