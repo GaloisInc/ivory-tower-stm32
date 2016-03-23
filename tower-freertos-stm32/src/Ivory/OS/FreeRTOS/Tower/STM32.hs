@@ -20,8 +20,10 @@ import Control.Monad (forM_)
 import Data.List
 import qualified Data.Map as Map
 import System.FilePath
+import MonadLib
 
 import Ivory.Language
+import qualified Ivory.Language.Module as Mod
 import Ivory.Artifact
 import Ivory.HW
 import qualified Ivory.Stdlib as I
@@ -46,13 +48,17 @@ import qualified Ivory.OS.FreeRTOS.Tower.STM32.Build as STM32
 import Ivory.BSP.STM32.VectorTable (reset_handler)
 import Ivory.BSP.STM32.ClockConfig.Init (init_clocks)
 import Ivory.BSP.STM32.Config
+import qualified Ivory.Language.Syntax as IAST
+import qualified Ivory.Language.Syntax.AST as IAST
+import qualified Ivory.Language.Syntax.Type as IAST
+import Ivory.Language.Proc (Def(DefProc), IvoryProcDef)
 
 data STM32FreeRTOSBackend = STM32FreeRTOSBackend
 
 instance TowerBackend STM32FreeRTOSBackend where
-  newtype TowerBackendCallback STM32FreeRTOSBackend a = STM32FreeRTOSCallback (forall s. AST.Handler -> AST.Thread -> (Def ('[ConstRef s a] ':-> ()), ModuleDef))
+  newtype TowerBackendCallback STM32FreeRTOSBackend = STM32FreeRTOSCallback (AST.Handler -> AST.Thread -> (IAST.Proc, ModuleDef))
   newtype TowerBackendEmitter STM32FreeRTOSBackend = STM32FreeRTOSEmitter (Maybe (AST.Monitor -> AST.Thread -> EmitterCode))
-  data TowerBackendHandler STM32FreeRTOSBackend a = STM32FreeRTOSHandler AST.Handler (forall s. AST.Monitor -> AST.Thread -> (Def ('[ConstRef s a] ':-> ()), ThreadCode))
+  data TowerBackendHandler STM32FreeRTOSBackend = STM32FreeRTOSHandler AST.Handler (AST.Monitor -> AST.Thread -> (IAST.Proc, ThreadCode))
   newtype TowerBackendMonitor STM32FreeRTOSBackend = STM32FreeRTOSMonitor (AST.Tower -> TowerBackendOutput STM32FreeRTOSBackend)
     deriving Monoid
   data TowerBackendOutput STM32FreeRTOSBackend = STM32FreeRTOSOutput
@@ -61,14 +67,15 @@ instance TowerBackend STM32FreeRTOSBackend where
     }
 
   callbackImpl _ ast f = STM32FreeRTOSCallback $ \ h t ->
-    let p = proc (callbackProcName ast (AST.handler_name h) t) $ \ r -> body $ noReturn $ f r
-    in (p, incl p)
+    let p = f {IAST.procSym = (callbackProcName ast (AST.handler_name h) t)}
+    in (p, put (mempty { IAST.modProcs   = Mod.visAcc Mod.Public p }))
 
-  emitterImpl _ _ [] = (Emitter $ const $ return (), STM32FreeRTOSEmitter Nothing)
+  emitterImpl _ _ [] = (STM32FreeRTOSEmitter Nothing)
   emitterImpl _ ast handlers =
-    ( Emitter $ call_ $ trampolineProc ast $ const $ return ()
-    , STM32FreeRTOSEmitter $ Just $ \ mon thd -> emitterCode ast thd [ fst $ h mon thd | STM32FreeRTOSHandler _ h <- handlers ]
-    )
+    STM32FreeRTOSEmitter $ Just $ \ mon thd -> emitterCode ast thd [ fst $ h mon thd | STM32FreeRTOSHandler _ h <- handlers ]
+
+  emitterImplAST _ ast =
+    Emitter $ call_ $ trampolineProc ast $ const $ return ()
 
   handlerImpl _ ast emitters callbacks = STM32FreeRTOSHandler ast $ \ mon thd ->
     let ems = [ e mon thd | STM32FreeRTOSEmitter (Just e) <- emitters ]
@@ -77,7 +84,7 @@ instance TowerBackend STM32FreeRTOSBackend where
     in (runner, ThreadCode
       { threadcode_user = sequence_ cbdefs
       , threadcode_emitter = mapM_ emittercode_user ems
-      , threadcode_gen = mapM_ emittercode_gen ems >> private (incl runner)
+      , threadcode_gen = mapM_ emittercode_gen ems >> put (mempty { IAST.modProcs   = Mod.visAcc Mod.Private runner })
       })
 
   monitorImpl _ ast handlers moddef = STM32FreeRTOSMonitor $ \ twr -> STM32FreeRTOSOutput
@@ -106,10 +113,9 @@ data EmitterCode = EmitterCode
   , emittercode_gen :: ModuleDef
   }
 
-emitterCode :: (IvoryArea a, IvoryZero a)
-            => AST.Emitter
+emitterCode :: AST.Emitter
             -> AST.Thread
-            -> (forall s. [Def ('[ConstRef s a] ':-> ())])
+            -> [IAST.Proc]
             -> EmitterCode
 emitterCode ast thr sinks = EmitterCode
   { emittercode_init = store (addrOf messageCount) 0
@@ -118,7 +124,7 @@ emitterCode ast thr sinks = EmitterCode
       forM_ (zip messages [0..]) $ \ (m, index) ->
         I.when (fromInteger index <? mc) $
           forM_ sinks $ \ p ->
-            call_ p (constRef (addrOf m))
+            call_bis (p) (constRef (addrOf m)) -- potential bug : be sure that the function names match 
 
   , emittercode_user = do
       private $ incl trampoline
@@ -154,17 +160,23 @@ emitterCode ast thr sinks = EmitterCode
   e_per_thread suffix =
     emitterProcName ast ++ "_" ++ AST.threadName thr ++ "_" ++ suffix
 
+call_bis :: IAST.Proc -> ConstRef s a -> Ivory eff ()
+call_bis p = emit (IAST.Call (IAST.tType $ head $ IAST.procArgs p) Nothing (IAST.NameSym (IAST.procSym p)) []) 
+
+procbis :: forall proc impl. IvoryProcDef proc impl => IAST.Sym -> impl -> IAST.Proc
+procbis name impl =
+  let (DefProc a) = proc name impl in a
+
 trampolineProc :: IvoryArea a
                => AST.Emitter
                -> (forall eff. ConstRef s a -> Ivory eff ())
                -> Def ('[ConstRef s a] ':-> ())
 trampolineProc ast f = proc (emitterProcName ast) $ \ r -> body $ f r
 
-handlerProc :: (IvoryArea a, IvoryZero a)
-            => [Def ('[ConstRef s a] ':-> ())]
+handlerProc :: [IAST.Proc]
             -> [EmitterCode]
             -> AST.Thread -> AST.Monitor -> AST.Handler
-            -> Def ('[ConstRef s a] ':-> ())
+            -> IAST.Proc
 handlerProc callbacks emitters t m h =
   proc (handlerProcName h t) $ \ msg -> body $ do
     comment "init emitters"
@@ -181,9 +193,9 @@ handlerProc callbacks emitters t m h =
 emitterProcName :: AST.Emitter -> String
 emitterProcName e = showUnique (AST.emitter_name e)
 
-callbackProcName :: Unique -> Unique -> AST.Thread -> String
+callbackProcName :: String -> Unique -> AST.Thread -> String
 callbackProcName callbackname _handlername tast
-  =  showUnique callbackname
+  =  callbackname
   ++ "_"
   ++ AST.threadName tast
 
@@ -193,8 +205,6 @@ callbackProcName callbackname _handlername tast
 compileTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO ()
 compileTowerSTM32FreeRTOS fromEnv getEnv twr = compileTowerSTM32FreeRTOSWithOpts fromEnv getEnv twr []
 
-
-
 compileTowerSTM32FreeRTOSWithOpts :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> [AST.Tower -> IO AST.Tower] -> IO ()
 compileTowerSTM32FreeRTOSWithOpts fromEnv getEnv twr optslist = do
   (copts, topts) <- towerGetOpts
@@ -202,6 +212,7 @@ compileTowerSTM32FreeRTOSWithOpts fromEnv getEnv twr optslist = do
 
   let cfg = fromEnv env
   (ast, o, deps, sigs) <- runTower compatBackend twr env optslist
+
   let mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
           ++ monitorModules deps (Map.toList (compatoutput_monitors o))
@@ -211,11 +222,11 @@ compileTowerSTM32FreeRTOSWithOpts fromEnv getEnv twr optslist = do
       as = stm32Artifacts cfg ast mods givenArtifacts
   runCompiler mods (as ++ givenArtifacts) copts
   where
-  compatBackend = STM32FreeRTOSBackend
+    compatBackend = STM32FreeRTOSBackend
 
-  thread_codes o = Map.toList
-                 $ Map.insertWith mappend (AST.InitThread AST.Init) mempty
-                 $ compatoutput_threads o
+    thread_codes o = Map.toList
+                   $ Map.insertWith mappend (AST.InitThread AST.Init) mempty
+                   $ compatoutput_threads o
 
 
 parseTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO AST.Tower
