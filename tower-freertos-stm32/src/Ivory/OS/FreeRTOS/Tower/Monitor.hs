@@ -15,12 +15,12 @@ module Ivory.OS.FreeRTOS.Tower.Monitor
 import Ivory.Tower.Types.Dependencies
 
 import qualified Ivory.Tower.AST as AST
-import qualified Ivory.Tower.Opts as Opts
 
 import Ivory.Language
 import qualified Ivory.OS.FreeRTOS.Mutex as Mutex
 import Data.Foldable (traverse_)
 import Data.List
+import Ivory.Tower.Types.Opts
 
 monitorStateModName :: AST.Monitor -> String
 monitorStateModName mon = "tower_state_monitor_" ++ AST.monitorName mon
@@ -64,9 +64,10 @@ monitorLockWithCoarsening mon lockId = addrOf (monitorLockAreaWithCoarsening mon
 
 monitorInitProc :: AST.Monitor -> Def('[]':->())
 monitorInitProc mon = 
-  if (Opts.lockCoarseningName `elem` (AST.monitor_transformers mon))
+  if (LockCoarsening OptVoid `elemOpt` (AST.monitor_transformers mon))
     then 
-      monitorInitProcLockCoarsening mon
+      --monitorInitProcLockCoarsening mon
+      monitorInitProcRaw mon
     else
       monitorInitProcRaw mon
 
@@ -76,18 +77,19 @@ monitorInitProcRaw mon = proc n $ body $ do
   where
   n = "monitor_init_" ++ AST.monitorName mon
 
-monitorInitProcLockCoarsening :: AST.Monitor -> Def('[]':->())
-monitorInitProcLockCoarsening mon = proc n $ body $ 
-  traverse_ (call_ Mutex.create) $ map (monitorLockWithCoarsening mon) [1..(length $ AST.monitor_globals mon)]
-  where
-  n = "monitor_init_" ++ AST.monitorName mon
+--monitorInitProcLockCoarsening :: AST.Monitor -> Def('[]':->())
+--monitorInitProcLockCoarsening mon = proc n $ body $ 
+--  traverse_ (call_ Mutex.create) $ map (monitorLockWithCoarsening mon) [1..(length $ AST.monitor_globals mon)]
+--  where
+--  n = "monitor_init_" ++ AST.monitorName mon
 
 
 monitorUnlockProc :: AST.Monitor -> AST.Handler -> Ivory eff ()
 monitorUnlockProc mon h =
-  if (Opts.lockCoarseningName `elem` (AST.monitor_transformers mon))
+  if (LockCoarsening OptVoid `elemOpt` (AST.monitor_transformers mon))
     then 
-      monitorUnlockProcLockCoarsening mon h
+      --monitorUnlockProcLockCoarsening mon h
+      monitorUnlockProcRaw mon
     else
       monitorUnlockProcRaw mon
 
@@ -97,19 +99,20 @@ monitorUnlockProcRaw mon =
   call_ Mutex.give (monitorLock mon)
 
 
-monitorUnlockProcLockCoarsening :: AST.Monitor -> AST.Handler -> Ivory eff ()
-monitorUnlockProcLockCoarsening mon h = 
-  traverse_ (call_ Mutex.give) $ map (monitorLockWithCoarsening mon) locksToTake
-  where
-    locksToTake :: [Int]
-    locksToTake = sort $ map succ $ nub $ concat $ map (\x -> findIndices (\list -> elem x list) $ AST.monitor_globals mon) $ AST.handler_globals h
+--monitorUnlockProcLockCoarsening :: AST.Monitor -> AST.Handler -> Ivory eff ()
+--monitorUnlockProcLockCoarsening mon h = 
+--  traverse_ (call_ Mutex.give) $ map (monitorLockWithCoarsening mon) locksToTake
+--  where
+--    locksToTake :: [Int]
+--    locksToTake = sort $ map succ $ nub $ concat $ map (\x -> findIndices (\list -> elem x list) $ AST.monitor_globals mon) $ AST.handler_globals h
 
 
 monitorLockProc :: AST.Monitor -> AST.Handler -> Ivory eff ()
 monitorLockProc mon h =
-  if (Opts.lockCoarseningName `elem` (AST.monitor_transformers mon))
+  if (LockCoarsening OptVoid `elemOpt` (AST.monitor_transformers mon))
     then 
-      monitorLockProcLockCoarsening mon h
+      --monitorLockProcLockCoarsening mon h
+      monitorLockProcRaw mon
     else
       monitorLockProcRaw mon
 
@@ -117,12 +120,12 @@ monitorLockProcRaw :: AST.Monitor -> Ivory eff ()
 monitorLockProcRaw mon = 
   call_ Mutex.take (monitorLock mon)
 
-monitorLockProcLockCoarsening :: AST.Monitor -> AST.Handler -> Ivory eff ()
-monitorLockProcLockCoarsening mon h = 
-  traverse_ (call_ Mutex.take) $ map (monitorLockWithCoarsening mon) locksToTake
-  where
-    locksToTake :: [Int]
-    locksToTake = sort $ map succ $ nub $ concat $ map (\x -> findIndices (\list -> elem x list) $ AST.monitor_globals mon) $ AST.handler_globals h
+--monitorLockProcLockCoarsening :: AST.Monitor -> AST.Handler -> Ivory eff ()
+--monitorLockProcLockCoarsening mon h = 
+--  traverse_ (call_ Mutex.take) $ map (monitorLockWithCoarsening mon) locksToTake
+--  where
+--    locksToTake :: [Int]
+--    locksToTake = sort $ map succ $ nub $ concat $ map (\x -> findIndices (\list -> elem x list) $ AST.monitor_globals mon) $ AST.handler_globals h
 
 
 monitorUnlockProcName :: AST.Monitor -> String
