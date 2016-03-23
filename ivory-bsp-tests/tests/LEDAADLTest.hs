@@ -19,7 +19,7 @@ main :: IO ()
 main = compileTowerAADLForPlatform f p $ do
   app testplatform_leds
   where
-  f :: TestPlatform -> (AADLConfig, OSSpecific STM32Config e)
+  f :: TestPlatform -> (AADLConfig, OSSpecific STM32Config)
   f tp = ( defaultAADLConfig { configSystemOS = EChronos
                              , configSystemHW = PIXHAWK
                              }
