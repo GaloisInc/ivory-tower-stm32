@@ -10,15 +10,10 @@
 
 module Tower.AADL.Build.EChronos where
 
-import Data.Maybe ( fromMaybe )
-import System.FilePath
-
 import Ivory.Artifact
 import Ivory.Language
 import Ivory.Tower
 import Ivory.HW
-
-import qualified Ivory.Compile.C.CmdlineFrontend as O
 
 import Tower.AADL.Config (AADLConfig(..))
 import Tower.AADL.Build.Common
@@ -161,26 +156,16 @@ echronosArtifacts cfg = map Root ls ++ hw_artifacts
           echronosMakefileName
           (renderMkStmts (echronosMakefile cfg)) ]
 
-defaultEChronosOS :: STM32Config -> OSSpecific STM32Config e
+defaultEChronosOS :: STM32Config -> OSSpecific STM32Config
 defaultEChronosOS cfg =
   OSSpecific
     { osSpecificName       = "eChronos"
     , osSpecificConfig     = cfg
-    , osSpecificArtifacts  = const echronosArtifacts
-    , osSpecificSrcDir     = const id
+    , osSpecificArtifacts  = \_ c _ -> echronosArtifacts c
+    , osSpecificSrcDir     = \_ x   -> x
     , osSpecificTower      = eChronosModules cfg
-    , osSpecificOptsApps   = \c copts ->
-        let dir = fromMaybe "." (O.outDir copts)
-        in copts { O.outDir    = Just (dir </> configSrcsDir c)
-                 , O.outHdrDir = Just (dir </> configHdrDir  c)
-                 , O.outArtDir = Just dir
-                 }
-    , osSpecificOptsLibs  = \c copts ->
-        let dir = fromMaybe "." (O.outDir copts)
-        in copts { O.outDir    = Just (dir </> configSrcsDir c)
-                 , O.outHdrDir = Just (dir </> configHdrDir  c)
-                 , O.outArtDir = Just dir
-                 }
+    , osSpecificOptsApps   = defaultOptsUpdate
+    , osSpecificOptsLibs   = defaultOptsUpdate
     }
 
 ----------------------------------------------------------------------------

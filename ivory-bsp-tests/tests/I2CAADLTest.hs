@@ -17,7 +17,7 @@ main = compileTowerAADLForPlatform f p $ do
         app (stm32config_clock . testplatform_stm32)
             testplatform_i2c
   where
-  f :: TestPlatform -> (AADLConfig, OSSpecific STM32Config e)
+  f :: TestPlatform -> (AADLConfig, OSSpecific STM32Config)
   f tp = ( defaultAADLConfig { configSystemOS = EChronos
                              , configSystemHW = PIXHAWK
                              }
