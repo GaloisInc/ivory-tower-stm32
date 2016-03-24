@@ -36,6 +36,7 @@ import Ivory.Tower.Types.Dependencies
 import Ivory.Tower (Tower)
 import Ivory.Tower.Monad.Tower (runTower)
 import Ivory.Tower.Options
+import Ivory.Tower.Types.Backend
 import Ivory.Tower.Types.Emitter
 
 import           Ivory.OS.FreeRTOS.Tower.System
@@ -49,7 +50,7 @@ import Ivory.BSP.STM32.Config
 
 data STM32FreeRTOSBackend = STM32FreeRTOSBackend
 
-instance TowerBackend STM32FreeRTOSBackend where
+instance TowerBackendTypes STM32FreeRTOSBackend where
   newtype TowerBackendCallback STM32FreeRTOSBackend a = STM32FreeRTOSCallback (forall s. AST.Handler -> AST.Thread -> (Def ('[ConstRef s a] ':-> ()), ModuleDef))
   newtype TowerBackendEmitter STM32FreeRTOSBackend = STM32FreeRTOSEmitter (Maybe (AST.Monitor -> AST.Thread -> EmitterCode))
   data TowerBackendHandler STM32FreeRTOSBackend a = STM32FreeRTOSHandler AST.Handler (forall s. AST.Monitor -> AST.Thread -> (Def ('[ConstRef s a] ':-> ()), ThreadCode))
@@ -59,6 +60,8 @@ instance TowerBackend STM32FreeRTOSBackend where
     { compatoutput_threads :: Map.Map AST.Thread ThreadCode
     , compatoutput_monitors :: Map.Map AST.Monitor ModuleDef
     }
+
+instance TowerBackend STM32FreeRTOSBackend where
 
   callbackImpl _ ast f = STM32FreeRTOSCallback $ \ h t ->
     let p = proc (callbackProcName ast (AST.handler_name h) t) $ \ r -> body $ noReturn $ f r
