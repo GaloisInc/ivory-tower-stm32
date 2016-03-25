@@ -204,7 +204,8 @@ compileTowerSTM32FreeRTOSWithOpts fromEnv getEnv twr optslist = do
   env <- getEnv topts
 
   let cfg = fromEnv env
-  (ast, o, deps, sigs) <- runTower compatBackend twr env optslist
+  (ast, monitors, deps, sigs) <- runTower compatBackend twr env optslist
+  let o = towerImpl compatBackend ast monitors
   let mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
           ++ monitorModules deps (Map.toList (compatoutput_monitors o))
