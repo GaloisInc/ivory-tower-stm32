@@ -35,7 +35,6 @@ import Ivory.Tower.Types.Backend
 import Ivory.Tower.Types.Emitter
 
 import Ivory.OS.FreeRTOS.Tower.Dummy.Monitor
-import Ivory.OS.FreeRTOS.Tower.Dummy.Signal
 import qualified Ivory.OS.FreeRTOS.Tower.Dummy.Build as Dum
 import Ivory.OS.FreeRTOS.Tower.Dummy.System
 import Ivory.OS.FreeRTOS.Tower.Dummy.Time
@@ -188,6 +187,24 @@ callbackProcName callbackname _handlername tast
   ++ "_"
   ++ AST.threadName tast
 
+
+--------------
+-- BACKEND BIS 
+--------------
+
+--monitorImplTD :: AST.Monitor -> DummyMonitor
+--monitorImplTD mon = 
+
+--towerImplTD :: AST.Tower -> TowerBackendOutput DummyBackend
+--towerImplTD a = 
+
+
+
+
+--data TowerBackendOutput DummyBackend = DummyOutput
+--    { compatoutput_threads :: Map.Map AST.Thread ThreadCode
+--    , compatoutput_monitors :: Map.Map AST.Monitor ModuleDef
+--    }
 
 --------
 
