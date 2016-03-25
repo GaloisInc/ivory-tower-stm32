@@ -8,6 +8,7 @@ packages:
 - ivory-bsp-stm32/
 - ivory-bsp-tests/
 - ivory-freertos-bindings/
+- tower-freertos-dummy/
 - tower-freertos-stm32/
 - tower-echronos-stm32/
 - tower-freertos-stm32-tests/
