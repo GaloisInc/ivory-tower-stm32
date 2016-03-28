@@ -51,12 +51,11 @@ import qualified Ivory.Language.Module as Mod
 import qualified Ivory.Language.Monad as Mon
 import qualified Ivory.Language.Syntax.AST as IAST
 import qualified Ivory.Language.Syntax.Names as IAST
-import Ivory.Language.Type (wrapVar, unwrapExpr,typedExpr)
 import qualified Ivory.Language.Syntax.Type as TIAST
-import Ivory.Language.MemArea (memSym, primAddrOf)
-import Ivory.Language.Proc (initialClosure, genVar, runBody)
+import Ivory.Language.MemArea (primAddrOf)
+import Ivory.Language.Proc (initialClosure, genVar)
 import Ivory.Language.MemArea (makeArea)
-import Ivory.Language.Uint (getUint32)
+import Ivory.Language.Type
 
 data DummyBackend = DummyBackend
 
@@ -324,25 +323,48 @@ handlerProcTD callbacks emitters t m h =
   IAST.Proc { IAST.procSym      = (handlerProcName h t)
             , IAST.procRetTy    = TIAST.TyVoid
             , IAST.procArgs     = [TIAST.Typed (TIAST.tType $ head $ IAST.procArgs $ head callbacks) var]
-            , IAST.procBody     = []--blockStmts block TODO
-            , IAST.procRequires = []--blockRequires block TODO
-            , IAST.procEnsures  = []--blockEnsures block TODO
+            , IAST.procBody     = blocBody
+            , IAST.procRequires = blocReq
+            , IAST.procEnsures  = blocEns
             }
   where 
     (var,_) = genVar initialClosure -- initial closure is ok until we have one argument per function
-    --TODO write the body
-    {-block = 
-      comment "init emitters"
-      mapM_ emittercode_init emitters
-      comment "take monitor lock"
-      monitorLockProc m h
-      comment "run callbacks"
-      forM_ callbacks $ \ cb -> call_ cb msg
-      comment "release monitor lock"
-      monitorUnlockProc m h
-      comment "deliver emitters"
-      mapM_ emittercode_deliver emitters
-      -}
+    emitterscodeinit = snd $ Mon.primRunIvory $ mapM_ emittercode_init emitters
+    monitorlockproc = snd $ Mon.primRunIvory $ monitorLockProc m h
+    monitorunlockproc = snd $ Mon.primRunIvory $ monitorUnlockProc m h
+    emittersdeliver = snd $ Mon.primRunIvory $ mapM_ emittercode_deliver emitters
+    blocReq = Mon.blockRequires emitterscodeinit ++
+      (Mon.blockRequires monitorlockproc) ++
+      (Mon.blockRequires monitorunlockproc) ++
+      (Mon.blockRequires emittersdeliver)
+    blocEns = Mon.blockEnsures emitterscodeinit ++
+      (Mon.blockEnsures monitorlockproc) ++
+      (Mon.blockEnsures monitorunlockproc) ++
+      (Mon.blockEnsures emittersdeliver)
+    blocBody = 
+      [IAST.Comment $ IAST.UserComment "init emitters"] ++ 
+      (Mon.blockStmts $ emitterscodeinit) ++ 
+      [IAST.Comment $ IAST.UserComment "take monitor lock(s)"] ++
+      (Mon.blockStmts $ monitorlockproc) ++       
+      [IAST.Comment $ IAST.UserComment "run callbacks"] ++
+      map (\ cb -> (IAST.Call (IAST.procRetTy cb) Nothing (IAST.NameSym $ IAST.procSym cb) [TIAST.Typed (TIAST.tType $ head $ IAST.procArgs $ head callbacks) $ IAST.ExpVar var])) callbacks ++
+      [IAST.Comment $ IAST.UserComment "release monitor lock(s)"] ++
+      (Mon.blockStmts $ monitorunlockproc) ++ 
+      [IAST.Comment $ IAST.UserComment "deliver emitters"] ++
+      (Mon.blockStmts $ emittersdeliver)
+
+    {-block = body $ do
+      --comment "init emitters"
+      --mapM_ emittercode_init emitters
+      --comment "take monitor lock"
+      --monitorLockProc m h
+      --comment "run callbacks"
+      --forM_ callbacks $ \ cb -> Mon.emit (IAST.Call (IAST.procRetTy cb) Nothing (IAST.NameSym $ IAST.procSym cb) [TIAST.Typed (TIAST.tType $ head $ IAST.procArgs $ head callbacks) $ IAST.ExpVar var])
+      --comment "release monitor lock"
+      --monitorUnlockProc m h
+      --comment "deliver emitters"
+      --mapM_ emittercode_deliver emitters-}
+      
 
 handlerImplTD :: AST.Tower -> AST.Handler -> AST.Monitor -> AST.Thread -> (IAST.Proc, ThreadCode)
 handlerImplTD tow ast = \ mon thd ->
