@@ -4,6 +4,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Ivory.OS.FreeRTOS.Tower.Dummy where
 
@@ -15,6 +16,7 @@ import Control.Monad (forM_)
 import Data.List
 import qualified Data.Map as Map
 import System.FilePath
+import MonadLib (put)
 
 import Ivory.Language
 import Ivory.Artifact
@@ -43,6 +45,18 @@ import Ivory.OS.FreeRTOS.Tower.Dummy.Time
 import Ivory.BSP.STM32.VectorTable (reset_handler)
 import Ivory.BSP.STM32.ClockConfig.Init (init_clocks)
 import Ivory.BSP.STM32.Config
+
+
+import qualified Ivory.Language.Module as Mod
+import qualified Ivory.Language.Monad as Mon
+import qualified Ivory.Language.Syntax.AST as IAST
+import qualified Ivory.Language.Syntax.Names as IAST
+import Ivory.Language.Type (wrapVar, unwrapExpr,typedExpr)
+import qualified Ivory.Language.Syntax.Type as TIAST
+import Ivory.Language.MemArea (memSym, primAddrOf)
+import Ivory.Language.Proc (initialClosure, genVar, runBody)
+import Ivory.Language.MemArea (makeArea)
+import Ivory.Language.Uint (getUint32)
 
 data DummyBackend = DummyBackend
 
@@ -192,19 +206,172 @@ callbackProcName callbackname _handlername tast
 -- BACKEND BIS 
 --------------
 
---monitorImplTD :: AST.Monitor -> DummyMonitor
---monitorImplTD mon = 
+emitterCodeTD :: AST.Emitter 
+              -> AST.Thread
+              -> [IAST.Proc]
+              -> EmitterCode
+emitterCodeTD ast thr sinks = EmitterCode
+  { emittercode_init = store (addrOf messageCount) 0
+  , emittercode_deliver = do
+      mc <- deref (addrOf messageCount)
+      forM_ (zip messages [0..]) $ \ (m, index) ->
+        I.when (fromInteger index <? mc) $
+          forM_ sinks $ \ p ->
+            let sym = (IAST.NameSym (IAST.procSym p)) in
+            let param = TIAST.Typed (emitter_type) $ IAST.ExpAddrOfGlobal (IAST.areaSym m) in
+            Mon.emit (IAST.Call (IAST.procRetTy p) Nothing sym [param])
 
---towerImplTD :: AST.Tower -> TowerBackendOutput DummyBackend
---towerImplTD a = 
+  , emittercode_user = do
+      incltrampolineprivate
+  , emittercode_gen = do
+      incleproc
+      mapM_ (\a -> put (mempty { IAST.modAreas = Mod.visAcc Mod.Private a })) messages
+--      mapM_ defMemArea messages
+      defMemArea messageCount
+  }
+  where
+  emitter_type :: TIAST.Type
+  emitter_type = TIAST.tType $ head $ IAST.procArgs $ head sinks
+
+  max_messages = AST.emitter_bound ast - 1
+  messageCount :: MemArea ('Stored Uint32)
+  messageCount = area (e_per_thread "message_count") Nothing
+  
+  messages :: [IAST.Area]
+  messages = [makeArea (e_per_thread $ "message_" ++ show d) False emitter_type IAST.zeroInit | d <- [0..max_messages] ]
+--messages = [ area (e_per_thread ("message_" ++ show d)) Nothing | d <- [0..max_messages] ]
 
 
 
+  messageAt mc = foldl aux dflt (zip messages [0..])
+    where
+    dflt = IAST.ExpAddrOfGlobal $ IAST.areaSym (messages !! 0) -- Should be impossible.
+    aux basecase (msg, midx) = 
+      IAST.ExpOp IAST.ExpCond 
+        [booleanCond,IAST.ExpAddrOfGlobal $ IAST.areaSym $ msg,basecase]
+      where
+        booleanCond = IAST.ExpOp (IAST.ExpEq (TIAST.TyWord TIAST.Word32)) [fromIntegral midx, IAST.ExpVar mc]
+  trampoline :: IAST.Proc
+  trampoline = 
+    IAST.Proc { IAST.procSym      = (emitterProcName ast)
+              , IAST.procRetTy    = TIAST.TyVoid
+              , IAST.procArgs     = [TIAST.Typed emitter_type var]
+              , IAST.procBody     = [IAST.Call TIAST.TyVoid Nothing (IAST.NameSym $ e_per_thread "emit") [TIAST.Typed emitter_type $ IAST.ExpVar var]]
+              , IAST.procRequires = []
+              , IAST.procEnsures  = []
+              }
+    where 
+    (var,_) = genVar initialClosure
 
---data TowerBackendOutput DummyBackend = DummyOutput
---    { compatoutput_threads :: Map.Map AST.Thread ThreadCode
---    , compatoutput_monitors :: Map.Map AST.Monitor ModuleDef
---    }
+  incltrampolineprivate = put (mempty { IAST.modProcs   = Mod.visAcc Mod.Private trampoline })
+  incleproc = put (mempty { IAST.modProcs   = Mod.visAcc Mod.Public eproc })
+
+  eproc :: IAST.Proc
+  eproc = 
+    IAST.Proc { IAST.procSym      = (e_per_thread "emit")
+              , IAST.procRetTy    = TIAST.TyVoid
+              , IAST.procArgs     = [TIAST.Typed emitter_type var]
+              , IAST.procBody     = eprocblock
+              , IAST.procRequires = []
+              , IAST.procEnsures  = []
+              }
+    where 
+    (var,_) = genVar initialClosure
+    eprocblock = 
+      [IAST.Deref (TIAST.TyWord TIAST.Word32) mc (primAddrOf messageCount),
+      IAST.IfTE (IAST.ExpOp (IAST.ExpLt True $ TIAST.TyWord TIAST.Word32) [IAST.ExpVar mc, IAST.ExpLit $ IAST.LitInteger $ fromInteger max_messages]) 
+        [IAST.Store (TIAST.TyWord TIAST.Word32) (primAddrOf messageCount) (IAST.ExpOp IAST.ExpAdd [IAST.ExpVar mc, IAST.ExpLit $ IAST.LitInteger $ 1]),
+        IAST.Assign (emitter_type) r (messageAt mc),
+        IAST.RefCopy (emitter_type) (IAST.ExpVar r) (IAST.ExpVar var)] 
+        [] --nothing else
+      ]
+      where
+      mc=IAST.VarName ("let"++ show 1)
+      r=IAST.VarName ("let"++ show 2)
+
+
+  e_per_thread suffix =
+    emitterProcName ast ++ "_" ++ AST.threadName thr ++ "_" ++ suffix
+
+callbackImplTD :: Unique -> IAST.Proc -> AST.Handler -> AST.Thread -> (IAST.Proc, ModuleDef)
+callbackImplTD ast f = \ h t -> 
+  let p = f {IAST.procSym = (callbackProcName ast (AST.handler_name h) t)} in
+  let inclp = put (mempty { IAST.modProcs   = Mod.visAcc Mod.Public p }) in
+  (p, inclp)
+
+emitterImplTD :: AST.Tower -> AST.Emitter -> AST.Monitor -> AST.Thread -> Maybe EmitterCode
+emitterImplTD tow ast =
+  let handlers = map (handlerImplTD tow) $ subscribedHandlers in
+  if null handlers
+  then
+    \_ _ -> Nothing
+  else
+    \ mon thd -> Just $ emitterCodeTD ast thd [ fst $ h mon thd | h <- handlers ]
+  where
+    subscribedHandlers = filter (\x -> isListening $ AST.handler_chan x) allHandlers
+    -- dont know why it works
+
+    allHandlers = concat $ map (AST.monitor_handlers) (AST.tower_monitors tow)
+
+    isListening (AST.ChanSync sc) = sc == (AST.emitter_chan ast)
+    isListening _ = False
+
+handlerProcTD :: [IAST.Proc]
+              -> [EmitterCode]
+              -> AST.Thread -> AST.Monitor -> AST.Handler
+              -> IAST.Proc
+handlerProcTD callbacks emitters t m h =
+  IAST.Proc { IAST.procSym      = (handlerProcName h t)
+            , IAST.procRetTy    = TIAST.TyVoid
+            , IAST.procArgs     = [TIAST.Typed (TIAST.tType $ head $ IAST.procArgs $ head callbacks) var]
+            , IAST.procBody     = []--blockStmts block TODO
+            , IAST.procRequires = []--blockRequires block TODO
+            , IAST.procEnsures  = []--blockEnsures block TODO
+            }
+  where 
+    (var,_) = genVar initialClosure -- initial closure is ok until we have one argument per function
+    --TODO write the body
+    {-block = 
+      comment "init emitters"
+      mapM_ emittercode_init emitters
+      comment "take monitor lock"
+      monitorLockProc m h
+      comment "run callbacks"
+      forM_ callbacks $ \ cb -> call_ cb msg
+      comment "release monitor lock"
+      monitorUnlockProc m h
+      comment "deliver emitters"
+      mapM_ emittercode_deliver emitters
+      -}
+
+handlerImplTD :: AST.Tower -> AST.Handler -> AST.Monitor -> AST.Thread -> (IAST.Proc, ThreadCode)
+handlerImplTD tow ast = \ mon thd ->
+  let emitters::([AST.Monitor -> AST.Thread -> Maybe EmitterCode]) = map (emitterImplTD tow) $ AST.handler_emitters ast in
+  let callbacks::([AST.Handler -> AST.Thread -> (IAST.Proc, ModuleDef)]) = map (\(x,y) -> callbackImplTD x y) (zip (AST.handler_callbacks ast) (AST.handler_callbacksAST ast)) in
+  let ems2 = [ e mon thd | e <- emitters ]
+      ems = [e | Just e <- ems2]
+      (cbs, cbdefs) = unzip [ c ast thd | c <- callbacks ]
+      runner = handlerProcTD cbs ems thd mon ast
+  in
+  let inclrunner = put (mempty { IAST.modProcs   = Mod.visAcc Mod.Private runner })
+  in (runner, ThreadCode
+    { threadcode_user = sequence_ cbdefs
+    , threadcode_emitter = mapM_ emittercode_user ems
+    , threadcode_gen = mapM_ emittercode_gen ems >> (inclrunner)
+    })
+
+monitorImplTD :: AST.Tower -> AST.Monitor -> TowerBackendMonitor DummyBackend
+monitorImplTD tow ast = 
+  let (moddef::ModuleDef) = put $ AST.monitor_moduledef ast in
+  DummyMonitor $ \ twr -> DummyOutput
+    { compatoutput_threads = Map.fromListWith mappend
+        [ (thd, snd $ handlerImplTD tow hast ast thd)
+        -- handlers are reversed to match old output for convenient diffs
+        | hast <- reverse $ AST.monitor_handlers ast
+        , thd <- AST.handlerThreads twr hast
+        ]
+    , compatoutput_monitors = Map.singleton ast moddef
+    }
 
 --------
 
@@ -219,8 +386,9 @@ compileTowerDummyWithOpts fromEnv getEnv twr optslist = do
 
   let cfg = fromEnv env
   (ast, monitors, deps, sigs) <- runTower compatBackend twr env optslist
-  let o = towerImpl compatBackend ast monitors
-  -- TODO reconstruct the o
+  --let o = towerImpl compatBackend ast monitors
+  let o = towerImpl compatBackend ast (map (monitorImplTD ast) $ AST.tower_monitors ast)
+  -- reconstructing the o from TopDown analysis
   let mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
           ++ monitorModules deps (Map.toList (compatoutput_monitors o))

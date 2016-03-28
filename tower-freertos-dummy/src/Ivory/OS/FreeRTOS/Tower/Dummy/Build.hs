@@ -63,7 +63,7 @@ makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines
   , ""
   ]
   where
-  objects = userobjs ++  ["stm32_freertos_init.o", "vector_table.o", "stm32_freertos_user_assert.o"]
+  objects = userobjs ++  ["dummy_freertos_init.o", "vector_table.o", "dummy_freertos_user_assert.o"]
   bootloader_default_targets = case stm32config_px4version of
     Nothing -> ""
     Just _ -> " image.px4"
@@ -92,9 +92,9 @@ artifacts STM32Config{..} =
   ] ++ init_artifacts ++ aux stm32config_px4version
   where
   init_artifacts =
-    [ Src  $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.c"
-    , Incl $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.h"
-    , Src  $ artifactCabalFile P.getDataDir "support/stm32_freertos_user_assert.c"
+    [ Src  $ artifactCabalFile P.getDataDir "support/dummy_freertos_init.c"
+    , Incl $ artifactCabalFile P.getDataDir "support/dummy_freertos_init.h"
+    , Src  $ artifactCabalFile P.getDataDir "support/dummy_freertos_user_assert.c"
     ]
 
   aux Nothing = [ mk_lds "linker_script.lds" 0 ]
