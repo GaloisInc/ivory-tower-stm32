@@ -55,7 +55,6 @@ import qualified Ivory.Language.Syntax.Type as TIAST
 import Ivory.Language.MemArea (primAddrOf)
 import Ivory.Language.Proc (initialClosure, genVar)
 import Ivory.Language.MemArea (makeArea)
-import Ivory.Language.Type
 
 data DummyBackend = DummyBackend
 
@@ -226,23 +225,30 @@ emitterCodeTD ast thr sinks = EmitterCode
       incleproc
       mapM_ (\a -> put (mempty { IAST.modAreas = Mod.visAcc Mod.Private a })) messages
 --      mapM_ defMemArea messages
-      defMemArea messageCount
+      private $ defMemArea messageCount
   }
   where
   emitter_type :: TIAST.Type
   emitter_type = TIAST.tType $ head $ IAST.procArgs $ head sinks
+  emitter_type_unconst :: TIAST.Type
+  emitter_type_unconst = 
+    let (TIAST.TyConstRef tt) = emitter_type in
+    TIAST.TyRef tt 
+  emitter_type_unconst_unref :: TIAST.Type
+  emitter_type_unconst_unref = 
+    let (TIAST.TyConstRef tt) = emitter_type in tt 
 
   max_messages = AST.emitter_bound ast - 1
   messageCount :: MemArea ('Stored Uint32)
   messageCount = area (e_per_thread "message_count") Nothing
   
   messages :: [IAST.Area]
-  messages = [makeArea (e_per_thread $ "message_" ++ show d) False emitter_type IAST.zeroInit | d <- [0..max_messages] ]
+  messages = [makeArea (e_per_thread $ "message_" ++ show d) False emitter_type_unconst_unref IAST.zeroInit | d <- [(0::Integer)..max_messages] ]
 --messages = [ area (e_per_thread ("message_" ++ show d)) Nothing | d <- [0..max_messages] ]
 
 
 
-  messageAt mc = foldl aux dflt (zip messages [0..])
+  messageAt mc = foldl aux dflt (zip messages [(0::Integer)..])
     where
     dflt = IAST.ExpAddrOfGlobal $ IAST.areaSym (messages !! 0) -- Should be impossible.
     aux basecase (msg, midx) = 
@@ -279,13 +285,13 @@ emitterCodeTD ast thr sinks = EmitterCode
     eprocblock = 
       [IAST.Deref (TIAST.TyWord TIAST.Word32) mc (primAddrOf messageCount),
       IAST.IfTE (IAST.ExpOp (IAST.ExpLt True $ TIAST.TyWord TIAST.Word32) [IAST.ExpVar mc, IAST.ExpLit $ IAST.LitInteger $ fromInteger max_messages]) 
-        [IAST.Store (TIAST.TyWord TIAST.Word32) (primAddrOf messageCount) (IAST.ExpOp IAST.ExpAdd [IAST.ExpVar mc, IAST.ExpLit $ IAST.LitInteger $ 1]),
-        IAST.Assign (emitter_type) r (messageAt mc),
-        IAST.RefCopy (emitter_type) (IAST.ExpVar r) (IAST.ExpVar var)] 
+        [IAST.Store (TIAST.TyWord TIAST.Word32) (primAddrOf messageCount) (IAST.ExpOp IAST.ExpAdd [IAST.ExpVar mc, IAST.ExpLit $ IAST.LitInteger $ (1::Integer)]),
+        IAST.Assign (emitter_type_unconst) r (messageAt mc),
+        IAST.RefCopy (emitter_type_unconst) (IAST.ExpVar r) (IAST.ExpVar var)] 
         [] --nothing else
       ]
       where
-      mc=IAST.VarName ("let"++ show 1)
+      mc=IAST.VarName ("deref"++ show 1)
       r=IAST.VarName ("let"++ show 2)
 
 
@@ -407,7 +413,7 @@ compileTowerDummyWithOpts fromEnv getEnv twr optslist = do
   env <- getEnv topts
 
   let cfg = fromEnv env
-  (ast, monitors, deps, sigs) <- runTower compatBackend twr env optslist
+  (ast, _monitors, deps, sigs) <- runTower compatBackend twr env optslist
   --let o = towerImpl compatBackend ast monitors
   let o = towerImpl compatBackend ast (map (monitorImplTD ast) $ AST.tower_monitors ast)
   -- reconstructing the o from TopDown analysis
