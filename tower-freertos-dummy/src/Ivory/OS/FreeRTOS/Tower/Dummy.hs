@@ -10,7 +10,7 @@ module Ivory.OS.FreeRTOS.Tower.Dummy where
 
 
 import Prelude ()
-import Prelude.Compat hiding (length, foldl)
+import Prelude.Compat hiding (length, foldl, concat, null)
 
 import Control.Monad (forM_)
 import Data.List
