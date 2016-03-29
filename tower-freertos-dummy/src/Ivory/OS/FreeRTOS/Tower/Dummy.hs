@@ -291,8 +291,8 @@ emitterCodeTD ast thr sinks = EmitterCode
         [] --nothing else
       ]
       where
-      mc=IAST.VarName ("deref"++ show 1)
-      r=IAST.VarName ("let"++ show 2)
+      mc=IAST.VarName ("deref"++ show (0::Integer))
+      r=IAST.VarName ("let"++ show (1::Integer))
 
 
   e_per_thread suffix =
