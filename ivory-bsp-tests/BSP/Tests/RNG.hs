@@ -95,7 +95,8 @@ randReporter greeting req res rands = do
           putc =<< deref (constRef (vs ! i))
         flush e
 
-    handler res "result" $ return () -- XXX
+    handler res "result" $ do
+      callback $ const $ return ()
 
     where
     bitsAt :: Uint32 -> Int -> Uint8
