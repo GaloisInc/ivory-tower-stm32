@@ -30,6 +30,8 @@ library
                         template-haskell >= 2.8,
                         filepath,
                         containers,
+                        monadLib,
+                        deepseq,
                         mainland-pretty,
                         pretty-show,
                         ivory,
