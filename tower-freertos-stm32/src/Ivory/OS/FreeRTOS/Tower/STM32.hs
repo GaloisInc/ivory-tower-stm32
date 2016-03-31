@@ -401,9 +401,8 @@ compileTowerSTM32FreeRTOSWithOpts fromEnv getEnv twr optslist = do
   env <- getEnv topts
 
   let cfg = fromEnv env
-  (ast, monitors, deps, sigs) <- runTower compatBackend twr env optslist
-  --let o = towerImpl compatBackend (show ast `deepseq` ast) monitors
-  --putStrLn (show ast)
+  (ast, _monitors, deps, sigs) <- runTower compatBackend twr env optslist
+  --let o = towerImpl compatBackend (ast) monitors
   let o = towerImpl compatBackend (ast) (map (monitorImplTD ast) $ AST.tower_monitors ast)
   let mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
@@ -464,7 +463,7 @@ stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]
 
 stm32Artifacts :: STM32Config -> AST.Tower -> [Module] -> [Located Artifact] -> [Located Artifact]
 stm32Artifacts conf ast ms gcas = as --(systemArtifacts ast ms) ++ as
-  --systemArtifacts : debug_mods.txt" "debug_ast.txt" "out.dot"
+  --NOTA : systemArtifacts : debug_mods.txt" "debug_ast.txt" "out.dot"
   where
   as = [ STM32.makefile conf makeobjs ] ++ STM32.artifacts conf
     ++ FreeRTOS.kernel fconfig ++ FreeRTOS.wrapper
