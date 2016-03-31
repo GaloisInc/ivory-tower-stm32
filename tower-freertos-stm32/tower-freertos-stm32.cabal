@@ -30,6 +30,7 @@ library
                         template-haskell >= 2.8,
                         filepath,
                         containers,
+                        semigroups,
                         monadLib,
                         deepseq,
                         mainland-pretty,

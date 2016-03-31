@@ -19,6 +19,7 @@ import Prelude.Compat hiding (length, foldl, null, concat)
 
 import Control.Monad (forM_)
 import Data.List
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map as Map
 import System.FilePath
 import MonadLib (put)
@@ -318,15 +319,14 @@ emitterImplTD tow ast =
     isListening (AST.ChanSync sc) = sc == (AST.emitter_chan ast)
     isListening _ = False
 
-handlerProcTD :: [IAST.Proc]
+handlerProcTD :: NE.NonEmpty IAST.Proc
               -> [EmitterCode]
               -> AST.Thread -> AST.Monitor -> AST.Handler
               -> IAST.Proc
-handlerProcTD [] _emitters _t _m h = error $ "Handler with no callback" ++ (AST.handlerName h)
 handlerProcTD callbacks emitters t m h =
   IAST.Proc { IAST.procSym      = (handlerProcName h t)
             , IAST.procRetTy    = TIAST.TyVoid
-            , IAST.procArgs     = [TIAST.Typed (TIAST.tType $ head $ IAST.procArgs $ head callbacks) var]
+            , IAST.procArgs     = [TIAST.Typed (TIAST.tType $ head $ IAST.procArgs $ NE.head callbacks) var]
             , IAST.procBody     = blocBody
             , IAST.procRequires = blocReq
             , IAST.procEnsures  = blocEns
@@ -351,7 +351,7 @@ handlerProcTD callbacks emitters t m h =
       [IAST.Comment $ IAST.UserComment "take monitor lock(s)"] ++
       (Mon.blockStmts $ monitorlockproc) ++       
       [IAST.Comment $ IAST.UserComment "run callbacks"] ++
-      map (\ cb -> (IAST.Call (IAST.procRetTy cb) Nothing (IAST.NameSym $ IAST.procSym cb) [TIAST.Typed (TIAST.tType $ head $ IAST.procArgs $ head callbacks) $ IAST.ExpVar var])) callbacks ++
+      (NE.toList $ NE.map (\ cb -> (IAST.Call (IAST.procRetTy cb) Nothing (IAST.NameSym $ IAST.procSym cb) [TIAST.Typed (TIAST.tType $ head $ IAST.procArgs $ NE.head callbacks) $ IAST.ExpVar var])) callbacks )++
       [IAST.Comment $ IAST.UserComment "release monitor lock(s)"] ++
       (Mon.blockStmts $ monitorunlockproc) ++ 
       [IAST.Comment $ IAST.UserComment "deliver emitters"] ++
@@ -361,10 +361,10 @@ handlerProcTD callbacks emitters t m h =
 handlerImplTD :: AST.Tower -> AST.Handler -> AST.Monitor -> AST.Thread -> (IAST.Proc, ThreadCode)
 handlerImplTD tow ast = \ mon thd ->
   let emitters::([AST.Monitor -> AST.Thread -> Maybe EmitterCode]) = map (emitterImplTD tow) $ AST.handler_emitters ast in
-  let callbacks::([AST.Handler -> AST.Thread -> (IAST.Proc, ModuleDef)]) = map (\(x,y) -> callbackImplTD x y) (zip (AST.handler_callbacks ast) (AST.handler_callbacksAST ast)) in
+  let callbacks::(NE.NonEmpty (AST.Handler -> AST.Thread -> (IAST.Proc, ModuleDef))) = NE.map (\(x,y) -> callbackImplTD x y) (NE.zip (AST.handler_callbacks ast) (AST.handler_callbacksAST ast)) in
   let ems2 = [ e mon thd | e <- emitters ]
       ems = [e | Just e <- ems2]
-      (cbs, cbdefs) = unzip [ c ast thd | c <- callbacks ]
+      (cbs, cbdefs) = NE.unzip $ NE.map (\c -> c ast thd) callbacks
       runner = handlerProcTD cbs ems thd mon ast
   in
   let inclrunner = put (mempty { IAST.modProcs   = Mod.visAcc Mod.Private runner })
