@@ -211,7 +211,7 @@ emitterCodeTD :: AST.Emitter
               -> AST.Thread
               -> [IAST.Proc]
               -> Maybe EmitterCode
-emitterCodeTD ast thr [] = Nothing
+emitterCodeTD _ast _thr [] = Nothing
 emitterCodeTD ast thr sinks = Just $ EmitterCode
   { emittercode_init = store (addrOf messageCount) 0
   , emittercode_deliver = do
@@ -322,7 +322,7 @@ handlerProcTD :: [IAST.Proc]
               -> [EmitterCode]
               -> AST.Thread -> AST.Monitor -> AST.Handler
               -> IAST.Proc
-handlerProcTD [] emitters t m h = error "Handler with no callback"
+handlerProcTD [] _emitters _t _m _h = error "Handler with no callback"
 handlerProcTD callbacks emitters t m h =
   IAST.Proc { IAST.procSym      = (handlerProcName h t)
             , IAST.procRetTy    = TIAST.TyVoid
