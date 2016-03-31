@@ -210,8 +210,9 @@ callbackProcName callbackname _handlername tast
 emitterCodeTD :: AST.Emitter 
               -> AST.Thread
               -> [IAST.Proc]
-              -> EmitterCode
-emitterCodeTD ast thr sinks = EmitterCode
+              -> Maybe EmitterCode
+emitterCodeTD ast thr [] = Nothing
+emitterCodeTD ast thr sinks = Just $ EmitterCode
   { emittercode_init = store (addrOf messageCount) 0
   , emittercode_deliver = do
       mc <- deref (addrOf messageCount)
@@ -306,12 +307,9 @@ callbackImplTD ast f = \ h t ->
 emitterImplTD :: AST.Tower -> AST.Emitter -> AST.Monitor -> AST.Thread -> Maybe EmitterCode
 emitterImplTD tow ast =
   let handlers = map (handlerImplTD tow) $ subscribedHandlers in
-  if null handlers
-  then
-    \_ _ -> Nothing
-  else
-    \ mon thd -> Just $ emitterCodeTD ast thd [ fst $ h mon thd | h <- handlers ]
-  where
+    \ mon thd -> emitterCodeTD ast thd [ fst $ h mon thd | h <- handlers ]
+
+    where
     subscribedHandlers = filter (\x -> isListening $ AST.handler_chan x) allHandlers
     -- dont know why it works
 
@@ -324,6 +322,7 @@ handlerProcTD :: [IAST.Proc]
               -> [EmitterCode]
               -> AST.Thread -> AST.Monitor -> AST.Handler
               -> IAST.Proc
+handlerProcTD [] emitters t m h = error "Handler with no callback"
 handlerProcTD callbacks emitters t m h =
   IAST.Proc { IAST.procSym      = (handlerProcName h t)
             , IAST.procRetTy    = TIAST.TyVoid
@@ -463,7 +462,7 @@ stm32Modules conf ast = systemModules ast ++ [ main_module, time_module ]
 
 stm32Artifacts :: STM32Config -> AST.Tower -> [Module] -> [Located Artifact] -> [Located Artifact]
 stm32Artifacts conf ast ms gcas = as --(systemArtifacts ast ms) ++ as
-  --NOTA : systemArtifacts : debug_mods.txt" "debug_ast.txt" "out.dot"
+  --NOTA : systemArtifacts : "debug_mods.txt" "debug_ast.txt" "out.dot"
   where
   as = [ STM32.makefile conf makeobjs ] ++ STM32.artifacts conf
     ++ FreeRTOS.kernel fconfig ++ FreeRTOS.wrapper
