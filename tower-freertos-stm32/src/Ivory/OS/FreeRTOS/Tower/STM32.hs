@@ -322,7 +322,7 @@ handlerProcTD :: [IAST.Proc]
               -> [EmitterCode]
               -> AST.Thread -> AST.Monitor -> AST.Handler
               -> IAST.Proc
-handlerProcTD [] _emitters _t _m _h = error "Handler with no callback"
+handlerProcTD [] _emitters _t _m h = error $ "Handler with no callback" ++ (handlerName h)
 handlerProcTD callbacks emitters t m h =
   IAST.Proc { IAST.procSym      = (handlerProcName h t)
             , IAST.procRetTy    = TIAST.TyVoid
