@@ -342,10 +342,10 @@ handlerProcTD callbacks emitters t m h =
             }
   where 
     (var,_) = genVar initialClosure -- initial closure is ok until we have one argument per function
-    emitterscodeinit = snd $ Mon.primRunIvory $ mapM_ emittercode_init emitters
-    monitorlockproc = snd $ Mon.primRunIvory $ monitorLockProc m h
-    monitorunlockproc = snd $ Mon.primRunIvory $ monitorUnlockProc m h
-    emittersdeliver = snd $ Mon.primRunIvory $ mapM_ emittercode_deliver emitters
+    ((_,emitterscodeinit),n1) = Mon.primRunIvory 0 $ mapM_ emittercode_init emitters
+    ((_,monitorlockproc),n2) = Mon.primRunIvory n1 $ monitorLockProc m h
+    ((_,monitorunlockproc),n3) = Mon.primRunIvory n2 $ monitorUnlockProc m h
+    ((_,emittersdeliver),_n4) = Mon.primRunIvory n3 $ mapM_ emittercode_deliver emitters
     blocReq = Mon.blockRequires emitterscodeinit ++
       (Mon.blockRequires monitorlockproc) ++
       (Mon.blockRequires monitorunlockproc) ++
