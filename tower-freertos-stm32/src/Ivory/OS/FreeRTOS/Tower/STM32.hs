@@ -31,7 +31,7 @@ import Ivory.Tower.Types.Unique
 import qualified Ivory.OS.FreeRTOS as FreeRTOS
 import Ivory.Tower.Types.Dependencies
 import Ivory.Tower (Tower)
-import Ivory.Tower.Monad.Tower (runTower)
+import Ivory.Tower.Monad.Tower (runTower_)
 import Ivory.Tower.Options
 import Ivory.Tower.Types.Emitter
 
@@ -194,7 +194,7 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
   env <- getEnv topts
 
   let cfg = fromEnv env
-      (ast, o, deps, sigs) = runTower compatBackend twr env
+      (ast, o, deps, sigs) = runTower_ compatBackend twr env
 
       mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
