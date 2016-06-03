@@ -10,6 +10,7 @@ module Ivory.BSP.STM32F427.UART.DMA
   ( dmaUART1, dmaUART2, dmaUART3, dmaUART4, dmaUART5, dmaUART6, dmaUART7, dmaUART8
   ) where
 
+import Ivory.BSP.STM32.Peripheral.DMA.Peripheral
 import Ivory.BSP.STM32.Peripheral.UART.DMA
 import Ivory.BSP.STM32F427.UART
 import Ivory.BSP.STM32F427.DMA
@@ -25,72 +26,72 @@ dmaUART1, dmaUART2, dmaUART3, dmaUART4, dmaUART5, dmaUART6, dmaUART7, dmaUART8 :
 dmaUART1 = DMAUART
   { dmaUARTPeriph    = uart1
   , dmaUARTDMAPeriph = dma2
-  , dmaUARTTxStream  = 7
-  , dmaUARTTxChannel = 4
-  , dmaUARTRxStream  = 2
-  , dmaUARTRxChannel = 4
+  , dmaUARTTxStream  = DMAStream  7
+  , dmaUARTTxChannel = DMAChannel 4
+  , dmaUARTRxStream  = DMAStream  2
+  , dmaUARTRxChannel = DMAChannel 4
   }
 
 dmaUART2 = DMAUART
   { dmaUARTPeriph    = uart2
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = 6
-  , dmaUARTTxChannel = 4
-  , dmaUARTRxStream  = 5
-  , dmaUARTRxChannel = 4
+  , dmaUARTTxStream  = DMAStream  6
+  , dmaUARTTxChannel = DMAChannel 4
+  , dmaUARTRxStream  = DMAStream  5
+  , dmaUARTRxChannel = DMAChannel 4
   }
 
 dmaUART3 = DMAUART
   { dmaUARTPeriph    = uart3
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = 3
-  , dmaUARTTxChannel = 4
-  , dmaUARTRxStream  = 1
-  , dmaUARTRxChannel = 4
+  , dmaUARTTxStream  = DMAStream  3
+  , dmaUARTTxChannel = DMAChannel 4
+  , dmaUARTRxStream  = DMAStream  1
+  , dmaUARTRxChannel = DMAChannel 4
   }
 
 dmaUART4 = DMAUART
   { dmaUARTPeriph    = uart4
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = 4
-  , dmaUARTTxChannel = 4
-  , dmaUARTRxStream  = 2
-  , dmaUARTRxChannel = 4
+  , dmaUARTTxStream  = DMAStream  4
+  , dmaUARTTxChannel = DMAChannel 4
+  , dmaUARTRxStream  = DMAStream  2
+  , dmaUARTRxChannel = DMAChannel 4
   }
 
 dmaUART5 = DMAUART
   { dmaUARTPeriph    = uart5
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = 7
-  , dmaUARTTxChannel = 4
-  , dmaUARTRxStream  = 0
-  , dmaUARTRxChannel = 4
+  , dmaUARTTxStream  = DMAStream  7
+  , dmaUARTTxChannel = DMAChannel 4
+  , dmaUARTRxStream  = DMAStream  0
+  , dmaUARTRxChannel = DMAChannel 4
   }
 
 dmaUART6 = DMAUART
   { dmaUARTPeriph    = uart6
   , dmaUARTDMAPeriph = dma2
-  , dmaUARTTxStream  = 6
-  , dmaUARTTxChannel = 5
-  , dmaUARTRxStream  = 1
-  , dmaUARTRxChannel = 5
+  , dmaUARTTxStream  = DMAStream  6
+  , dmaUARTTxChannel = DMAChannel 5
+  , dmaUARTRxStream  = DMAStream  1
+  , dmaUARTRxChannel = DMAChannel 5
   }
 
 dmaUART7 = DMAUART
   { dmaUARTPeriph    = uart7
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = 1
-  , dmaUARTTxChannel = 5
-  , dmaUARTRxStream  = 3
-  , dmaUARTRxChannel = 5
+  , dmaUARTTxStream  = DMAStream  1
+  , dmaUARTTxChannel = DMAChannel 5
+  , dmaUARTRxStream  = DMAStream  3
+  , dmaUARTRxChannel = DMAChannel 5
   }
 
 dmaUART8 = DMAUART
   { dmaUARTPeriph    = uart8
   , dmaUARTDMAPeriph = dma1
-  , dmaUARTTxStream  = 0
-  , dmaUARTTxChannel = 5
-  , dmaUARTRxStream  = 6
-  , dmaUARTRxChannel = 5
+  , dmaUARTTxStream  = DMAStream  0
+  , dmaUARTTxChannel = DMAChannel 5
+  , dmaUARTRxStream  = DMAStream  6
+  , dmaUARTRxChannel = DMAChannel 5
   }
 

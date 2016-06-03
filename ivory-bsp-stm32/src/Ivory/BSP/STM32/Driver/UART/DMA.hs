@@ -181,7 +181,7 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
 
     -- Set control register:
     modifyReg (dmaStreamCR tx_regs) $ do
-      setField dma_sxcr_chsel  (fromRep (fromIntegral (dma_stream_channel txstream)))
+      setField dma_sxcr_chsel  (fromRep (fromIntegral (dmaChannelToInt (dma_stream_channel txstream))))
       setField dma_sxcr_mburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_pburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_dbm    (fromRep 0) -- Single Buffering
@@ -293,7 +293,7 @@ dmaUARTReceiveMonitor uart rxstream out_chan flush_chan init_chan = do
 
     -- Set control register:
     modifyReg (dmaStreamCR rx_regs) $ do
-      setField dma_sxcr_chsel  (fromRep (fromIntegral (dma_stream_channel rxstream)))
+      setField dma_sxcr_chsel  (fromRep (fromIntegral (dmaChannelToInt (dma_stream_channel rxstream))))
       setField dma_sxcr_mburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_pburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_ct     (fromRep 0) -- Current Target buf 0
