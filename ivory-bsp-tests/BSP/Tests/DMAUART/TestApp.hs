@@ -45,7 +45,7 @@ app toleds tocc totestdma = do
       dmauart = testDMAUARTPeriph testdma
       pins    = testDMAUARTPins testdma
   (BackpressureTransmit req res, ostream, mon)
-      <- dmaUARTTower tocc dmauart pins 115200 (Proxy :: Proxy UARTBuffer) m
+      <- dmaUARTTower tocc dmauart pins 115200 (Proxy :: Proxy UARTBuffer)
   monitor "dma" mon
 
   -- Start the task defined below
