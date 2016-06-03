@@ -44,8 +44,9 @@ app toleds tocc totestdma = do
   let testdma = totestdma e
       dmauart = testDMAUARTPeriph testdma
       pins    = testDMAUARTPins testdma
-  (BackpressureTransmit req res, ostream)
-      <- dmaUARTTower tocc dmauart pins 115200 (Proxy :: Proxy UARTBuffer)
+  (BackpressureTransmit req res, ostream, mon)
+      <- dmaUARTTower tocc dmauart pins 115200 (Proxy :: Proxy UARTBuffer) m
+  monitor "dma" mon
 
   -- Start the task defined below
   echoPrompt "hello world!" req res ostream (fst redledctl)

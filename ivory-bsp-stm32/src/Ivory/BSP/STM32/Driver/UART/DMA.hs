@@ -34,9 +34,10 @@ dmaUARTTower :: forall tx rx e
              -> Integer
              -> Proxy rx
              -> Tower e ( BackpressureTransmit tx ('Stored IBool)
-                        , ChanOutput ('Stored Uint8))
+                        , ChanOutput ('Stored Uint8)
+                        , Monitor e ())
 dmaUARTTower tocc dmauart pins baud _ = do
-  (tx, (buf_rx :: ChanOutput rx)) <- dmaUARTTower' tocc dmauart pins baud
+  (tx, (buf_rx :: ChanOutput rx), mon) <- dmaUARTTower' tocc dmauart pins baud
   char_rx <- channel
   monitor (uartName uart ++ "_dma_rx_byte_shim") $ do
     handler buf_rx (uartName uart ++ "_buf_rx") $ do
@@ -46,7 +47,7 @@ dmaUARTTower tocc dmauart pins baud _ = do
         arrayMap $ \ix -> do
           when (fromIx ix <? len) $
             emit e ((buf ~> stringDataL) ! ix)
-  return (tx, snd char_rx)
+  return (tx, snd char_rx, mon)
   where
   uart = dmaUARTPeriph dmauart
   somebuf :: Ref s rx
@@ -59,7 +60,8 @@ dmaUARTTower' :: forall tx rx e
              -> UARTPins
              -> Integer
              -> Tower e ( BackpressureTransmit tx ('Stored IBool)
-                        , ChanOutput rx)
+                        , ChanOutput rx
+                        , Monitor e ())
 dmaUARTTower' tocc dmauart pins baud = do
   req_chan  <- channel
   resp_chan <- channel
@@ -74,17 +76,17 @@ dmaUARTTower' tocc dmauart pins baud = do
   txstream <- dmaTowerStream dma (dmaUARTTxStream dmauart) (dmaUARTTxChannel dmauart)
   rxstream <- dmaTowerStream dma (dmaUARTRxStream dmauart) (dmaUARTRxChannel dmauart)
 
-  monitor (uartName uart ++ "_dma_driver") $ do
-    dmaUARTHardwareMonitor tocc dmauart pins baud
-      (fst dmauart_initialized)
+  let mon = do
+        dmaUARTHardwareMonitor tocc dmauart pins baud
+          (fst dmauart_initialized)
 
-    dmaUARTTransmitMonitor uart txstream (snd req_chan) (fst resp_chan)
-      (snd dmauart_initialized)
+        dmaUARTTransmitMonitor uart txstream (snd req_chan) (fst resp_chan)
+          (snd dmauart_initialized)
 
-    dmaUARTReceiveMonitor  uart rxstream (fst rx_chan) p
-      (snd dmauart_initialized)
+        dmaUARTReceiveMonitor  uart rxstream (fst rx_chan) p
+          (snd dmauart_initialized)
 
-  return (BackpressureTransmit (fst req_chan) (snd resp_chan), (snd rx_chan))
+  return (BackpressureTransmit (fst req_chan) (snd resp_chan), (snd rx_chan), mon)
 
   where
 
