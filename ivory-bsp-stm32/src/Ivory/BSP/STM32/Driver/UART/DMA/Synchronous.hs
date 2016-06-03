@@ -87,8 +87,8 @@ dmaUARTHardwareMonitor tocc dmauart pins baud init_cb = do
       uartInit uart pins clockConfig (fromIntegral baud) False
       emit e t
   where
-  uart = dmaUARTPeriph dmauart
-  dma = dmaUARTDMAPeriph dmauart
+  uart = dmaUARTPeriph    dmauart
+  dma  = dmaUARTDMAPeriph dmauart
 
 syncDMAMonitor :: (IvoryString tx, IvoryString rx)
                => UART

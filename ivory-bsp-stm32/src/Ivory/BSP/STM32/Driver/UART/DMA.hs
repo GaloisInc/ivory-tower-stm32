@@ -88,8 +88,8 @@ dmaUARTTower' tocc dmauart pins baud = do
 
   where
 
-  uart = dmaUARTPeriph dmauart
-  dma = dmaUARTDMAPeriph dmauart
+  uart = dmaUARTPeriph    dmauart
+  dma  = dmaUARTDMAPeriph dmauart
 
 
   ms_per_frame = max 1 ((10 {- bits per byte -}
@@ -115,8 +115,8 @@ dmaUARTHardwareMonitor tocc dmauart pins baud init_cb = do
       uartInit uart pins clockConfig (fromIntegral baud) False
       emit e t
   where
-  uart = dmaUARTPeriph dmauart
-  dma = dmaUARTDMAPeriph dmauart
+  uart = dmaUARTPeriph    dmauart
+  dma  = dmaUARTDMAPeriph dmauart
 
 dmaUARTTransmitMonitor :: (IvoryString tx)
                        => UART
@@ -169,7 +169,7 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
         safe_items n =
           (n <=? arrayLen (req_buf ~> stringDataL) .&& n >=? 0 .&& n <? 65535)
           ? (castWith 0 n, 0)
-    len <- deref (req_buf ~> stringLengthL)
+    len       <- deref  (req_buf ~> stringLengthL)
     req_items <- assign (safe_items len)
     modifyReg (dmaStreamNDTR tx_regs) $
       setField dma_sxndtr_ndt (fromRep req_items)
