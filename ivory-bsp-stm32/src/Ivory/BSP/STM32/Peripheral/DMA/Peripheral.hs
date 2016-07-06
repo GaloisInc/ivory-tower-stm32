@@ -26,8 +26,14 @@ import Ivory.BSP.STM32.Peripheral.DMA.Types
 import Ivory.BSP.STM32.Peripheral.DMA.Regs
 
 -- | DMA streams and channels are integers, type alias for clarity.
-type DMAChannel = Int
-type DMAStream = Int
+newtype DMAChannel = DMAChannel Int
+newtype DMAStream  = DMAStream  Int
+
+dmaStreamToInt :: DMAStream -> Int
+dmaStreamToInt (DMAStream n) = n
+
+dmaChannelToInt :: DMAChannel -> Int
+dmaChannelToInt (DMAChannel n) = n
 
 showReg :: BitDataReg d -> String
 showReg r = printf "%-20s  %08X\n" name addr
@@ -87,13 +93,13 @@ data DMAInterrupt = DMAInterrupt
 -- Register Accessors
 
 checkStream :: DMAStream -> DMAStream
-checkStream n | n >= 0 && n < 8 = n
-checkStream n = error $ "Invalid DMA stream: " ++ show n
+checkStream (DMAStream n) | n >= 0 && n < 8 = DMAStream n
+checkStream (DMAStream n) = error $ "Invalid DMA stream: " ++ show n
 
 -- | Get the stream registers for stream 'n'.
 getStreamRegs :: DMA -> DMAStream -> DMAStreamRegs
 getStreamRegs dma n = dmaStreamRegs dma !! stream
-  where stream = checkStream n
+  where DMAStream stream = checkStream n
 
 -- | Get the peripheral address register for stream 'n'.
 getStreamPAR :: DMA -> DMAStream -> BitDataReg DMA_SxPAR
@@ -119,15 +125,15 @@ disableStream regs = do
 getISRFlags :: DMA -> DMAStream -> Ivory eff DMA_ISRFlags
 getISRFlags dma n =
   case n of
-    0 -> go dmaRegLISR dma_lisr_stream0
-    1 -> go dmaRegLISR dma_lisr_stream1
-    2 -> go dmaRegLISR dma_lisr_stream2
-    3 -> go dmaRegLISR dma_lisr_stream3
-    4 -> go dmaRegHISR dma_hisr_stream4
-    5 -> go dmaRegHISR dma_hisr_stream5
-    6 -> go dmaRegHISR dma_hisr_stream6
-    7 -> go dmaRegHISR dma_hisr_stream7
-    _ -> error $ "Invalid DMA stream: " ++ show n
+    DMAStream 0 -> go dmaRegLISR dma_lisr_stream0
+    DMAStream 1 -> go dmaRegLISR dma_lisr_stream1
+    DMAStream 2 -> go dmaRegLISR dma_lisr_stream2
+    DMAStream 3 -> go dmaRegLISR dma_lisr_stream3
+    DMAStream 4 -> go dmaRegHISR dma_hisr_stream4
+    DMAStream 5 -> go dmaRegHISR dma_hisr_stream5
+    DMAStream 6 -> go dmaRegHISR dma_hisr_stream6
+    DMAStream 7 -> go dmaRegHISR dma_hisr_stream7
+    DMAStream s -> error $ "Invalid DMA stream: " ++ show s
   where
     go :: (BitData d, IvoryIOReg (BitDataRep d),
            BitCast (BitDataRep d) (BitDataRep DMA_ISRFlags))
@@ -142,15 +148,15 @@ getISRFlags dma n =
 clearISRFlags :: DMA -> DMAStream -> Ivory eff ()
 clearISRFlags dma n =
   case n of
-    0 -> go dmaRegLIFCR dma_lifcr_stream0
-    1 -> go dmaRegLIFCR dma_lifcr_stream1
-    2 -> go dmaRegLIFCR dma_lifcr_stream2
-    3 -> go dmaRegLIFCR dma_lifcr_stream3
-    4 -> go dmaRegHIFCR dma_hifcr_stream4
-    5 -> go dmaRegHIFCR dma_hifcr_stream5
-    6 -> go dmaRegHIFCR dma_hifcr_stream6
-    7 -> go dmaRegHIFCR dma_hifcr_stream7
-    _ -> error $ "Invalid DMA stream: " ++ show n
+    DMAStream 0 -> go dmaRegLIFCR dma_lifcr_stream0
+    DMAStream 1 -> go dmaRegLIFCR dma_lifcr_stream1
+    DMAStream 2 -> go dmaRegLIFCR dma_lifcr_stream2
+    DMAStream 3 -> go dmaRegLIFCR dma_lifcr_stream3
+    DMAStream 4 -> go dmaRegHIFCR dma_hifcr_stream4
+    DMAStream 5 -> go dmaRegHIFCR dma_hifcr_stream5
+    DMAStream 6 -> go dmaRegHIFCR dma_hifcr_stream6
+    DMAStream 7 -> go dmaRegHIFCR dma_hifcr_stream7
+    DMAStream s -> error $ "Invalid DMA stream: " ++ show s
   where
     go :: (BitData d, IvoryIOReg (BitDataRep d),
            BitCast (BitDataRep d) (BitDataRep DMA_ISRFlags))
@@ -337,13 +343,13 @@ mkDMA base rccEn rccDis ints name = DMA
 streamInterrupt :: DMA -> DMAStream -> HasSTM32Interrupt
 streamInterrupt dma n =
   case n of
-    0 -> dmaInterruptStream0 ints
-    1 -> dmaInterruptStream1 ints
-    2 -> dmaInterruptStream2 ints
-    3 -> dmaInterruptStream3 ints
-    4 -> dmaInterruptStream4 ints
-    5 -> dmaInterruptStream5 ints
-    6 -> dmaInterruptStream6 ints
-    7 -> dmaInterruptStream7 ints
-    _ -> error $ "Invalid DMA stream: " ++ show n
+    DMAStream 0 -> dmaInterruptStream0 ints
+    DMAStream 1 -> dmaInterruptStream1 ints
+    DMAStream 2 -> dmaInterruptStream2 ints
+    DMAStream 3 -> dmaInterruptStream3 ints
+    DMAStream 4 -> dmaInterruptStream4 ints
+    DMAStream 5 -> dmaInterruptStream5 ints
+    DMAStream 6 -> dmaInterruptStream6 ints
+    DMAStream 7 -> dmaInterruptStream7 ints
+    DMAStream s -> error $ "Invalid DMA stream: " ++ show s
   where ints = dmaInterrupt dma

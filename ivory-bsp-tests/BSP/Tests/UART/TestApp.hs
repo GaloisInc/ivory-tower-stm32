@@ -38,8 +38,9 @@ app toleds tocc touart = do
 
   -- Starts a UART (serial) driver
   let u = touart e
-  (buffered_ostream, istream) <- uartTower tocc (testUARTPeriph u) (testUARTPins u)
+  (buffered_ostream, istream, mon) <- uartTower tocc (testUARTPeriph u) (testUARTPins u)
                                                        115200
+  monitor "dma" mon
   -- UART buffer transmits in buffers. We want to transmit byte-by-byte and let
   -- this monitor manage periodically flushing a buffer.
   ostream <- uartUnbuffer (buffered_ostream :: BackpressureTransmit UARTBuffer ('Stored IBool))

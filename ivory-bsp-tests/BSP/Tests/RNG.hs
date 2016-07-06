@@ -39,7 +39,8 @@ app toleds tocc touart torng = do
   e <- getEnv
   blink p [blueLED (toleds e)]
   let u = touart e
-  (BackpressureTransmit req res, _istream) <- uartTower tocc (testUARTPeriph u) (testUARTPins u) 115200
+  (BackpressureTransmit req res, _istream, mon) <- uartTower tocc (testUARTPeriph u) (testUARTPins u) 115200
+  monitor "dma" mon
   rand_nums <- rngTower (torng e) (Milliseconds 5)
   randReporter "bsp-rng-test\r\n" req res rand_nums
   where

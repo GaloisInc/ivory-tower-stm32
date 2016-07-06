@@ -2,7 +2,7 @@ include ../stack.mk
 
 IVORYFLAGS ?= --const-fold
 TESTS      := bsp-led-test bsp-spi-test bsp-i2c-test bsp-uart-test bsp-can-test bsp-rng-test
-AADL_TESTS := bsp_led_aadl_test bsp_i2c_aadl_test bsp_uart_aadl_test bsp_can_aadl_test
+AADL_TESTS := bsp_led_aadl_test bsp_i2c_aadl_test bsp_uart_aadl_test bsp_can_aadl_test bsp_dma_uart_aadl_test
 CLEANS     := $(foreach test,$(TESTS),$(test)-clean) \
 	            $(foreach test,$(AADL_TESTS),$(test)_clean)
 
