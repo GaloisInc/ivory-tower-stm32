@@ -68,13 +68,13 @@ threadModules d sigcode tcodes twr = concatMap pertask tcodes
 
   threadMonitorDeps :: AST.Thread -> (AST.Monitor -> String) -> ModuleDef
   threadMonitorDeps t mname = sequence_
-    [ depend $ package (mname m) $ return ()
+    [ depend $ package (mname $ AST.monitor m) $ return ()
     | (m,_) <- AST.threadHandlers (AST.messageGraph twr) t ]
 
 threadLoopRunHandlers :: AST.Tower -> AST.Thread
                       -> Ref s ('Stored ITime) -> Ivory eff ()
 threadLoopRunHandlers twr thr t = sequence_
-  [ call_ (hproc h) (constRef t)
+  [ call_ (hproc $ AST.handler h) (constRef t)
   | (_m,h) <- AST.towerChanHandlers twr (AST.threadChan thr) ]
   where
   hproc :: AST.Handler -> Def('[ConstRef s ('Stored ITime)]':->())
