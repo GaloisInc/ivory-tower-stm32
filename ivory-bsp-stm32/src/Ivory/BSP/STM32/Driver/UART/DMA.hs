@@ -34,9 +34,10 @@ dmaUARTTower :: forall tx rx e
              -> Integer
              -> Proxy rx
              -> Tower e ( BackpressureTransmit tx ('Stored IBool)
-                        , ChanOutput ('Stored Uint8))
+                        , ChanOutput ('Stored Uint8)
+                        , Monitor e ())
 dmaUARTTower tocc dmauart pins baud _ = do
-  (tx, (buf_rx :: ChanOutput rx)) <- dmaUARTTower' tocc dmauart pins baud
+  (tx, (buf_rx :: ChanOutput rx), mon) <- dmaUARTTower' tocc dmauart pins baud
   char_rx <- channel
   monitor (uartName uart ++ "_dma_rx_byte_shim") $ do
     handler buf_rx (uartName uart ++ "_buf_rx") $ do
@@ -46,7 +47,7 @@ dmaUARTTower tocc dmauart pins baud _ = do
         arrayMap $ \ix -> do
           when (fromIx ix <? len) $
             emit e ((buf ~> stringDataL) ! ix)
-  return (tx, snd char_rx)
+  return (tx, snd char_rx, mon)
   where
   uart = dmaUARTPeriph dmauart
   somebuf :: Ref s rx
@@ -59,7 +60,8 @@ dmaUARTTower' :: forall tx rx e
              -> UARTPins
              -> Integer
              -> Tower e ( BackpressureTransmit tx ('Stored IBool)
-                        , ChanOutput rx)
+                        , ChanOutput rx
+                        , Monitor e ())
 dmaUARTTower' tocc dmauart pins baud = do
   req_chan  <- channel
   resp_chan <- channel
@@ -74,22 +76,22 @@ dmaUARTTower' tocc dmauart pins baud = do
   txstream <- dmaTowerStream dma (dmaUARTTxStream dmauart) (dmaUARTTxChannel dmauart)
   rxstream <- dmaTowerStream dma (dmaUARTRxStream dmauart) (dmaUARTRxChannel dmauart)
 
-  monitor (uartName uart ++ "_dma_driver") $ do
-    dmaUARTHardwareMonitor tocc dmauart pins baud
-      (fst dmauart_initialized)
+  let mon = do
+        dmaUARTHardwareMonitor tocc dmauart pins baud
+          (fst dmauart_initialized)
 
-    dmaUARTTransmitMonitor uart txstream (snd req_chan) (fst resp_chan)
-      (snd dmauart_initialized)
+        dmaUARTTransmitMonitor uart txstream (snd req_chan) (fst resp_chan)
+          (snd dmauart_initialized)
 
-    dmaUARTReceiveMonitor  uart rxstream (fst rx_chan) p
-      (snd dmauart_initialized)
+        dmaUARTReceiveMonitor  uart rxstream (fst rx_chan) p
+          (snd dmauart_initialized)
 
-  return (BackpressureTransmit (fst req_chan) (snd resp_chan), (snd rx_chan))
+  return (BackpressureTransmit (fst req_chan) (snd resp_chan), (snd rx_chan), mon)
 
   where
 
-  uart = dmaUARTPeriph dmauart
-  dma = dmaUARTDMAPeriph dmauart
+  uart = dmaUARTPeriph    dmauart
+  dma  = dmaUARTDMAPeriph dmauart
 
 
   ms_per_frame = max 1 ((10 {- bits per byte -}
@@ -115,8 +117,8 @@ dmaUARTHardwareMonitor tocc dmauart pins baud init_cb = do
       uartInit uart pins clockConfig (fromIntegral baud) False
       emit e t
   where
-  uart = dmaUARTPeriph dmauart
-  dma = dmaUARTDMAPeriph dmauart
+  uart = dmaUARTPeriph    dmauart
+  dma  = dmaUARTDMAPeriph dmauart
 
 dmaUARTTransmitMonitor :: (IvoryString tx)
                        => UART
@@ -169,7 +171,7 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
         safe_items n =
           (n <=? arrayLen (req_buf ~> stringDataL) .&& n >=? 0 .&& n <? 65535)
           ? (castWith 0 n, 0)
-    len <- deref (req_buf ~> stringLengthL)
+    len       <- deref  (req_buf ~> stringLengthL)
     req_items <- assign (safe_items len)
     modifyReg (dmaStreamNDTR tx_regs) $
       setField dma_sxndtr_ndt (fromRep req_items)
@@ -181,7 +183,7 @@ dmaUARTTransmitMonitor uart txstream req_chan resp_chan init_chan = do
 
     -- Set control register:
     modifyReg (dmaStreamCR tx_regs) $ do
-      setField dma_sxcr_chsel  (fromRep (fromIntegral (dma_stream_channel txstream)))
+      setField dma_sxcr_chsel  (fromRep (fromIntegral (dmaChannelToInt (dma_stream_channel txstream))))
       setField dma_sxcr_mburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_pburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_dbm    (fromRep 0) -- Single Buffering
@@ -293,7 +295,7 @@ dmaUARTReceiveMonitor uart rxstream out_chan flush_chan init_chan = do
 
     -- Set control register:
     modifyReg (dmaStreamCR rx_regs) $ do
-      setField dma_sxcr_chsel  (fromRep (fromIntegral (dma_stream_channel rxstream)))
+      setField dma_sxcr_chsel  (fromRep (fromIntegral (dmaChannelToInt (dma_stream_channel rxstream))))
       setField dma_sxcr_mburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_pburst (fromRep 0) -- Single (no burst)
       setField dma_sxcr_ct     (fromRep 0) -- Current Target buf 0

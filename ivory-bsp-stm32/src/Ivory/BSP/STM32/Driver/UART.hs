@@ -51,7 +51,8 @@ uartTower :: IvoryString s
           -> UARTPins
           -> Integer
           -> Tower e ( BackpressureTransmit s ('Stored IBool)
-                     , ChanOutput ('Stored Uint8))
+                     , ChanOutput ('Stored Uint8)
+                     , Monitor e ())
 uartTower tocc u p b = uartTowerDebuggable tocc u p b emptyDbg
 
 uartTowerDebuggable :: IvoryString s
@@ -61,7 +62,8 @@ uartTowerDebuggable :: IvoryString s
                     -> Integer
                     -> UARTTowerDebugger
                     -> Tower e ( BackpressureTransmit s ('Stored IBool)
-                               , ChanOutput ('Stored Uint8))
+                               , ChanOutput ('Stored Uint8)
+                               , Monitor e ())
 uartTowerDebuggable tocc uart pins baud dbg = do
   req_chan  <- channel
   resp_chan <- channel
@@ -73,10 +75,9 @@ uartTowerDebuggable tocc uart pins baud dbg = do
     (do debug_isr dbg
         interrupt_disable (uartInterrupt uart))
 
-  monitor (uartName uart ++ "_driver") $ do
-    uartTowerMonitor tocc uart pins baud interrupt (fst rx_chan) (snd req_chan) (fst resp_chan) dbg
+  let mon = uartTowerMonitor tocc uart pins baud interrupt (fst rx_chan) (snd req_chan) (fst resp_chan) dbg
 
-  return (BackpressureTransmit (fst req_chan) (snd resp_chan), (snd rx_chan))
+  return (BackpressureTransmit (fst req_chan) (snd resp_chan), (snd rx_chan), mon)
 
 uartTowerMonitor :: IvoryString s
                  => (e -> ClockConfig)

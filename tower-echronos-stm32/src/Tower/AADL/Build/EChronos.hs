@@ -129,6 +129,7 @@ makefile c =
     ]
   , Target ".tag.echronos" [".tag.ramses"]
     [ "pushd $(ECHRONOS_LOCATION) && source setenv && popd &&  \\\n\
+    \  $(ECHRONOS_LOCATION)/x.py build packages            &&  \\\n\
     \  $(PRJ) --output echronos_gen                            \\\n\
     \         --search-path $(ECHRONOS_LOCATION)/packages      \\\n\
     \         --no-project                                     \\\n\

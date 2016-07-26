@@ -30,7 +30,8 @@ spiTower :: forall e
           . (e -> ClockConfig)
          -> [SPIDevice]
          -> SPIPins
-         -> Tower e ( BackpressureTransmit ('Struct "spi_transaction_request") ('Struct "spi_transaction_result")
+         -> Tower e ( BackpressureTransmit ('Struct "spi_transaction_request")
+                                           ('Struct "spi_transaction_result")
                     , ChanOutput ('Stored ITime))
 spiTower tocc devices pins = do
   towerDepends spiDriverTypes
