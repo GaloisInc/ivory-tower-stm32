@@ -71,7 +71,7 @@ canTower tocc periph bitrate rxpin txpin = do
 
           modifyReg (canRegTDTR txmailbox) $ do
             clearBit can_tdtr_tgt
-            setField can_tdtr_dlc $ fromRep $ castDefault $ fromIx len
+            setField can_tdtr_dlc $ fromRep $ castDefault len
           setReg (canRegTDLR txmailbox) $ sequence_ low_bytes
           setReg (canRegTDHR txmailbox) $ sequence_ hi_bytes
           setReg (canRegTIR txmailbox) $ do
@@ -124,7 +124,7 @@ canTower tocc periph bitrate rxpin txpin = do
               , can_message_buf .= iarray (map ival $ map toRep $
                   map (rdlr #.) [can_rdlr_data0, can_rdlr_data1, can_rdlr_data2, can_rdlr_data3] ++
                   map (rdhr #.) [can_rdhr_data4, can_rdhr_data5, can_rdhr_data6, can_rdhr_data7])
-              , can_message_len .= ival (toIx $ toRep $ rdtr #. can_rdtr_dlc)
+              , can_message_len .= ival (toRep $ rdtr #. can_rdtr_dlc)
               ]
             emit resultEmitter $ constRef msg
 
