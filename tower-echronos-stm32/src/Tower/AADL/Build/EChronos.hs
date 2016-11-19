@@ -10,6 +10,8 @@
 
 module Tower.AADL.Build.EChronos where
 
+import System.FilePath ((</>))
+
 import Ivory.Artifact
 import Ivory.Language
 import Ivory.Tower
@@ -27,11 +29,12 @@ import Ivory.BSP.STM32.ClockConfig.Init
 -- Ramses build
 
 -- Ramses Makefile ------------------------------------------------------------
-ramsesMakefile :: [MkStmt]
-ramsesMakefile =
+ramsesMakefile :: AADLConfig -> [MkStmt]
+ramsesMakefile c =
   [ include    aadlFilesMk
-  , includeOpt "../RAMSES_PATH.mk"
-  , "RAMSES_PATH" ?= "./"
+  , "RAMSES_PATH" ?= case configBuildRoot c of
+      Nothing -> "./"
+      Just p  -> p </> "../ramses-demo"
   , "SMACCM_PATH" ?= "./"
   , export $"RAMSES_DIR" === "$(RAMSES_PATH)/ramses_resource"
   , export $"AADL2RTOS_CONFIG_DIR" === "$(RAMSES_PATH)/aadl2rtos_resource"
@@ -119,9 +122,10 @@ makefile c =
             \ECHRONOS_LOCATION should be the path to the echronos install where\\\n\
             \the setenv script and packages can be found. For example, the top of\\\n\
             \your echronos repository. PRJ should point to the prj tool."
-  , includeOpt "../PRJ_CMD.mk"
   , "PRJ" ?= "prj"
-  , "ECHRONOS_LOCATION" ?= "$(shell which prj)"
+  , "ECHRONOS_LOCATION" ?= case configBuildRoot c of
+      Nothing -> "$(shell which prj)"
+      Just p  -> p </> "echronos"
   , Target ".PHONY" ["generate", "clean"] []
   , Target "generate" [".tag.echronos", ".tag.ramses"]
     ["-mv " ++ configSrcsDir c ++ "/*.[cs] gen/"
@@ -147,7 +151,7 @@ echronosArtifacts cfg = map Root ls ++ hw_artifacts
   ls :: [Artifact]
   ls = artifactString
          ramsesMakefileName
-         (renderMkStmts ramsesMakefile)
+         (renderMkStmts (ramsesMakefile cfg))
      : osSpecific
   osSpecific =
       [ artifactString
