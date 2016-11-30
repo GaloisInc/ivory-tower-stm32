@@ -122,10 +122,10 @@ makefile c =
             \ECHRONOS_LOCATION should be the path to the echronos install where\\\n\
             \the setenv script and packages can be found. For example, the top of\\\n\
             \your echronos repository. PRJ should point to the prj tool."
-  , "PRJ" ?= "prj"
   , "ECHRONOS_LOCATION" ?= case configBuildRoot c of
       Nothing -> "$(shell which prj)"
       Just p  -> p </> "echronos"
+  , "PRJ" ?= "$(ECHRONOS_LOCATION)/prj/app/prj.py"
   , Target ".PHONY" ["generate", "clean"] []
   , Target "generate" [".tag.echronos", ".tag.ramses"]
     ["-mv " ++ configSrcsDir c ++ "/*.[cs] gen/"
