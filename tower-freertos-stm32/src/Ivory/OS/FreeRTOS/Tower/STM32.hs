@@ -256,6 +256,9 @@ stm32Artifacts conf ast ms gcas = (systemArtifacts ast ms) ++ as
              ]
   fconfig = FreeRTOS.defaultConfig
     { FreeRTOS.max_priorities = fromIntegral (length (AST.towerThreads ast)) + 1
+    -- (arbitrarily) leave half the sram for the stack and static
+    -- allocations; this should be a config
+    , FreeRTOS.total_heap_size = stm32config_sram conf `div` 2
     -- XXX expand tower config to fill in the rest of these values
     }
 
