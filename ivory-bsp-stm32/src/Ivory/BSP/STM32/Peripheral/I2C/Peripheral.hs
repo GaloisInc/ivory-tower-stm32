@@ -12,9 +12,10 @@
 
 module Ivory.BSP.STM32.Peripheral.I2C.Peripheral where
 
+import Control.Monad (replicateM_)
+
 import Ivory.Language
 import Ivory.HW
-
 
 import Ivory.BSP.STM32.Interrupt
 import Ivory.BSP.STM32.Peripheral.GPIOF4
@@ -84,7 +85,8 @@ i2cInit periph sda scl clockconfig = do
   pinsetup scl
 
   -- Reset and clear peripheral
-  modifyReg (i2cRegCR1 periph) $ setBit   i2c_cr1_swrst
+  replicateM_ 32 $
+    modifyReg (i2cRegCR1 periph) $ setBit i2c_cr1_swrst
   modifyReg (i2cRegCR1 periph) $ clearBit i2c_cr1_swrst
 
   modifyReg (i2cRegCR2 periph) $ do
