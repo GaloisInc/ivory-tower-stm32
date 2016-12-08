@@ -434,8 +434,8 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
         ]
       debugOff debugPin3
 
-busyMaster :: I2C_SR2 -> IBool
-busyMaster sr2 =
+_busyMaster :: I2C_SR2 -> IBool
+_busyMaster sr2 =
   bitToBool (sr2 #. i2c_sr2_busy) .&&
   bitToBool (sr2 #. i2c_sr2_msl)
 
