@@ -11,7 +11,9 @@
 module Tower.AADL.Build.EChronos where
 
 import System.FilePath ((</>))
+import qualified Paths_tower_echronos_stm32 as P
 
+import Data.Maybe(maybe)
 import Ivory.Artifact
 import Ivory.Language
 import Ivory.Tower
@@ -59,10 +61,11 @@ echronosMakefile c =
   [ "SHELL"       =: "/bin/bash"
   , "ROOT"        =: "$(shell pwd)"
   , "SRC"         =: "$(ROOT)/."
+  , "COMPILERROOT"=: "../../../../../../gcc-arm-embedded/gcc-arm-none-eabi-4_9-2015q2/bin"
   , "EXE"         =: "image"
   , "AS"          =: "arm-none-eabi-as -mthumb -g3 -mlittle-endian -mcpu=cortex-m4 \\\n\
                \      -mfloat-abi=hard -mfpu=fpv4-sp-d16 -I$(SRC)"
-  , "CC"          =: "arm-none-eabi-gcc"
+  , "CC"          =: "$(COMPILERROOT)/arm-none-eabi-gcc"
   , "CFLAGS"      =: "-Os -g3 -Wall -Werror              \\\n\
            \          -std=gnu99                         \\\n\
            \          -Wno-parentheses                   \\\n\
@@ -83,7 +86,7 @@ echronosMakefile c =
           \           -mthumb -mcpu=cortex-m4            \\\n\
           \           -mfloat-abi=hard -mfpu=fpv4-sp-d16"
   , "LDLIBS"      =: "-lm -lc -lnosys -lgcc"
-  , "LD"          =: "arm-none-eabi-gcc"
+  , "LD"          =: "$(COMPILERROOT)/arm-none-eabi-gcc"
   , "SOURCES_GCC" =: "$(wildcard $(SRC)/*.c)                    \\\n\
       \               $(wildcard $(SRC)/gen/*.c)                \\\n\
       \               $(wildcard $(SRC)/echronos_gen/*.c)"
@@ -101,6 +104,11 @@ echronosMakefile c =
     ]
   , Target "bl_image.bin" ["$(EXE)"]
     ["$(OBJCOPY) -O binary $< $@"]
+  , Target "image.px4" ["bl_image.bin"]
+    ["python px_mkfw.py --prototype=px4fmu-v2.prototype  --image=$< > $@"]
+  , Target "upload" ["image.px4"]
+    ["@echo \"*** User expected to set UPLOAD_PORT environment variable ***\""
+	  ,"python px_uploader.py --port=$(UPLOAD_PORT) $<k"] 
   , Target ".PHONY" ["echronos-clean"] []
   , Target "echronos-clean" []
     ["@echo remove all the object files"
@@ -116,7 +124,7 @@ makefile c =
     [ "# This sub-make is here to deal with bl_image.bin depending on"
     , "# files that have to be generated first. This requires us"
     , "# to do the build in two phases."
-    , "make bl_image.bin" ]
+    , "make bl_image.bin image.px4" ]
   , includeOpt ramsesMakefileName
   , Comment "We assume ECHRONOS_LOCATION and PRJ are set in PRJ_CMD.mk \\\n\
             \ECHRONOS_LOCATION should be the path to the echronos install where\\\n\
@@ -146,7 +154,7 @@ makefile c =
   , include echronosMakefileName ]
 
 echronosArtifacts :: AADLConfig -> [Located Artifact]
-echronosArtifacts cfg = map Root ls ++ hw_artifacts
+echronosArtifacts cfg = map Root ls ++ hw_artifacts ++ artifacts
   where
   ls :: [Artifact]
   ls = artifactString
@@ -172,6 +180,10 @@ defaultEChronosOS cfg =
     , osSpecificOptsApps   = defaultOptsUpdate
     , osSpecificOptsLibs   = defaultOptsUpdate
     }
+
+artifacts :: [Located Artifact]
+artifacts = map (Root . artifactCabalFile P.getDataDir)
+                [ "support/px_mkfw.py", "support/px_uploader.py", "support/px4fmu-v1.prototype", "support/px4fmu-v2.prototype"]
 
 ----------------------------------------------------------------------------
 -- eChronos requires a custom main() function ------------------------------
