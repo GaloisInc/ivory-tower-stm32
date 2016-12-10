@@ -107,7 +107,7 @@ echronosMakefile c =
     ["python px_mkfw.py --prototype=px4fmu-v2.prototype  --image=$< > $@"]
   , Target "upload" ["image.px4"]
     ["@echo \"*** User expected to set UPLOAD_PORT environment variable ***\""
-	  ,"python px_uploader.py --port=$(UPLOAD_PORT) $<k"] 
+  , "python px_uploader.py --port=$(UPLOAD_PORT) $<k"]
   , Target ".PHONY" ["echronos-clean"] []
   , Target "echronos-clean" []
     ["@echo remove all the object files"
