@@ -31,6 +31,14 @@ import Ivory.BSP.STM32.Peripheral.I2C.Peripheral
 
 import Ivory.BSP.STM32.Driver.I2C.I2CDriverState
 
+i2c_TIMEOUT :: ITime
+i2c_TIMEOUT = toITime (Milliseconds 50)
+
+-- | Max number of failed transactions in a row before we try to reset
+-- the peripheral
+i2c_MAX_ERROR_RUN :: Uint32
+i2c_MAX_ERROR_RUN = 5
+
 i2cTower :: (e -> ClockConfig)
          -> I2CPeriph
          -> I2CPins
@@ -43,6 +51,7 @@ i2cTower tocc periph I2CPins{..} = do
   reschan <- channel
   readychan <- channel
   ready_per <- period (Milliseconds 1)
+  watchdog_per <- period (Milliseconds 20)
   evt_irq <- signalUnsafe
                 (Interrupt (i2cIntEvent periph))
                 (Microseconds 50)
@@ -60,7 +69,7 @@ i2cTower tocc periph I2CPins{..} = do
                     interrupt_disable (i2cIntError periph))
   monitor ((i2cName periph) ++ "PeripheralDriver") $
     i2cPeripheralDriver tocc periph i2cpins_sda i2cpins_scl evt_irq err_irq
-      (snd reqchan) (fst reschan) ready_per (fst readychan)
+      (snd reqchan) (fst reschan) ready_per (fst readychan) watchdog_per
   return (BackpressureTransmit (fst reqchan) (snd reschan), snd readychan)
 
 i2cTowerTypes :: Module
@@ -80,39 +89,56 @@ i2cPeripheralDriver :: forall e
                     -> ChanInput  ('Struct "i2c_transaction_result")
                     -> ChanOutput ('Stored ITime)
                     -> ChanInput  ('Stored ITime)
+                    -> ChanOutput ('Stored ITime)
                     -> Monitor e ()
-i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_per ready_in = do
+i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_per ready_in watchdog_per = do
   clockConfig <- fmap tocc getEnv
   monitorModuleDef $ hw_moduledef
 
-  driverstate <- stateInit "driverstate" (ival i2cInactive)
+  let named nm = i2cName periph ++ "_" ++ nm
 
-  handler systemInit "init" $ do
+  driverstate <- stateInit (named "driverstate") (ival i2cInactive)
+
+  handler systemInit (named "init") $ do
     callback $ const $ do
       debugSetup     debugPin1
       debugSetup     debugPin2
       debugSetup     debugPin3
       debugSetup     debugPin4
       i2cInit        periph sda scl clockConfig
-      -- Setup hardware for interrupts
-      interrupt_enable (i2cIntEvent periph)
-      interrupt_enable (i2cIntError periph)
 
-  ready_sent <- state "ready_sent"
-  handler ready_per "readyPeriod" $ do
+  ready_sent <- state (named "ready_sent")
+  handler ready_per (named "ready_period") $ do
     send_ready <- emitter ready_in 1
     callback $ \now -> do
       r <- deref ready_sent
       unless r $ emit send_ready now
       store ready_sent true
 
-  (reqbuffer :: Ref 'Global ('Struct "i2c_transaction_request")) <- state "reqbuffer"
-  (reqbufferpos :: Ref 'Global ('Stored (Ix 128)))               <- state "reqbufferpos"
+  (reqbuffer :: Ref 'Global ('Struct "i2c_transaction_request"))
+    <- state (named "reqbuffer")
+  (reqbufferpos :: Ref 'Global ('Stored (Ix 128)))
+    <- state (named "reqbufferpos")
 
-  (resbuffer :: Ref 'Global ('Struct "i2c_transaction_result"))  <- state "resbuffer"
-  (resbufferpos :: Ref 'Global ('Stored (Ix 128)))               <- state "resbufferpos"
+  (resbuffer :: Ref 'Global ('Struct "i2c_transaction_result"))
+    <- state (named "resbuffer")
+  (resbufferpos :: Ref 'Global ('Stored (Ix 128)))
+    <- state (named "resbufferpos")
 
-  (invalid_request :: Ref 'Global ('Stored Uint32)) <- state "invalid_request"
+  (invalid_request :: Ref 'Global ('Stored Uint32))
+    <- state (named "invalid_request")
+
+  -- number of errors we've seen in a row
+  (error_run :: Ref 'Global ('Stored Uint32))
+    <- state (named "error_run")
+
+  -- time of last event
+  (last_event :: Ref 'Global ('Stored ITime))
+    <- state (named "last_event")
+
+  -- time the current transaction began
+  (start_time :: Ref 'Global ('Stored ITime))
+    <- state (named "start_time")
 
   let sendresult :: Emitter ('Struct "i2c_transaction_result")
                  -> Ref s' ('Struct "i2c_transaction_result")
@@ -121,9 +147,54 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
       sendresult e res code = do
           debugToggle debugPin4
           store (res ~> resultcode) code
-          emit e (constRef res)
+          ifte_ (code >? 0)
+            (do errs <- deref error_run
+                store error_run (errs + 1))
+            (store error_run 0)
+          start_t <- deref start_time
+          t <- getTime
+          -- only send a response if we haven't exceeded the timeout
+          unless (t - start_t <? i2c_TIMEOUT) $
+            emit e (constRef res)
 
-  handler err_irq "error_irq" $ do
+  handler watchdog_per (named "watchdog") $ do
+    res_emitter <- emitter res_chan 1
+    callback $ \_ -> do
+      t_last <- deref last_event
+      t <- getTime
+      s <- deref driverstate
+      errs <- deref error_run
+
+      when (s /=? i2cInactive .&& t - t_last >? i2c_TIMEOUT) $ do
+        -- handle a timeout like an error coming from the peripheral,
+        -- except don't send a response back until we get the
+        -- scheduler interface figured out better
+        store driverstate i2cInactive
+        clearSR1 periph
+        disableAllInterrupts periph
+        -- sendresult res_emitter resbuffer 1
+
+      when (s ==? i2cInactive) $ do
+        sr2 <- getReg (i2cRegSR2 periph)
+        when (bitToBool (sr2 #. i2c_sr2_busy)) $ do
+          -- if we're inactive but the bus is busy, reset the peripheral
+          disableAllInterrupts periph
+          i2cReset periph sda scl clockConfig
+          -- increment the error run in case we need to try again
+          store error_run (errs + 1)
+
+      when (errs >=? i2c_MAX_ERROR_RUN) $ do
+        when (s /=? i2cInactive) $ do
+          -- shoot down any in-progress transaction
+          store driverstate i2cInactive
+          sendresult res_emitter resbuffer 1
+        -- reset the peripheral
+        disableAllInterrupts periph
+        i2cReset periph sda scl clockConfig
+        -- reset the error run
+        store error_run 0
+
+  handler err_irq (named "error_irq") $ do
     res_emitter <- emitter res_chan 1
     callback $ \_ -> do
       -- Must read these registers, sometimes reading dr helps too??
@@ -140,22 +211,22 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
 
       -- If there is an active transaction, terminate it
       s <- deref driverstate
-      when (s /=? i2cInactive) $ do
+      when (s /=? i2cInactive .&& must_release) $ do
         store driverstate i2cInactive
         sendresult res_emitter resbuffer 1
 
-      -- disable the peripheral
-      modifyReg (i2cRegCR1 periph) $ clearBit i2c_cr1_pe
+      -- otherwise try to keep going
+      when (s /=? i2cInactive .&& iNot must_release) $ do
+        -- Re-enable interrupt
+        modifyReg (i2cRegCR2 periph)
+          (setBit i2c_cr2_iterren)
+        interrupt_enable (i2cIntError periph)
 
-      -- Re-enable interrupt
-      modifyReg (i2cRegCR2 periph)
-        (setBit i2c_cr2_iterren)
-      interrupt_enable (i2cIntError periph)
-
-  handler evt_irq "event_irq" $ do
+  handler evt_irq (named "event_irq") $ do
     res_emitter <- emitter res_chan 1
     callback $ \_ -> do
       debugOn debugPin3
+      store last_event =<< getTime
       s <- deref driverstate
       sr1 <- getReg (i2cRegSR1 periph)
       cond_
@@ -404,11 +475,14 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
         ]
 
       debugOff debugPin3
-      modifyReg (i2cRegCR2 periph)
-        (setBit i2c_cr2_itbufen >> setBit i2c_cr2_itevten)
-      interrupt_enable (i2cIntEvent periph)
 
-  handler req_chan "request" $ do
+      ifte_ (s /=? i2cInactive)
+        (do modifyReg (i2cRegCR2 periph)
+              (setBit i2c_cr2_itbufen >> setBit i2c_cr2_itevten)
+            interrupt_enable (i2cIntEvent periph))
+        (disableAllInterrupts periph)
+
+  handler req_chan (named "request") $ do
     res_emitter <- emitter res_chan 1
     callback $ \req -> do
       debugOn debugPin3
@@ -426,6 +500,8 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
               refCopy reqbuffer req
               store reqbufferpos 0
               store resbufferpos 0
+              store last_event =<< getTime
+              enableAllInterrupts periph
               setStart periph
         , true ==> do
             invalid_request %= (+1)
@@ -478,6 +554,19 @@ clearSR1 periph = modifyReg (i2cRegSR1 periph) $ do
   clearBit i2c_sr1_addr
   clearBit i2c_sr1_sb
 
+enableAllInterrupts :: I2CPeriph -> Ivory eff ()
+enableAllInterrupts periph = do
+  modifyReg (i2cRegCR2 periph)
+    (mapM_ setBit [i2c_cr2_itbufen, i2c_cr2_itevten, i2c_cr2_iterren])
+  interrupt_enable (i2cIntEvent periph)
+  interrupt_enable (i2cIntError periph)
+
+disableAllInterrupts :: I2CPeriph -> Ivory eff ()
+disableAllInterrupts periph = do
+  modifyReg (i2cRegCR2 periph)
+    (mapM_ clearBit [i2c_cr2_itbufen, i2c_cr2_itevten, i2c_cr2_iterren])
+  interrupt_disable (i2cIntEvent periph)
+  interrupt_disable (i2cIntError periph)
 
 -- Debugging Helpers: useful for development, disabled for production.
 debugPin1, debugPin2, debugPin3, debugPin4 :: Maybe GPIOPin
