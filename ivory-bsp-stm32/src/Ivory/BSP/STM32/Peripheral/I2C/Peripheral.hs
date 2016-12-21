@@ -37,6 +37,7 @@ data I2CPeriph = I2CPeriph
   , i2cRegFLTR     :: BitDataReg I2C_FLTR
   , i2cRCCEnable   :: forall eff . Ivory eff ()
   , i2cRCCDisable  :: forall eff . Ivory eff ()
+  , i2cRCCReset    :: forall eff . Ivory eff ()
   , i2cIntEvent    :: HasSTM32Interrupt
   , i2cIntError    :: HasSTM32Interrupt
   , i2cName        :: String
@@ -52,11 +53,12 @@ mkI2CPeriph :: (STM32Interrupt i)
             => Integer -- Base
             -> (forall eff . Ivory eff ()) -- RCC Enable
             -> (forall eff . Ivory eff ()) -- RCC Disable
+            -> (forall eff . Ivory eff ()) -- RCC Reset
             -> i -- event interrupt
             -> i -- error interrupt
             -> String -- Name
             -> I2CPeriph
-mkI2CPeriph base rccenable rccdisable evtint errint n =
+mkI2CPeriph base rccenable rccdisable rccreset evtint errint n =
   I2CPeriph
     { i2cRegCR1     = reg 0x00 "cr1"
     , i2cRegCR2     = reg 0x04 "cr2"
@@ -70,6 +72,7 @@ mkI2CPeriph base rccenable rccdisable evtint errint n =
     , i2cRegFLTR    = reg 0x24 "fltr"
     , i2cRCCEnable  = rccenable
     , i2cRCCDisable = rccdisable
+    , i2cRCCReset   = rccreset
     , i2cIntEvent   = HasSTM32Interrupt evtint
     , i2cIntError   = HasSTM32Interrupt errint
     , i2cName       = n
@@ -132,6 +135,7 @@ i2cDeinit periph sda scl = do
   setReg (i2cRegCR1 periph) clear
   pinUnconfigure sda
   pinUnconfigure scl
+  i2cRCCReset periph
   i2cRCCDisable periph
 
 -- | Reset an I2C peripheral and bus by reinitializing the peripheral
