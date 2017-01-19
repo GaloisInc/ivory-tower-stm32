@@ -3,7 +3,7 @@
 {-# LANGUAGE DataKinds         #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts  #-}
--- Create Ramses build script.
+-- Create eChronos build artifacts.
 --
 -- (c) 2015 Galois, Inc.
 --
