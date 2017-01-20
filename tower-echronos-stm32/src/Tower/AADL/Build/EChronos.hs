@@ -18,7 +18,7 @@ import Ivory.Language
 import Ivory.Tower
 import Ivory.HW
 
-import Tower.AADL.Config (AADLConfig(..))
+import Tower.AADL.Config (AADLConfig(..), maybeFP)
 import Tower.AADL.Build.Common
 
 import Ivory.BSP.ARMv7M.SysTick
@@ -33,9 +33,7 @@ import Ivory.BSP.STM32.ClockConfig.Init
 ramsesMakefile :: AADLConfig -> [MkStmt]
 ramsesMakefile c =
   [ include    aadlFilesMk
-  , "RAMSES_PATH" ?= case configBuildRoot c of
-      Nothing -> "./"
-      Just p  -> p </> "../ramses-demo"
+  , "RAMSES_PATH" ?= maybeFP (configRamsesPath c)
   , "SMACCM_PATH" ?= "./"
   , export $"RAMSES_DIR" === "$(RAMSES_PATH)/ramses_resource"
   , export $"AADL2RTOS_CONFIG_DIR" === "$(RAMSES_PATH)/aadl2rtos_resource"
@@ -57,14 +55,13 @@ echronosMakefileName = "echronos.mk"
 
 echronosMakefile :: AADLConfig -> [MkStmt]
 echronosMakefile c =
-  [ "SHELL"       =: "/bin/bash"
-  , "ROOT"        =: "$(shell pwd)"
-  , "SRC"         =: "$(ROOT)/."
-  , "COMPILERROOT"=: "../../../../../../gcc-arm-embedded/gcc-arm-none-eabi-4_9-2015q2/bin"
-  , "EXE"         =: "image"
-  , "AS"          =: "arm-none-eabi-as -mthumb -g3 -mlittle-endian -mcpu=cortex-m4 \\\n\
+  [ "SHELL"        =: "/bin/bash"
+  , "ROOT"         =: "$(shell pwd)"
+  , "SRC"          =: "$(ROOT)/."
+  , "EXE"          =: "image"
+  , "AS"           =: "arm-none-eabi-as -mthumb -g3 -mlittle-endian -mcpu=cortex-m4 \\\n\
                \      -mfloat-abi=hard -mfpu=fpv4-sp-d16 -I$(SRC)"
-  , "CC"          =: "$(COMPILERROOT)/arm-none-eabi-gcc"
+  , "CC"          =: "arm-none-eabi-gcc"
   , "CFLAGS"      =: "-Os -g3 -Wall -Werror              \\\n\
            \          -std=gnu99                         \\\n\
            \          -Wno-parentheses                   \\\n\
@@ -85,7 +82,7 @@ echronosMakefile c =
           \           -mthumb -mcpu=cortex-m4            \\\n\
           \           -mfloat-abi=hard -mfpu=fpv4-sp-d16"
   , "LDLIBS"      =: "-lm -lc -lnosys -lgcc"
-  , "LD"          =: "$(COMPILERROOT)/arm-none-eabi-gcc"
+  , "LD"          =: "arm-none-eabi-gcc"
   , "SOURCES_GCC" =: "$(wildcard $(SRC)/*.c)                    \\\n\
       \               $(wildcard $(SRC)/gen/*.c)                \\\n\
       \               $(wildcard $(SRC)/echronos_gen/*.c)"
@@ -129,9 +126,7 @@ makefile c =
             \ECHRONOS_LOCATION should be the path to the echronos install where\\\n\
             \the setenv script and packages can be found. For example, the top of\\\n\
             \your echronos repository. PRJ should point to the prj tool."
-  , "ECHRONOS_LOCATION" ?= case configBuildRoot c of
-      Nothing -> "$(shell which prj)"
-      Just p  -> p </> "echronos"
+  , "ECHRONOS_LOCATION" ?= maybeFP (configEchronosPath c)
   , "PRJ" ?= "$(ECHRONOS_LOCATION)/prj/app/prj.py"
   , Target ".PHONY" ["generate", "clean"] []
   , Target "generate" [".tag.echronos", ".tag.ramses"]
@@ -296,3 +291,9 @@ timeModule = package "tower_time" $ do
   -- XXX: This is really Uint64 not ITime aka Sint64
   clock_get_time' :: Def('[]':->ITime)
   clock_get_time' = importProc "clock_get_time" "clock_driver.h"
+
+ccprefix :: String
+ccprefix = "arm-none-eabi-"
+
+ccTool :: String -> String
+ccTool t = ccprefix ++ t
