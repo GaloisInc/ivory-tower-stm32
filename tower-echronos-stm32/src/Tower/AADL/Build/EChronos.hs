@@ -83,7 +83,7 @@ echronosMakefile c =
           \           -mthumb -mcpu=cortex-m4            \\\n\
           \           -mfloat-abi=hard -mfpu=fpv4-sp-d16"
   , "LDLIBS"      =: "-lm -lc -lnosys -lgcc"
-  , "LD"          ?= "$(ARM_PATH)arm-none-eabi-gcc"
+  , "LD"          =: "$(ARM_PATH)arm-none-eabi-gcc"
   , "SOURCES_GCC" =: "$(wildcard $(SRC)/*.c)                    \\\n\
       \               $(wildcard $(SRC)/gen/*.c)                \\\n\
       \               $(wildcard $(SRC)/echronos_gen/*.c)"
