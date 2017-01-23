@@ -59,9 +59,10 @@ echronosMakefile c =
   , "ROOT"         =: "$(shell pwd)"
   , "SRC"          =: "$(ROOT)/."
   , "EXE"          =: "image"
-  , "AS"           =: "arm-none-eabi-as -mthumb -g3 -mlittle-endian -mcpu=cortex-m4 \\\n\
-               \      -mfloat-abi=hard -mfpu=fpv4-sp-d16 -I$(SRC)"
-  , "CC"          =: "arm-none-eabi-gcc"
+  , "ARM_PATH"     ?= ""
+  , "AS"           =: "$(ARM_PATH)arm-none-eabi-as -mthumb -g3 -mlittle-endian -mcpu=cortex-m4 \\\n\
+             \      -mfloat-abi=hard -mfpu=fpv4-sp-d16 -I$(SRC)"
+  , "CC"          =: "$(ARM_PATH)arm-none-eabi-gcc"
   , "CFLAGS"      =: "-Os -g3 -Wall -Werror              \\\n\
            \          -std=gnu99                         \\\n\
            \          -Wno-parentheses                   \\\n\
@@ -82,7 +83,7 @@ echronosMakefile c =
           \           -mthumb -mcpu=cortex-m4            \\\n\
           \           -mfloat-abi=hard -mfpu=fpv4-sp-d16"
   , "LDLIBS"      =: "-lm -lc -lnosys -lgcc"
-  , "LD"          =: "arm-none-eabi-gcc"
+  , "LD"          ?= "$(ARM_PATH)arm-none-eabi-gcc"
   , "SOURCES_GCC" =: "$(wildcard $(SRC)/*.c)                    \\\n\
       \               $(wildcard $(SRC)/gen/*.c)                \\\n\
       \               $(wildcard $(SRC)/echronos_gen/*.c)"
@@ -92,7 +93,7 @@ echronosMakefile c =
   , "OBJECTS_GCC" =: "$(SOURCES_GCC:.c=.o)"
   , "OBJECTS_AS"  =: "$(SOURCES_AS:.s=.o)"
   , "VPATH"       =: "$(SRC)"
-  , "OBJCOPY"     =: "arm-none-eabi-objcopy"
+  , "OBJCOPY"     =: "$(ARM_PATH)arm-none-eabi-objcopy"
   , Target "$(EXE)" ["$(OBJECTS_GCC)", "$(OBJECTS_AS)"]
     ["@echo building executable from assembly files: $(OBJECTS_AS) and .c files: $(OBJECTS_GCC)"
     ,"@echo linking executable"
@@ -291,9 +292,3 @@ timeModule = package "tower_time" $ do
   -- XXX: This is really Uint64 not ITime aka Sint64
   clock_get_time' :: Def('[]':->ITime)
   clock_get_time' = importProc "clock_get_time" "clock_driver.h"
-
-ccprefix :: String
-ccprefix = "arm-none-eabi-"
-
-ccTool :: String -> String
-ccTool t = ccprefix ++ t
