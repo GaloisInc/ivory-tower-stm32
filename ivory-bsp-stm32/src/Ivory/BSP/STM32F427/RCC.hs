@@ -150,3 +150,17 @@ regRCC_APB1ENR = mkBitDataRegNamed (rcc_periph_base + 0x40) "rcc_apb1enr"
 regRCC_APB2ENR :: BitDataReg RCC_APB2ENR
 regRCC_APB2ENR = mkBitDataRegNamed (rcc_periph_base + 0x44) "rcc_apb2enr"
 
+-- APB Peripheral Reset Registers ----------------------------------------------
+
+[ivory|
+ bitdata RCC_APB1RSTR :: Bits 32 = rcc_apb1rstr
+  { _                :: Bits 8
+  , rcc_apb1rst_i2c3 :: Bit
+  , rcc_apb1rst_i2c2 :: Bit
+  , rcc_apb1rst_i2c1 :: Bit
+  , _                :: Bits 21
+  }
+|]
+
+regRCC_APB1RSTR :: BitDataReg RCC_APB1RSTR
+regRCC_APB1RSTR = mkBitDataRegNamed (rcc_periph_base + 0x20) "rcc_apb1rstr"

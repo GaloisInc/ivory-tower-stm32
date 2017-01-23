@@ -5,3 +5,4 @@ cabal.sandbox.config
 /ivory-bsp-tests/PRJ_CMD.mk
 /ivory-bsp-tests/bsp_led_aadl_test
 TAGS
+/ivory-bsp-tests/bsp-i2c-fuzzer

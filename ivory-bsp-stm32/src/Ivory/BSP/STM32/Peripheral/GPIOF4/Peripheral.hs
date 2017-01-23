@@ -91,6 +91,16 @@ pinName p = gpioPortName (gpioPinPort p) ++ show (gpioPinNumber p)
 pinEnable :: GPIOPin -> Ivory eff ()
 pinEnable = gpioPortRCCEnable . gpioPinPort
 
+pinDisable :: GPIOPin -> Ivory eff ()
+pinDisable = gpioPortRCCDisable . gpioPinPort
+
+-- | Set a GPIO to a default floating input state
+pinUnconfigure :: GPIOPin -> Ivory eff ()
+pinUnconfigure p = do
+  pinDisable p
+  pinSetMode p gpio_mode_input
+  pinSetPUPD p gpio_pupd_none
+
 setRegF :: (BitData a, BitData b, IvoryIOReg (BitDataRep a),
             SafeCast (BitDataRep b) (BitDataRep a))
         => (GPIOPort -> BitDataReg a)

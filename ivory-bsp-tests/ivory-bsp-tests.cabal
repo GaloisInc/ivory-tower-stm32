@@ -248,3 +248,16 @@ executable bsp_led_aadl_test_gen
                        ivory-bsp-tests
   ghc-options:          -Wall
 
+executable bsp-i2c-fuzzer-gen
+  main-is:             I2CFuzzer.hs
+  hs-source-dirs:      tests
+  build-depends:       base >= 4.6,
+                       ivory,
+                       ivory-stdlib,
+                       ivory-hw,
+                       tower                >= 0.9,
+                       tower-config,
+                       tower-freertos-stm32 >= 0.9,
+                       ivory-bsp-stm32,
+                       ivory-bsp-tests
+  ghc-options:          -Wall
