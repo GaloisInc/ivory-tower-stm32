@@ -10,7 +10,6 @@
 
 module Tower.AADL.Build.EChronos where
 
-import System.FilePath ((</>))
 import qualified Paths_tower_echronos_stm32 as P
 
 import Ivory.Artifact
