@@ -81,7 +81,8 @@ makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines
       , "\t$(CC) -o $@ $(LDFLAGS) -Wl,--script=bl_linker_script.lds -Wl,-Map=$@.map $(OBJS) $(LDLIBS)"
       , ""
       , "upload: image.px4"
-      , "\tpython px_uploader.py --port=/dev/serial/by-id/usb-3D_Robotics* $<"
+      , "\t@echo \"*** User expected to set UPLOAD_PORT environment variable ***\""
+      , "\tpython px_uploader.py --port=$(UPLOAD_PORT) $<"
       , ""
       ]
 
