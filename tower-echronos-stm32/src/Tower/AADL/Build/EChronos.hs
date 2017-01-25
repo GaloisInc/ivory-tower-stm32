@@ -59,6 +59,10 @@ echronosMakefile c =
   , "ROOT"         =: "$(shell pwd)"
   , "SRC"          =: "$(ROOT)/."
   , "EXE"          =: "image"
+  , "UNAME_S"      =: "$(shell uname -s)\n\
+    \ifeq ($(UNAME_S),Linux)\n\
+    \UPLOAD_PORT?=/dev/serial/by-id/usb-3D_Robotics*\n\
+    \endif"
   , "ARM_PATH"     ?= ""
   , "AS"           =: "$(ARM_PATH)arm-none-eabi-as -mthumb -g3 -mlittle-endian -mcpu=cortex-m4 \\\n\
              \      -mfloat-abi=hard -mfpu=fpv4-sp-d16 -I$(SRC)"
@@ -103,9 +107,14 @@ echronosMakefile c =
     ["$(OBJCOPY) -O binary $< $@"]
   , Target "image.px4" ["bl_image.bin"]
     ["python px_mkfw.py --prototype=px4fmu-v2.prototype  --image=$< > $@"]
-  , Target "upload" ["image.px4"]
-    ["@echo \"*** User expected to set UPLOAD_PORT environment variable ***\""
-  , "python px_uploader.py --port=$(UPLOAD_PORT) $<"]
+  , IfNDef "pokus" 
+      [Target "upload" ["image.px4"]
+        ["@echo \"*** User expected to set UPLOAD_PORT environment variable, exiting. ***\""]
+      ]
+      [Target "upload" ["image.px4"]
+        ["@echo \"*** Uploading ***\""
+        , "python px_uploader.py --port=$(UPLOAD_PORT) $<"]
+      ]
   , Target ".PHONY" ["echronos-clean"] []
   , Target "echronos-clean" []
     ["@echo remove all the object files"

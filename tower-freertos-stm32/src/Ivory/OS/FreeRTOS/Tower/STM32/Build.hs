@@ -15,7 +15,11 @@ import Ivory.BSP.STM32.Config
 
 makefile :: STM32Config -> [FilePath] -> Located Artifact
 makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines
-  [ "CC := arm-none-eabi-gcc"
+  [ "UNAME_S := $(shell uname -s)"
+  , "ifeq ($(UNAME_S),Linux)"
+  , "UPLOAD_PORT?=/dev/serial/by-id/usb-3D_Robotics*"
+  , "endif"
+  , "CC := arm-none-eabi-gcc"
   , "OBJCOPY := arm-none-eabi-objcopy"
   , "CFLAGS := -Os"
   , "TOWER_STM32_CFLAGS := \\"
@@ -81,7 +85,12 @@ makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines
       , "\t$(CC) -o $@ $(LDFLAGS) -Wl,--script=bl_linker_script.lds -Wl,-Map=$@.map $(OBJS) $(LDLIBS)"
       , ""
       , "upload: image.px4"
-      , "\tpython px_uploader.py --port=/dev/serial/by-id/usb-3D_Robotics* $<"
+      , "ifndef UPLOAD_PORT"
+      , "\t@echo \"*** User expected to set UPLOAD_PORT environment variable, exiting. ***\""
+      , "else"
+      , "\t@echo \"*** Uploading ***\""
+      , "\tpython px_uploader.py --port=$(UPLOAD_PORT) $<"
+      , "endif"
       , ""
       ]
 
