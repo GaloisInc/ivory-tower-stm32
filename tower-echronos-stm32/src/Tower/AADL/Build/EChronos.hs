@@ -106,7 +106,7 @@ echronosMakefile c =
     ["$(OBJCOPY) -O binary $< $@"]
   , Target "image.px4" ["bl_image.bin"]
     ["python px_mkfw.py --prototype=px4fmu-v2.prototype  --image=$< > $@"]
-  , IfNDef "pokus" 
+  , IfNDef "UPLOAD_PORT" 
       [Target "upload" ["image.px4"]
         ["@echo \"*** User expected to set UPLOAD_PORT environment variable, exiting. ***\""]
       ]
