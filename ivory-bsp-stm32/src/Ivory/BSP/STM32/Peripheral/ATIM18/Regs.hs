@@ -177,7 +177,7 @@ import Ivory.BSP.STM32.Peripheral.ATIM18.RegTypes
   , atim_ccer_cc4p         :: Bit
   , atim_ccer_cc4e         :: Bit
   , atim_ccer_cc3np        :: Bit
-  , atim_ccer_ccne         :: Bit
+  , atim_ccer_cc3ne        :: Bit
   , atim_ccer_cc3p         :: Bit
   , atim_ccer_cc3e         :: Bit
   , atim_ccer_cc2np        :: Bit
