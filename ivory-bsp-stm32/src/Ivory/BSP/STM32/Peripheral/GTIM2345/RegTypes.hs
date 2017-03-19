@@ -35,3 +35,15 @@ import Ivory.Language
    | ccs_mode_intrc as 3
 |]
 
+[ivory|
+ bitdata SlaveMode :: Bits 3
+   = sms_mode_none     as 0
+   | sms_mode_enc1     as 1
+   | sms_mode_enc2     as 2
+   | sms_mode_enc3     as 3
+   | sms_mode_reset    as 4
+   | sms_mode_gated    as 5
+   | sms_mode_trigger  as 6
+   | sms_mode_ext_clk  as 7
+|]
+
