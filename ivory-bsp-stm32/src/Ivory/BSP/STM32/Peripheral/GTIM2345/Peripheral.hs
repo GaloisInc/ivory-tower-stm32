@@ -35,7 +35,7 @@ data GTIM a = GTIM
   , gtimRegCCMR2_ICM    :: BitDataReg GTIM_CCMR2_ICM
   , gtimRegCCER         :: BitDataReg GTIM_CCER
   , gtimRegCNT          :: BitDataReg a
-  , gtimRegPSC          :: BitDataReg GTIM_16
+  , gtimRegPSC          :: BitDataReg GTIM_PSC
   , gtimRegARR          :: BitDataReg a
   , gtimRegCCR1         :: BitDataReg a
   , gtimRegCCR2         :: BitDataReg a
