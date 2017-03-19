@@ -42,5 +42,16 @@ import Ivory.Language
    | cr2_mms_compare_oc2ref as 5
    | cr2_mms_compare_oc3ref as 6
    | cr2_mms_compare_oc4ref as 7
-|]
 
+-- CR1 Direction
+bitdata CR1DIR  :: Bit
+   = cr1_dir_up   as 0
+   | cr1_dir_down as 1
+
+-- CR1 Center-aligned mode Selection field definitions:
+bitdata CR1CMS  :: Bits 2
+   = cr1_cms_edge_align    as 0
+   | cr1_cms_center_align1 as 1
+   | cr1_cms_center_align2 as 2
+   | cr1_cms_center_align3 as 3
+|]

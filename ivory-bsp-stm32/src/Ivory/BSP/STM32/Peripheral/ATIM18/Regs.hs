@@ -19,8 +19,8 @@ import Ivory.BSP.STM32.Peripheral.ATIM18.RegTypes
   { _             :: Bits 22
   , atim_cr1_ckd  :: Bits 2
   , atim_cr1_arpe :: Bit
-  , atim_cr1_cms  :: Bits 2
-  , atim_cr1_dir  :: Bit
+  , atim_cr1_cms  :: CR1CMS
+  , atim_cr1_dir  :: CR1DIR
   , atim_cr1_opm  :: Bit
   , atim_cr1_urs  :: Bit
   , atim_cr1_udis :: Bit
