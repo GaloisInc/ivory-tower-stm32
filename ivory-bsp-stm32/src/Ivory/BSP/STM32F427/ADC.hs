@@ -14,6 +14,7 @@ import Ivory.BSP.STM32F427.RCC
 
 adc1 :: ADCPeriph
 adc1 = mkADCPeriph adc1_periph_base
+        adc1_periph_base
         (rccEnable rcc_apb2en_adc1)
         (rccDisable rcc_apb2en_adc1)
         ADC
@@ -21,6 +22,7 @@ adc1 = mkADCPeriph adc1_periph_base
 
 adc2 :: ADCPeriph
 adc2 = mkADCPeriph adc2_periph_base
+        adc1_periph_base
         (rccEnable rcc_apb2en_adc2)
         (rccDisable rcc_apb2en_adc2)
         ADC
@@ -28,6 +30,7 @@ adc2 = mkADCPeriph adc2_periph_base
 
 adc3 :: ADCPeriph
 adc3 = mkADCPeriph adc3_periph_base
+        adc1_periph_base
         (rccEnable rcc_apb2en_adc3)
         (rccDisable rcc_apb2en_adc3)
         ADC
