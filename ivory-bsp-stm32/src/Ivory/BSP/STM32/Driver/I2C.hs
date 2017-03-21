@@ -159,7 +159,8 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
             -- whenever we have a successful result to send
             store (res ~> resultcode) code
             ifte_ (code >? 0)
-              (do errs <- deref error_run
+              (do comment "non-zero result code; increment error run"
+                  errs <- deref error_run
                   store error_run (errs + 1))
               (store error_run 0)
             emit e (constRef res)
@@ -174,12 +175,14 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
       errs <- deref error_run
 
       when (s /=? i2cInactive .&& t - t_last >? i2c_TIMEOUT) $ do
+        comment "timeout"
         -- handle a timeout like an error coming from the peripheral
         sendresult res_emitter resbuffer 1
 
       when (s ==? i2cInactive) $ do
         sr2 <- getReg (i2cRegSR2 periph)
         when (bitToBool (sr2 #. i2c_sr2_busy)) $ do
+          comment "inactive, but bus is busy"
           -- if we're inactive but the bus is busy, reset the peripheral
           disableCRInterrupts periph
           i2cReset periph sda scl clockConfig
@@ -187,6 +190,7 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
           store error_run (errs + 1)
 
       when (errs >=? i2c_MAX_ERROR_RUN) $ do
+        comment "exceeded max error run"
         when (s /=? i2cInactive) $ do
           -- shoot down any in-progress transaction
           sendresult res_emitter resbuffer 1
@@ -225,9 +229,11 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
         [ (s ==? i2cEV5) ==> do
             comment "i2cEV5"
             -- I2C start bit sent and Master mode selected
---            sr2 <- getReg (i2cRegSR2 periph)
             cond_
-              [ ( {-busyMaster sr2 .&&-} bitToBool (sr1 #. i2c_sr1_sb)) ==> do
+              [ (bitToBool (sr1 #. i2c_sr1_addr)) ==> do
+                  comment "addr bit shouldn't be set"
+                  sendresult res_emitter resbuffer 1
+              , (bitToBool (sr1 #. i2c_sr1_sb)) ==> do
                   comment "master mode, busy bus, start bit set"
                   tx_ad  <- deref (reqbuffer ~> tx_addr)
                   tx_pos <- deref reqbufferpos
@@ -308,9 +314,16 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
 
         , (s ==? i2cEV7) ==> do
             comment "i2cEV7"
+            -- if the addr bit is somehow still around, something's wrong
+            when (bitToBool (sr1 #. i2c_sr1_addr)) $ do
+              comment "rx: somehow addr didn't get cleared the first time"
+              sendresult res_emitter resbuffer 1
+
             -- Receive mode: data register non-empty with either at
             -- least two more or no more bytes left to receive
-            when (bitToBool (sr1 #. i2c_sr1_rxne)) $ do
+            when ( bitToBool (sr1 #. i2c_sr1_rxne) .&&
+                   iNot (bitToBool (sr1 #. i2c_sr1_addr))
+                 ) $ do
               rx_pos <- deref resbufferpos
               rx_sz  <- deref (reqbuffer ~> rx_len)
               let read_remaining = rx_sz - rx_pos
@@ -433,7 +446,7 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
             comment "i2cEV8_2"
             -- Transmit mode: no bytes left to send; wait for shift
             -- register to empty
-            when ( bitToBool (sr1 #. i2c_sr1_txe) .&&
+            when ( bitToBool (sr1 #. i2c_sr1_txe) .||
                    bitToBool (sr1 #. i2c_sr1_btf)
                  ) $ do
               tx_pos <- deref reqbufferpos
