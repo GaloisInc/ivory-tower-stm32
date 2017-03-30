@@ -44,8 +44,9 @@ spiTower tocc devices pins = do
                 (Microseconds 9)
                 (do debugToggle debugPin1
                     interrupt_disable interrupt)
-  monitor (periphname ++ "PeripheralDriver") $
-    spiPeripheralDriver tocc periph pins devices (snd reqchan) (fst reschan) (fst readychan) irq
+  watchdog_per <- period (Milliseconds 1)
+  monitor (periphname ++ "PeripheralDriver") $ do
+    spiPeripheralDriver tocc periph pins devices (snd reqchan) (fst reschan) (fst readychan) irq watchdog_per
   return (BackpressureTransmit (fst reqchan) (snd reschan), snd readychan)
   where
   interrupt = spiInterrupt periph
@@ -72,11 +73,13 @@ spiPeripheralDriver :: forall e
                     -> ChanInput    ('Struct "spi_transaction_result")
                     -> ChanInput    ('Stored ITime)
                     -> ChanOutput ('Stored ITime)
+                    -> ChanOutput ('Stored ITime)
                     -> Monitor e ()
-spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
+spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq watchdog_per = do
   clockconfig <- fmap tocc getEnv
   monitorModuleDef $ hw_moduledef
   done <- state "done"
+  shutdown <- stateInit "shutdown" (ival false)
   handler systemInit "initialize_hardware" $ do
     send_ready <- emitter ready_in 1
     callback $ \ now -> do
@@ -96,9 +99,20 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
   resbuffer    <- state "resbuffer"
   resbufferpos <- state "resbufferpos"
 
-  handler irq "irq" $ do
+  handler watchdog_per "spi_shutdown_watchdog" $ do
     e <- emitter res_in 1
+    callback $ \_ -> do
+      do_shutdown <- deref shutdown
+      when do_shutdown $ do
+        sr <- getReg (spiRegSR periph)
+        unless (bitToBool (sr #. spi_sr_bsy)) $ do
+          spiBusEnd periph
+          chooseDevice spiDeviceDeselect (reqbuffer ~> tx_device)
+          emit e (constRef resbuffer)
+          store done true
+          store shutdown false
 
+  handler irq "irq" $ do
     callback $ \_ -> do
       tx_pos <- deref reqbufferpos
       tx_sz  <- deref (reqbuffer ~> tx_len)
@@ -136,12 +150,10 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
                   (clearBit spi_cr2_txeie >> setBit spi_cr2_rxneie)
             when (tx_pos >=? tx_sz .&& rx_pos >=? (rx_sz - 1) .&&
                   iNot (bitToBool (sr #. spi_sr_bsy))) $ do
-              comment "transaction done"
+              comment "transaction done; disable interrupts and let watchdog"
+              comment "shut down the device once the bus isn't busy"
               modifyReg (spiRegCR2 periph) (clearBit spi_cr2_txeie)
-              spiBusEnd       periph
-              chooseDevice spiDeviceDeselect (reqbuffer ~> tx_device)
-              emit e (constRef resbuffer)
-              store done true
+              store shutdown true
 
             debugOff debugPin3
         ]
