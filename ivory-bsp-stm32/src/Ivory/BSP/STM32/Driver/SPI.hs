@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Ivory.BSP.STM32.Driver.SPI
   ( spiTower
@@ -95,9 +96,9 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
   resbuffer    <- state "resbuffer"
   resbufferpos <- state "resbufferpos"
 
-
   handler irq "irq" $ do
     e <- emitter res_in 1
+
     callback $ \_ -> do
       tx_pos <- deref reqbufferpos
       tx_sz  <- deref (reqbuffer ~> tx_len)
@@ -105,6 +106,7 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
       rx_sz  <- deref (resbuffer ~> rx_idx)
 
       sr <- getReg (spiRegSR periph)
+
       cond_
         [ bitToBool (sr #. spi_sr_rxne) ==> do
             debugOn debugPin2
@@ -112,12 +114,14 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
               r <- spiGetDR periph
               store ((resbuffer ~> rx_buf) ! rx_pos) r
               store resbufferpos (rx_pos + 1)
+            when (tx_pos <? tx_sz) $ do
+              comment "still more to send"
+              modifyReg (spiRegCR2 periph)
+                (setBit spi_cr2_txeie >> clearBit spi_cr2_rxneie)
             when (rx_pos ==? (rx_sz - 1)) $ do
-              modifyReg (spiRegCR2 periph) (clearBit spi_cr2_txeie)
-              spiBusEnd       periph
-              chooseDevice spiDeviceDeselect (reqbuffer ~> tx_device)
-              emit e (constRef resbuffer)
-              store done true
+              comment "done receiving"
+              modifyReg (spiRegCR2 periph)
+                (setBit spi_cr2_txeie >> clearBit spi_cr2_rxneie)
             debugOff debugPin2
 
         , bitToBool (sr #. spi_sr_txe) ==> do
@@ -125,10 +129,20 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
             when (tx_pos <? tx_sz) $ do
               w <- deref ((reqbuffer ~> tx_buf) ! tx_pos)
               spiSetDR periph w
-            ifte_ (tx_pos <=? tx_sz)
-              (do store reqbufferpos (tx_pos + 1)
-                  modifyReg (spiRegCR2 periph) (setBit spi_cr2_rxneie))
-              (modifyReg (spiRegCR2 periph) (clearBit spi_cr2_rxneie))
+              store reqbufferpos (tx_pos + 1)
+              when (rx_pos <? rx_sz) $ do
+                comment "still more to receive"
+                modifyReg (spiRegCR2 periph)
+                  (clearBit spi_cr2_txeie >> setBit spi_cr2_rxneie)
+            when (tx_pos >=? tx_sz .&& rx_pos >=? (rx_sz - 1) .&&
+                  iNot (bitToBool (sr #. spi_sr_bsy))) $ do
+              comment "transaction done"
+              modifyReg (spiRegCR2 periph) (clearBit spi_cr2_txeie)
+              spiBusEnd       periph
+              chooseDevice spiDeviceDeselect (reqbuffer ~> tx_device)
+              emit e (constRef resbuffer)
+              store done true
+
             debugOff debugPin3
         ]
       interrupt_enable interrupt
@@ -182,7 +196,6 @@ spiPeripheralDriver tocc periph pins devices req_out res_in ready_in irq = do
     invalidhandle = SPIDeviceHandle (fromIntegral (length devices))
     aux cd device idx =
       cd ==? SPIDeviceHandle (fromIntegral idx) ==> cb device
-
 
 -- Debugging Helpers: useful for development, disabled for production.
 debugPin1, debugPin2, debugPin3, debugPin4 :: Maybe GPIOPin
