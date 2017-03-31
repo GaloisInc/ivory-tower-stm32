@@ -227,7 +227,7 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
             -- I2C start bit sent and Master mode selected
 --            sr2 <- getReg (i2cRegSR2 periph)
             cond_
-              [ ( {-busyMaster sr2 .&&-} bitToBool (sr1 #. i2c_sr1_sb)) ==> do
+              [(bitToBool (sr1 #. i2c_sr1_sb)) ==> do
                   comment "master mode, busy bus, start bit set"
                   tx_ad  <- deref (reqbuffer ~> tx_addr)
                   tx_pos <- deref reqbufferpos
@@ -241,70 +241,72 @@ i2cPeripheralDriver tocc periph sda scl evt_irq err_irq req_chan res_chan ready_
 
                   modifyReg (i2cRegDR periph) $
                     setField i2c_dr_data (fromRep addr)
---              , (bitToBool (sr1 #. i2c_sr1_sb)) ==> do
---                  comment "bad state: start bit set, but not master"
---                  store driverstate i2cInactive
---                  sendresult res_emitter resbuffer 1
-
-                -- TODO: this is a bad state to be in! we should
-                -- probably write a full reset routine that
-                -- reinitializes the peripheral
+              , (bitToBool (sr1 #. i2c_sr1_addr)) ==> do
+                  comment "addr bit shouldn't be set unless start bit is"
+                  sendresult res_emitter resbuffer 1
               ]
 
         , (s ==? i2cEV6) ==> do
             comment "i2cEV6"
-            -- Address bit set, ready to start sending/receiving
-            when (bitToBool (sr1 #. i2c_sr1_addr)) $ do
-              tx_pos <- deref reqbufferpos
-              tx_sz  <- deref (reqbuffer ~> tx_len)
-              rx_pos <- deref resbufferpos
-              rx_sz  <- deref (reqbuffer ~> rx_len)
 
-              let write_remaining = tx_sz - tx_pos
-                  read_remaining  = rx_sz - rx_pos
+            cond_
+              [ (bitToBool (sr1 #. i2c_sr1_sb)) ==> do
+                  comment "start bit should have been cleared when writing addr"
+                  sendresult res_emitter resbuffer 1
 
-              cond_
-                [ (write_remaining >? 0) ==> do
-                    comment "tx: clear addr"
-                    void $ getReg (i2cRegSR2 periph)
-                    -- take a byte off the write buffer, write to DR
-                    w <- deref ((reqbuffer ~> tx_buf) ! tx_pos)
-                    store reqbufferpos (tx_pos + 1)
-                    modifyReg (i2cRegDR periph) $
-                      setField i2c_dr_data (fromRep w)
-                    ifte_ (write_remaining ==? 1)
-                      -- stop transmission after this
-                      (store driverstate i2cEV8_2)
-                      -- otherwise keep transmitting
-                      (store driverstate i2cEV8)
-                , (read_remaining >? 2) ==> do
-                    comment "rx: send an ack until cleared"
-                    modifyReg (i2cRegCR1 periph) $
-                      setBit i2c_cr1_ack
-                    ifte_ (read_remaining ==? 3)
-                      -- special case read N-2 next
-                      (store driverstate i2cEV7_N2)
-                      -- otherwise normal reading next
-                      (store driverstate i2cEV7)
-                , (read_remaining ==? 2) ==> do
-                    comment "rx: special case read 2 bytes (pg841)"
-                    -- set ACK low, set POS high
-                    modifyReg (i2cRegCR1 periph) $
-                      (clearBit i2c_cr1_ack >> setBit i2c_cr1_pos)
-                    -- special case read N-1 next
-                    store driverstate i2cEV7_N1
-                , (read_remaining ==? 1) ==> do
-                    comment "rx: 1 byte read, set nack now (Figure 244)"
-                    modifyReg (i2cRegCR1 periph) $
-                      clearBit i2c_cr1_ack
-                    -- read final byte next
-                    store driverstate i2cEV7_rx1
-                , true ==> do
-                    -- nothing to do
-                    sendresult res_emitter resbuffer 0
-                ]
-              -- read sr2 to finish clearing address bit for reads
-              void $ getReg (i2cRegSR2 periph)
+              , (bitToBool (sr1 #. i2c_sr1_addr)) ==> do
+                  comment "addr bit set, ready to start sending/receiving"
+                  tx_pos <- deref reqbufferpos
+                  tx_sz  <- deref (reqbuffer ~> tx_len)
+                  rx_pos <- deref resbufferpos
+                  rx_sz  <- deref (reqbuffer ~> rx_len)
+
+                  let write_remaining = tx_sz - tx_pos
+                      read_remaining  = rx_sz - rx_pos
+
+                  cond_
+                    [ (write_remaining >? 0) ==> do
+                        comment "tx: clear addr"
+                        void $ getReg (i2cRegSR2 periph)
+                        -- take a byte off the write buffer, write to DR
+                        w <- deref ((reqbuffer ~> tx_buf) ! tx_pos)
+                        store reqbufferpos (tx_pos + 1)
+                        modifyReg (i2cRegDR periph) $
+                          setField i2c_dr_data (fromRep w)
+                        ifte_ (write_remaining ==? 1)
+                          -- stop transmission after this
+                          (store driverstate i2cEV8_2)
+                          -- otherwise keep transmitting
+                          (store driverstate i2cEV8)
+                    , (read_remaining >? 2) ==> do
+                        comment "rx: send an ack until cleared"
+                        modifyReg (i2cRegCR1 periph) $
+                          setBit i2c_cr1_ack
+                        ifte_ (read_remaining ==? 3)
+                          -- special case read N-2 next
+                          (store driverstate i2cEV7_N2)
+                          -- otherwise normal reading next
+                          (store driverstate i2cEV7)
+                    , (read_remaining ==? 2) ==> do
+                        comment "rx: special case read 2 bytes (pg841)"
+                        -- set ACK low, set POS high
+                        modifyReg (i2cRegCR1 periph) $
+                          (clearBit i2c_cr1_ack >> setBit i2c_cr1_pos)
+                        -- special case read N-1 next
+                        store driverstate i2cEV7_N1
+                    , (read_remaining ==? 1) ==> do
+                        comment "rx: 1 byte read, set nack now (Figure 244)"
+                        modifyReg (i2cRegCR1 periph) $
+                          clearBit i2c_cr1_ack
+                        -- read final byte next
+                        store driverstate i2cEV7_rx1
+                    , true ==> do
+                        -- nothing to do
+                        sendresult res_emitter resbuffer 0
+                    ]
+                  -- read sr2 to finish clearing address bit for reads
+                  void $ getReg (i2cRegSR2 periph)
+              ]
 
         , (s ==? i2cEV7) ==> do
             comment "i2cEV7"
