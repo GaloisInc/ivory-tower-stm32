@@ -47,6 +47,3 @@ uartUnbuffer (BackpressureTransmit req res) = do
       callback $ const $ store flush_defer false
 
   return (fst c)
-
-  where
-
