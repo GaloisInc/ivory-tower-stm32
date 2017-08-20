@@ -1,4 +1,4 @@
-module Ivory.BSP.STM32F427.ADC
+module Ivory.BSP.STM32F405.ADC
   ( adc1
   , adc2
   , adc3
@@ -8,9 +8,9 @@ import Ivory.Language
 import Ivory.HW
 
 import Ivory.BSP.STM32.Peripheral.ADC
-import Ivory.BSP.STM32F427.Interrupt
-import Ivory.BSP.STM32F427.MemoryMap
-import Ivory.BSP.STM32F427.RCC
+import Ivory.BSP.STM32F405.Interrupt
+import Ivory.BSP.STM32F405.MemoryMap
+import Ivory.BSP.STM32F405.RCC
 
 adc1 :: ADCPeriph
 adc1 = mkADCPeriph adc1_periph_base

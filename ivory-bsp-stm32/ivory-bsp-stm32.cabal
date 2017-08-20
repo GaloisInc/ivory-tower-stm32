@@ -122,6 +122,7 @@ library
                        Ivory.BSP.STM32F405.ATIM18,
                        Ivory.BSP.STM32F405.UART,
                        Ivory.BSP.STM32F405.RNG,
+                       Ivory.BSP.STM32F405.ADC
 
                        Ivory.BSP.STM32F427.MemoryMap,
                        Ivory.BSP.STM32F427.Interrupt,

@@ -48,7 +48,7 @@ import Ivory.BSP.STM32.Peripheral.GTIM2345.RegTypes
   , gtim_smcr_msm   :: Bit
   , gtim_smcr_ts    :: Bits 3
   , _               :: Bit
-  , gtim_smcr_sms   :: Bits 3
+  , gtim_smcr_sms   :: SlaveMode
   }
 |]
 

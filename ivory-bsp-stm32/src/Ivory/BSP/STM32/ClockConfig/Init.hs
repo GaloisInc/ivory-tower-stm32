@@ -70,7 +70,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
 
       -- Spin for a little bit waiting for RCC->CR HSERDY bit to be high
       hserdy <- local (ival false)
-      arrayMap $ \(_ :: Ix 1024) -> do
+      arrayMap $ \(_ :: Ix 10240) -> do
         cr <- getReg (rcc_reg_cr rcc)
         when (bitToBool (cr #. rcc_cr_hse_rdy)) $ do
           store hserdy true
@@ -87,6 +87,7 @@ init_clocks clockconfig = proc "init_clocks" $ body $ do
       unless success $ do
         comment "waiting for HSERDY failed: check your hardware for a fault"
         comment "XXX handle this exception case with a breakpoint or reconfigure pll values for hsi"
+        assert success
         forever $ return ()
 
   -- Select regulator voltage output scale 1 mode
