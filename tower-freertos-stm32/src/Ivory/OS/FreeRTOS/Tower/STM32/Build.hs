@@ -11,10 +11,10 @@ import qualified Paths_tower_freertos_stm32 as P
 import Ivory.Artifact
 import Ivory.BSP.STM32.VectorTable
 import Ivory.BSP.STM32.LinkerScript
-import Ivory.BSP.STM32.Config
+import Ivory.BSP.STM32.MCU
 
-makefile :: STM32Config -> [FilePath] -> Located Artifact
-makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines
+makefile :: [FilePath] -> Located Artifact
+makefile userobjs = Root $ artifactString "Makefile" $ unlines
   [ "UNAME_S := $(shell uname -s)"
   , "ifeq ($(UNAME_S),Linux)"
   , "UPLOAD_PORT?=/dev/serial/by-id/usb-3D_Robotics*"
@@ -44,9 +44,7 @@ makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines
   , "OBJDIR := obj"
   , "OBJS := $(addprefix $(OBJDIR)/," ++ (L.intercalate " " objects) ++ ")"
   , ""
-  , "default: $(OBJDIR) $(OBJS) image" ++ bootloader_default_targets
-  , ""
-  , bootloader_targets
+  , "default: $(OBJDIR) $(OBJS) image"
   , ""
   , "image: $(OBJS)"
   , "\t$(CC) -o $@ $(LDFLAGS) -Wl,--script=linker_script.lds -Wl,-Map=$@.map $(OBJS) $(LDLIBS)"
@@ -68,36 +66,11 @@ makefile STM32Config{..} userobjs = Root $ artifactString "Makefile" $ unlines
   ]
   where
   objects = userobjs ++  ["stm32_freertos_init.o", "vector_table.o", "stm32_freertos_user_assert.o"]
-  bootloader_default_targets = case stm32config_px4version of
-    Nothing -> ""
-    Just _ -> " image.px4"
-  bootloader_targets = case stm32config_px4version of
-    Nothing -> ""
-    Just px4vers -> unlines
-      [ "image.px4: bl_image.bin"
-      , "\tpython px_mkfw.py --prototype=" ++ px4vers_prototype px4vers 
-            ++ "  --image=$< > $@"
-      , ""
-      , "bl_image.bin: bl_image"
-      , "\t$(OBJCOPY) -O binary $< $@"
-      , ""
-      , "bl_image: $(OBJS)"
-      , "\t$(CC) -o $@ $(LDFLAGS) -Wl,--script=bl_linker_script.lds -Wl,-Map=$@.map $(OBJS) $(LDLIBS)"
-      , ""
-      , "upload: image.px4"
-      , "ifndef UPLOAD_PORT"
-      , "\t@echo \"*** User expected to set UPLOAD_PORT environment variable, exiting. ***\""
-      , "else"
-      , "\t@echo \"*** Uploading ***\""
-      , "\tpython px_uploader.py --port=$(UPLOAD_PORT) $<"
-      , "endif"
-      , ""
-      ]
 
-artifacts :: STM32Config -> [Located Artifact]
-artifacts STM32Config{..} =
-  [ vector_table stm32config_processor
-  ] ++ init_artifacts ++ aux stm32config_px4version
+artifacts :: MCU -> [Located Artifact]
+artifacts mcu =
+  [ vector_table (mcuFamily mcu)
+  ] ++ init_artifacts ++ aux
   where
   init_artifacts =
     [ Src  $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.c"
@@ -105,16 +78,7 @@ artifacts STM32Config{..} =
     , Src  $ artifactCabalFile P.getDataDir "support/stm32_freertos_user_assert.c"
     ]
 
-  aux Nothing = [ mk_lds "linker_script.lds" 0 ]
-  aux (Just px4vers) =
-    [ mk_lds "linker_script.lds" 0
-    , mk_lds "bl_linker_script.lds" 0x4000
-    ] ++ map (Root . artifactCabalFile P.getDataDir)
-              (px_python ++ ["support/" ++ px4vers_prototype px4vers])
+  aux = [ mk_lds "linker_script.lds" 0 ]
 
-  mk_lds name bl_offset = Root $ linker_script name stm32config_processor bl_offset reset_handler
-  px_python = [ "support/px_mkfw.py", "support/px_uploader.py"] 
+  mk_lds name bl_offset = Root $ linker_script name mcu bl_offset reset_handler
 
-px4vers_prototype :: PX4Version -> String
-px4vers_prototype PX4FMU_v1 = "px4fmu-v1.prototype"
-px4vers_prototype PX4FMU_v2 = "px4fmu-v2.prototype"
