@@ -17,6 +17,7 @@ import Control.Monad (forM_)
 import Data.List (nub)
 import qualified Data.Map as Map
 import System.FilePath
+import Data.Monoid ((<>))
 
 import Ivory.Language
 import Ivory.Artifact
@@ -52,7 +53,6 @@ instance TowerBackend STM32FreeRTOSBackend where
   newtype TowerBackendEmitter STM32FreeRTOSBackend = STM32FreeRTOSEmitter (Maybe (AST.Monitor -> AST.Thread -> EmitterCode))
   data TowerBackendHandler STM32FreeRTOSBackend a = STM32FreeRTOSHandler AST.Handler (forall s. AST.Monitor -> AST.Thread -> (Def ('[ConstRef s a] ':-> ()), ThreadCode))
   newtype TowerBackendMonitor STM32FreeRTOSBackend = STM32FreeRTOSMonitor (AST.Tower -> TowerBackendOutput STM32FreeRTOSBackend)
-    deriving Monoid
   data TowerBackendOutput STM32FreeRTOSBackend = STM32FreeRTOSOutput
     { compatoutput_threads :: Map.Map AST.Thread ThreadCode
     , compatoutput_monitors :: Map.Map AST.Monitor ModuleDef
@@ -90,12 +90,20 @@ instance TowerBackend STM32FreeRTOSBackend where
 
   towerImpl _ ast monitors = case mconcat monitors of STM32FreeRTOSMonitor f -> f ast
 
-instance Monoid (TowerBackendOutput STM32FreeRTOSBackend) where
-  mempty = STM32FreeRTOSOutput mempty mempty
-  mappend a b = STM32FreeRTOSOutput
+instance Semigroup (TowerBackendMonitor STM32FreeRTOSBackend) where
+  (<>) (STM32FreeRTOSMonitor a) (STM32FreeRTOSMonitor b) = STM32FreeRTOSMonitor $ \twr -> a twr <> b twr
+
+instance Monoid (TowerBackendMonitor STM32FreeRTOSBackend) where
+  mempty = STM32FreeRTOSMonitor $ \_twr -> mempty
+
+instance Semigroup (TowerBackendOutput STM32FreeRTOSBackend) where
+  (<>) a b = STM32FreeRTOSOutput
     { compatoutput_threads = Map.unionWith mappend (compatoutput_threads a) (compatoutput_threads b)
     , compatoutput_monitors = Map.unionWith (>>) (compatoutput_monitors a) (compatoutput_monitors b)
     }
+
+instance Monoid (TowerBackendOutput STM32FreeRTOSBackend) where
+  mempty = STM32FreeRTOSOutput mempty mempty
 
 data EmitterCode = EmitterCode
   { emittercode_init :: forall eff. Ivory eff ()
