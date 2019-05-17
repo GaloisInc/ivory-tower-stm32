@@ -42,6 +42,7 @@ import           Ivory.OS.FreeRTOS.Tower.Time (time_module)
 import qualified Ivory.OS.FreeRTOS.Tower.STM32.Build as STM32
 
 import Ivory.BSP.STM32.VectorTable (reset_handler)
+import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.ClockConfig.Init (init_clocks)
 import Ivory.BSP.STM32.MCU
 
@@ -196,21 +197,22 @@ callbackProcName callbackname _handlername tast
 
 --------
 
-compileTowerSTM32FreeRTOS :: (e -> MCU) -> (TOpts -> IO e) -> Tower e () -> IO ()
-compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
+compileTowerSTM32FreeRTOS :: (e -> MCU) -> (e -> ClockConfig) -> (TOpts -> IO e) -> Tower e () -> IO ()
+compileTowerSTM32FreeRTOS toMcu toCc getEnv twr = do
   (copts, topts) <- towerGetOpts
   env <- getEnv topts
 
-  let mcu = fromEnv env
+  let mcu = toMcu env
+      cc  = toCc env
       (ast, o, deps, sigs) = runTower_ compatBackend twr env
 
       mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
           ++ monitorModules deps (Map.toList (compatoutput_monitors o))
-          ++ stm32Modules mcu ast
+          ++ stm32Modules mcu cc ast
 
       givenArtifacts = dependencies_artifacts deps
-      as = stm32Artifacts mcu ast mods givenArtifacts
+      as = stm32Artifacts mcu cc ast mods givenArtifacts
   runCompiler mods (as ++ givenArtifacts) copts
   where
   compatBackend = STM32FreeRTOSBackend
@@ -220,15 +222,15 @@ compileTowerSTM32FreeRTOS fromEnv getEnv twr = do
                  $ compatoutput_threads o
 
 
-stm32Modules :: MCU -> AST.Tower -> [Module]
-stm32Modules mcu ast = systemModules ast ++ [ main_module, time_module ]
+stm32Modules :: MCU -> ClockConfig -> AST.Tower -> [Module]
+stm32Modules mcu cc ast = systemModules ast ++ [ main_module, time_module ]
   where
   main_module :: Module
   main_module = package "stm32_main" $ do
     incl reset_handler_proc
     hw_moduledef
     private $ do
-      --incl (init_clocks (stm32config_clock conf))
+      incl (init_clocks cc)
       incl init_relocate
       incl init_libc
       incl main_proc
@@ -236,7 +238,7 @@ stm32Modules mcu ast = systemModules ast ++ [ main_module, time_module ]
   reset_handler_proc :: Def('[]':->())
   reset_handler_proc = proc reset_handler $ body $ do
     call_ init_relocate
-    --call_ (init_clocks (stm32config_clock conf))
+    call_ (init_clocks cc)
     call_ init_libc
     call_ main_proc
 
@@ -248,8 +250,8 @@ stm32Modules mcu ast = systemModules ast ++ [ main_module, time_module ]
   main_proc = importProc "main" "stm32_freertos_init.h"
 
 
-stm32Artifacts :: MCU -> AST.Tower -> [Module] -> [Located Artifact] -> [Located Artifact]
-stm32Artifacts mcu ast ms gcas = (systemArtifacts ast ms) ++ as
+stm32Artifacts :: MCU -> ClockConfig -> AST.Tower -> [Module] -> [Located Artifact] -> [Located Artifact]
+stm32Artifacts mcu cc ast ms gcas = (systemArtifacts ast ms) ++ as
   where
   as = [ STM32.makefile makeobjs ] ++ STM32.artifacts mcu
     ++ FreeRTOS.kernel fconfig ++ FreeRTOS.wrapper
@@ -268,5 +270,6 @@ stm32Artifacts mcu ast ms gcas = (systemArtifacts ast ms) ++ as
     -- allocations; this should be a config
     , FreeRTOS.total_heap_size = mcuRAM mcu `div` 2
     -- XXX expand tower config to fill in the rest of these values
+    , FreeRTOS.cpu_clock_hz = clockSysClkHz cc
     }
 
