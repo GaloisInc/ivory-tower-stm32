@@ -43,7 +43,7 @@ import qualified Ivory.OS.FreeRTOS.Tower.STM32.Build as STM32
 
 import Ivory.BSP.STM32.VectorTable (reset_handler)
 import Ivory.BSP.STM32.ClockConfig
-import Ivory.BSP.STM32.ClockConfig.Init (init_clocks)
+import Ivory.BSP.STM32.ClockInit (init_clocks)
 import Ivory.BSP.STM32.MCU
 
 
@@ -230,7 +230,7 @@ stm32Modules mcu cc ast = systemModules ast ++ [ main_module, time_module ]
     incl reset_handler_proc
     hw_moduledef
     private $ do
-      incl (init_clocks cc)
+      incl (init_clocks (mcuFamily mcu) cc)
       incl init_relocate
       incl init_libc
       incl main_proc
@@ -238,7 +238,7 @@ stm32Modules mcu cc ast = systemModules ast ++ [ main_module, time_module ]
   reset_handler_proc :: Def('[]':->())
   reset_handler_proc = proc reset_handler $ body $ do
     call_ init_relocate
-    call_ (init_clocks cc)
+    call_ (init_clocks (mcuFamily mcu) cc)
     call_ init_libc
     call_ main_proc
 
