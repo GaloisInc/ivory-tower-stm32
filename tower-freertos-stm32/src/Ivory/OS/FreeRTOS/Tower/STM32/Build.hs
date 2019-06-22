@@ -12,9 +12,10 @@ import Ivory.Artifact
 import Ivory.BSP.STM32.VectorTable
 import Ivory.BSP.STM32.LinkerScript
 import Ivory.BSP.STM32.MCU
+import Ivory.BSP.STM32.Core
 
-makefile :: [FilePath] -> Located Artifact
-makefile userobjs = Root $ artifactString "Makefile" $ unlines
+makefile :: MCU -> [FilePath] -> Located Artifact
+makefile mcu userobjs = Root $ artifactString "Makefile" $ unlines
   [ "UNAME_S := $(shell uname -s)"
   , "ifeq ($(UNAME_S),Linux)"
   , "UPLOAD_PORT?=/dev/serial/by-id/usb-3D_Robotics*"
@@ -29,16 +30,20 @@ makefile userobjs = Root $ artifactString "Makefile" $ unlines
   , "  -Wno-unused-function \\"
   , "  -Wno-unused-variable \\"
   , "  -mlittle-endian \\"
-  , "  -mthumb -mcpu=cortex-m4 \\"
-  , "  -mfloat-abi=hard -mfpu=fpv4-sp-d16 \\"
+  , "  -mthumb \\"
+  , "  -mcpu=" ++ cpu mcucore ++ " \\"
+  , "  -mfpu=" ++ fpu mcucore ++ " \\"
+  , maybe "" (\x -> "  -mfloat-abi=" ++ x ++ " \\") (floatabi mcucore)
   , "  -DIVORY_TEST \\"
   , "  -DIVORY_USER_ASSERT_HOOK \\"
   , "  -I."
   , ""
   , "LDFLAGS := \\"
   , "  -mlittle-endian \\"
-  , "  -mthumb -mcpu=cortex-m4 \\"
-  , "  -mfloat-abi=hard -mfpu=fpv4-sp-d16"
+  , "  -mthumb \\"
+  , "  -mcpu=" ++ cpu mcucore ++ " \\"
+  , "  -mfpu=" ++ fpu mcucore ++ " \\"
+  , maybe "" (\x -> "  -mfloat-abi=" ++ x) (floatabi mcucore)
   , "LDLIBS := -lm"
   , ""
   , "OBJDIR := obj"
@@ -65,6 +70,7 @@ makefile userobjs = Root $ artifactString "Makefile" $ unlines
   , ""
   ]
   where
+  mcucore = core $ mcuFamily mcu
   objects = userobjs ++  ["stm32_freertos_init.o", "vector_table.o", "stm32_freertos_user_assert.o"]
 
 artifacts :: MCU -> [Located Artifact]
