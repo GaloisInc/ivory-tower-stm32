@@ -42,6 +42,7 @@ import           Ivory.OS.FreeRTOS.Tower.Time (time_module)
 import qualified Ivory.OS.FreeRTOS.Tower.STM32.Build as STM32
 
 import Ivory.BSP.STM32.VectorTable (reset_handler)
+import Ivory.BSP.STM32.Core
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.ClockInit (init_clocks)
 import Ivory.BSP.STM32.MCU
@@ -253,11 +254,12 @@ stm32Modules mcu cc ast = systemModules ast ++ [ main_module, time_module ]
 stm32Artifacts :: MCU -> ClockConfig -> AST.Tower -> [Module] -> [Located Artifact] -> [Located Artifact]
 stm32Artifacts mcu cc ast ms gcas = (systemArtifacts ast ms) ++ as
   where
-  as = [ STM32.makefile makeobjs ] ++ STM32.artifacts mcu
-    ++ FreeRTOS.kernel fconfig ++ FreeRTOS.wrapper
+  coreStr = freertosCore mcu
+  as = [ STM32.makefile mcu makeobjs ] ++ STM32.artifacts mcu
+    ++ FreeRTOS.kernel coreStr fconfig ++ FreeRTOS.wrapper
     ++ hw_artifacts
 
-  makeobjs = nub $ FreeRTOS.objects
+  makeobjs = nub $ FreeRTOS.objects coreStr
           ++ [ moduleName m ++ ".o" | m <- ms ]
           ++ [ replaceExtension f ".o"
              | Src a <- gcas
