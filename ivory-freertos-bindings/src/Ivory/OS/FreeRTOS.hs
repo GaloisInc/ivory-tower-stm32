@@ -11,10 +11,10 @@ import qualified Paths_ivory_freertos_bindings as P
 import Ivory.Artifact
 import Ivory.OS.FreeRTOS.Config
 
-kernel :: Config -> [Located Artifact]
-kernel conf = configHeader conf : kas
+kernel :: String -> Config -> [Located Artifact]
+kernel core conf = configHeader conf : kas
   where
-  kas = map loc kernelfiles
+  kas = map loc (kernelfiles core)
 
 wrapper :: [Located Artifact]
 wrapper = map loc wrapperfiles
@@ -41,8 +41,8 @@ wrapperfiles =
   , "wrapper/freertos_time_wrapper.c"
   ]
 
-kernelfiles :: [FilePath]
-kernelfiles =
+kernelfiles :: String -> [FilePath]
+kernelfiles core =
   [ "freertos-sources/list.c"
   , "freertos-sources/queue.c"
   , "freertos-sources/tasks.c"
@@ -50,27 +50,31 @@ kernelfiles =
   , "freertos-sources/include/FreeRTOS.h"
   , "freertos-sources/include/StackMacros.h"
   , "freertos-sources/include/list.h"
+  , "freertos-sources/include/message_buffer.h"
   , "freertos-sources/include/mpu_wrappers.h"
+  , "freertos-sources/include/mpu_prototypes.h"
   , "freertos-sources/include/portable.h"
   , "freertos-sources/include/projdefs.h"
   , "freertos-sources/include/queue.h"
   , "freertos-sources/include/semphr.h"
   , "freertos-sources/include/task.h"
   , "freertos-sources/include/timers.h"
+  , "freertos-sources/include/stack_macros.h"
+  , "freertos-sources/include/stream_buffer.h"
   , "freertos-sources/include/deprecated_definitions.h"
-  , "freertos-sources/portable/GCC/ARM_CM4F/port.c"
-  , "freertos-sources/portable/GCC/ARM_CM4F/portmacro.h"
+  , "freertos-sources/portable/GCC/ARM_" ++ core ++ "/port.c"
+  , "freertos-sources/portable/GCC/ARM_" ++ core ++ "/portmacro.h"
   , "freertos-sources/portable/MemMang/heap_1.c"
   , "syscalls/assert.h"
   , "syscalls/syscalls.c"
   ]
 
-objects :: [FilePath]
-objects = map (\f -> replaceExtension f "o") sources
+objects :: String -> [FilePath]
+objects core = map (\f -> replaceExtension f "o") (sources core)
 
-sources :: [FilePath]
-sources = filter (\f -> takeExtension f == ".c")
-        $ map takeFileName ( wrapperfiles ++ kernelfiles )
+sources :: String -> [FilePath]
+sources core = filter (\f -> takeExtension f == ".c")
+             $ map takeFileName ( wrapperfiles ++ (kernelfiles core) )
 
 defaultConfig :: Config
 defaultConfig  = Config
