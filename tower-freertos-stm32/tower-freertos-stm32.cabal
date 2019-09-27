@@ -39,6 +39,7 @@ library
                         ivory-backend-c,
                         ivory-freertos-bindings,
                         ivory-bsp-stm32,
+                        data-stm32,
                         tower-config,
                         tower >= 0.9
 

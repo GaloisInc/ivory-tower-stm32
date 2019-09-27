@@ -12,7 +12,7 @@ import Ivory.Artifact
 import Ivory.BSP.STM32.VectorTable
 import Ivory.BSP.STM32.LinkerScript
 import Ivory.BSP.STM32.MCU
-import Ivory.BSP.STM32.Core
+import Data.STM32
 
 makefile :: MCU -> [FilePath] -> Located Artifact
 makefile mcu userobjs = Root $ artifactString "Makefile" $ unlines
@@ -73,9 +73,9 @@ makefile mcu userobjs = Root $ artifactString "Makefile" $ unlines
   mcucore = core $ mcuFamily mcu
   objects = userobjs ++  ["stm32_freertos_init.o", "vector_table.o", "stm32_freertos_user_assert.o"]
 
-artifacts :: MCU -> [Located Artifact]
-artifacts mcu =
-  [ vector_table (mcuFamily mcu)
+artifacts :: NamedMCU -> [Located Artifact]
+artifacts nmcu@(_name, mcu) =
+  [ vector_table nmcu
   ] ++ init_artifacts ++ aux
   where
   init_artifacts =
@@ -86,5 +86,5 @@ artifacts mcu =
 
   aux = [ mk_lds "linker_script.lds" 0 ]
 
-  mk_lds name bl_offset = Root $ linker_script name mcu bl_offset reset_handler
+  mk_lds name bl_offset = Root $ linker_script name nmcu bl_offset reset_handler
 

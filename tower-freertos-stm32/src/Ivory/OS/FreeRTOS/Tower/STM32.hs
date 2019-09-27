@@ -42,10 +42,10 @@ import           Ivory.OS.FreeRTOS.Tower.Time (time_module)
 import qualified Ivory.OS.FreeRTOS.Tower.STM32.Build as STM32
 
 import Ivory.BSP.STM32.VectorTable (reset_handler)
-import Ivory.BSP.STM32.Core
 import Ivory.BSP.STM32.ClockConfig
 import Ivory.BSP.STM32.ClockInit (init_clocks)
 import Ivory.BSP.STM32.MCU
+import Data.STM32
 
 
 data STM32FreeRTOSBackend = STM32FreeRTOSBackend
@@ -198,13 +198,14 @@ callbackProcName callbackname _handlername tast
 
 --------
 
-compileTowerSTM32FreeRTOS :: (e -> MCU) -> (e -> ClockConfig) -> (TOpts -> IO e) -> Tower e () -> IO ()
-compileTowerSTM32FreeRTOS toMcu toCc getEnv twr = do
+compileTowerSTM32FreeRTOS :: (e -> STM32Config) -> (TOpts -> IO e) -> Tower e () -> IO ()
+compileTowerSTM32FreeRTOS toConf getEnv twr = do
   (copts, topts) <- towerGetOpts
   env <- getEnv topts
 
-  let mcu = toMcu env
-      cc  = toCc env
+  let conf = toConf env
+      nmcu@(name, mcu) = confMCU conf
+      cc = confClocks conf
       (ast, o, deps, sigs) = runTower_ compatBackend twr env
 
       mods = dependencies_modules deps
@@ -213,7 +214,7 @@ compileTowerSTM32FreeRTOS toMcu toCc getEnv twr = do
           ++ stm32Modules mcu cc ast
 
       givenArtifacts = dependencies_artifacts deps
-      as = stm32Artifacts mcu cc ast mods givenArtifacts
+      as = stm32Artifacts nmcu cc ast mods givenArtifacts
   runCompiler mods (as ++ givenArtifacts) copts
   where
   compatBackend = STM32FreeRTOSBackend
@@ -251,11 +252,11 @@ stm32Modules mcu cc ast = systemModules ast ++ [ main_module, time_module ]
   main_proc = importProc "main" "stm32_freertos_init.h"
 
 
-stm32Artifacts :: MCU -> ClockConfig -> AST.Tower -> [Module] -> [Located Artifact] -> [Located Artifact]
-stm32Artifacts mcu cc ast ms gcas = (systemArtifacts ast ms) ++ as
+stm32Artifacts :: NamedMCU -> ClockConfig -> AST.Tower -> [Module] -> [Located Artifact] -> [Located Artifact]
+stm32Artifacts nmcu@(name, mcu) cc ast ms gcas = (systemArtifacts ast ms) ++ as
   where
-  coreStr = freertosCore mcu
-  as = [ STM32.makefile mcu makeobjs ] ++ STM32.artifacts mcu
+  coreStr = freertosCore (shortName name) (mcuFamily mcu)
+  as = [ STM32.makefile mcu makeobjs ] ++ STM32.artifacts nmcu
     ++ FreeRTOS.kernel coreStr fconfig ++ FreeRTOS.wrapper
     ++ hw_artifacts
 
@@ -270,7 +271,7 @@ stm32Artifacts mcu cc ast ms gcas = (systemArtifacts ast ms) ++ as
     { FreeRTOS.max_priorities = fromIntegral (length (AST.towerThreads ast)) + 1
     -- (arbitrarily) leave half the sram for the stack and static
     -- allocations; this should be a config
-    , FreeRTOS.total_heap_size = mcuRAM mcu `div` 2
+    , FreeRTOS.total_heap_size = (fromIntegral (mcuRam mcu)) `div` 2
     -- XXX expand tower config to fill in the rest of these values
     , FreeRTOS.cpu_clock_hz = clockSysClkHz cc
     }
