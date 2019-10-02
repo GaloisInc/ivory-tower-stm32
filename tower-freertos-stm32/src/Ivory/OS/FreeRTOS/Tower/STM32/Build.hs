@@ -33,7 +33,7 @@ makefile mcu userobjs = Root $ artifactString "Makefile" $ unlines
   , "  -mthumb \\"
   , "  -mcpu=" ++ cpu mcucore ++ " \\"
   , "  -mfpu=" ++ fpu mcucore ++ " \\"
-  , maybe " \\" (\x -> "  -mfloat-abi=" ++ x ++ " \\") (floatabi mcucore)
+  , "  -mfloat-abi=" ++ floatabi mcucore ++ " \\"
   , "  -DIVORY_TEST \\"
   , "  -DIVORY_USER_ASSERT_HOOK \\"
   , "  -I."
@@ -43,7 +43,8 @@ makefile mcu userobjs = Root $ artifactString "Makefile" $ unlines
   , "  -mthumb \\"
   , "  -mcpu=" ++ cpu mcucore ++ " \\"
   , "  -mfpu=" ++ fpu mcucore ++ " \\"
-  , maybe " \\" (\x -> "  -mfloat-abi=" ++ x) (floatabi mcucore)
+  , "  -mfloat-abi=" ++ floatabi mcucore
+  , ""
   , "LDLIBS := -lm"
   , ""
   , "OBJDIR := obj"
