@@ -82,6 +82,7 @@ defaultConfig  = Config
   , tick_rate_hz       = 1000
   , max_priorities     = 5
   , minimal_stack_size = 256
+  , task_stack_size    = 2560
   , total_heap_size    = 64 * 1024
   }
 
