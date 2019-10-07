@@ -172,13 +172,11 @@ systemModules twr = [initModule]
   threadBegin :: AST.Thread -> Ivory eff ()
   threadBegin thr = do
     call_ Task.begin (Task.taskProc threadLoopProcStub)
-                  stacksize priority debugname
+                  priority debugname
     where
     threadLoopProcStub :: Def('[Ref s ('Struct "taskarg")]':->())
     threadLoopProcStub = proc (AST.threadLoopProcName thr)
                           (const (body (return ())))
-    stacksize :: Uint32
-    stacksize = 2560 -- XXX need some story for computing this
 
     debugname :: IString
     debugname = fromString (AST.threadName thr)

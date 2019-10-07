@@ -12,6 +12,7 @@ data Config = Config
   , tick_rate_hz        :: Integer
   , max_priorities      :: Integer
   , minimal_stack_size  :: Integer
+  , task_stack_size     :: Integer
   , total_heap_size     :: Integer
   }
 
@@ -23,5 +24,6 @@ configHeader c = Incl $ artifactCabalFileTemplate P.getDataDir loc attrs
           , ("tick_rate_hz",       show (tick_rate_hz c))
           , ("max_priorities",     show (max_priorities c))
           , ("minimal_stack_size", show (minimal_stack_size c))
+          , ("task_stack_size",    show (task_stack_size c))
           , ("total_heap_size",    show (total_heap_size c))
           ]

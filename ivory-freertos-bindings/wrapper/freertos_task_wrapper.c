@@ -6,9 +6,9 @@
 #include "ivory.h"
 
 void ivory_freertos_task_create(void (*tsk)(struct taskarg*),
-        uint32_t stacksize, uint8_t priority, const char* const name)
+        uint8_t priority, const char* const name)
 {
-    unsigned short usStackDepth = stacksize / sizeof (portSTACK_TYPE);
+    unsigned short usStackDepth = configTASK_STACK_SIZE / sizeof (portSTACK_TYPE);
     TaskHandle_t xHandle = NULL;
     xTaskCreate(
             (TaskFunction_t) tsk, /* pvTaskCode */

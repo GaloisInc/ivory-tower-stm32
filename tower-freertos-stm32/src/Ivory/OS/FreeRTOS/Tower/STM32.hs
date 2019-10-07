@@ -274,5 +274,13 @@ stm32Artifacts nmcu@(name, mcu) cc ast ms gcas = (systemArtifacts ast ms) ++ as
     , FreeRTOS.total_heap_size = (fromIntegral (mcuRam mcu)) `div` 2
     -- XXX expand tower config to fill in the rest of these values
     , FreeRTOS.cpu_clock_hz = clockSysClkHz cc
+    , FreeRTOS.task_stack_size = stackSizeByRam (mcuRam mcu)
     }
 
+-- just a guess, use smaller stack size on devices
+-- with less memory
+stackSizeByRam :: (Ord a, Num a, Num p) => a -> p
+stackSizeByRam ram | ram <= 10 * 1024 = 768
+stackSizeByRam ram | ram <= 32 * 1024 = 1024
+stackSizeByRam ram | ram <= 64 * 1024 = 2048
+stackSizeByRam _   | otherwise        = 2560
