@@ -17,7 +17,6 @@ import Control.Monad (forM_)
 import Data.List (nub)
 import qualified Data.Map as Map
 import System.FilePath
-import Data.Monoid ((<>))
 
 import Ivory.Language
 import Ivory.Artifact
@@ -204,17 +203,17 @@ compileTowerSTM32FreeRTOS toConf getEnv twr = do
   env <- getEnv topts
 
   let conf = toConf env
-      nmcu@(name, mcu) = confMCU conf
+      namedMCU = confMCU conf
       cc = confClocks conf
       (ast, o, deps, sigs) = runTower_ compatBackend twr env
 
       mods = dependencies_modules deps
           ++ threadModules deps sigs (thread_codes o) ast
           ++ monitorModules deps (Map.toList (compatoutput_monitors o))
-          ++ stm32Modules mcu cc ast
+          ++ stm32Modules (snd namedMCU) cc ast
 
       givenArtifacts = dependencies_artifacts deps
-      as = stm32Artifacts nmcu cc ast mods givenArtifacts
+      as = stm32Artifacts namedMCU cc ast mods givenArtifacts
   runCompiler mods (as ++ givenArtifacts) copts
   where
   compatBackend = STM32FreeRTOSBackend
