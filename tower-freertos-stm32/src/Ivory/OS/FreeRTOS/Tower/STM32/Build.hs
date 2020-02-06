@@ -9,6 +9,7 @@ import qualified Data.List as L
 
 import qualified Paths_tower_freertos_stm32 as P
 import Ivory.Artifact
+import Ivory.BSP.ARMv7M.Instr
 import Ivory.BSP.STM32.VectorTable
 import Ivory.BSP.STM32.LinkerScript
 import Ivory.BSP.STM32.MCU
@@ -76,8 +77,10 @@ makefile mcu userobjs = Root $ artifactString "Makefile" $ unlines
 
 artifacts :: NamedMCU -> [Located Artifact]
 artifacts nmcu@(_name, mcu) =
-  [ vector_table nmcu
-  ] ++ init_artifacts ++ aux
+  [ vector_table nmcu ]
+  ++ init_artifacts
+  ++ instrArtifacts
+  ++ aux
   where
   init_artifacts =
     [ Src  $ artifactCabalFile P.getDataDir "support/stm32_freertos_init.c"
