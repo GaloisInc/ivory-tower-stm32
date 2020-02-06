@@ -37,14 +37,8 @@ void init_libc(void) {
 #include "task.h"
 extern void tower_entry(void);
 
-static void tower_launch_task(void *machtnichts) {
-	tower_entry();
-	for(;;);
-}
-
 int main (void) {
-	xTaskCreate(tower_launch_task, "twrlaunch",
-		256, NULL, 0, NULL);
+	tower_entry();
 	vTaskStartScheduler();
 	for(;;);
 	return 0; // unreachable
