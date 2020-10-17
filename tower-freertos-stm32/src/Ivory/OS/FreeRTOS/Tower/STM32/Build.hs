@@ -43,6 +43,7 @@ makefile mcu userobjs = Root $ artifactString "Makefile" $ unlines
   , ""
   , "LDFLAGS := \\"
   , "  -Wl,--gc-sections \\"
+  , "  -Wl,--print-memory-usage \\"
   , "  -mlittle-endian \\"
   , "  -mthumb \\"
   , "  -mcpu=" ++ cpu mcucore ++ " \\"
