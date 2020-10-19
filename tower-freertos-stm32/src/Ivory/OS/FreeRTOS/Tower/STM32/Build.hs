@@ -18,9 +18,6 @@ import Data.STM32
 makefile :: MCU -> [FilePath] -> Located Artifact
 makefile mcu userobjs = Root $ artifactString "Makefile" $ unlines
   [ "UNAME_S := $(shell uname -s)"
-  , "ifeq ($(UNAME_S),Linux)"
-  , "UPLOAD_PORT?=/dev/serial/by-id/usb-3D_Robotics*"
-  , "endif"
   , "CC := arm-none-eabi-gcc"
   , "OBJCOPY := arm-none-eabi-objcopy"
   , "CFLAGS := -Os"
