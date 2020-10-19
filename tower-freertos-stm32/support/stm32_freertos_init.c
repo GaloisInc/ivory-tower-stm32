@@ -39,7 +39,7 @@ extern void tower_entry(void);
 
 static void tower_launch_task(void *machtnichts) {
 	tower_entry();
-	for(;;);
+	vTaskSuspend(NULL);
 }
 
 int main (void) {
