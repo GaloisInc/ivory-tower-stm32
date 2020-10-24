@@ -18,8 +18,11 @@ import Data.STM32
 makefile :: MCU -> [FilePath] -> Located Artifact
 makefile mcu userobjs = Root $ artifactString "Makefile" $ unlines
   [ "UNAME_S := $(shell uname -s)"
-  , "CC := arm-none-eabi-gcc"
-  , "OBJCOPY := arm-none-eabi-objcopy"
+  , "PREFIX := arm-none-eabi-"
+  , "CC := $(PREFIX)gcc"
+  , "OBJCOPY := $(PREFIX)objcopy"
+  , "NM := $(PREFIX)nm"
+  , "SIZE := $(PREFIX)size"
   , "CFLAGS := -Os"
   , "TOWER_STM32_CFLAGS := \\"
   , "  -g3 -Wall -Werror \\"
@@ -56,6 +59,8 @@ makefile mcu userobjs = Root $ artifactString "Makefile" $ unlines
   , ""
   , "image: $(OBJS)"
   , "\t$(CC) -o $@ $(LDFLAGS) -Wl,--script=linker_script.lds -Wl,-Map=$@.map $(OBJS) $(LDLIBS)"
+  , "\t$(SIZE) image"
+  , "\t$(NM) --size-sort --radix d image | tail"
   , ""
   , "$(OBJDIR)/%.o : %.c"
   , "\t$(CC) $(TOWER_STM32_CFLAGS) $(CFLAGS) -c -o $@ $<"
