@@ -50,8 +50,13 @@ int main (void) {
 	return 0; // unreachable
 }
 
-extern void vApplicationStackOverflowHook (void) {
-	ASSERTS(0);
-	for(;;);
+extern void vApplicationStackOverflowHook ( TaskHandle_t xTask,
+                                            char * pcTaskName )
+{
+  /* Check pcTaskName for the name of the offending task,
+   * or pxCurrentTCB if pcTaskName has itself been corrupted. */
+  ( void ) xTask;
+  ( void ) pcTaskName;
+  ASSERTS(0);
+  for(;;);
 }
-
