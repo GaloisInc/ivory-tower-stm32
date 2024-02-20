@@ -19,6 +19,6 @@ uint32_t ivory_freertos_time_gettickcount(void) {
 
 uint32_t ivory_freertos_time_gettickrate_ms(void)
 {
-  return portTICK_RATE_MS;
+  return portTICK_PERIOD_MS;
 }
 
